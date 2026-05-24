@@ -9,43 +9,43 @@ function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-const sizes = ['0.8rem', '0.95rem', '1.1rem', '1.25rem', '1.4rem'];
+const sizes = ['0.8rem', '0.9rem', '1rem', '1.1rem', '1.2rem', '1.35rem', '1.5rem'];
 const allPaddings = [
-  '8px 14px', '10px 18px', '12px 24px', '14px 28px', '16px 32px',
+  '6px 12px', '8px 16px', '10px 18px', '10px 22px', '12px 26px', '14px 30px', '16px 34px',
 ];
 
-// 生成不规则的滚动行 —— 分散布局
+// 生成不规则的滚动行
 const rows = [];
-const rowCount = 6;
+const rowCount = 7;
 for (let r = 0; r < rowCount; r++) {
+  // 每行随机选择一些标签（3-5个），且打乱顺序
+  const shuffled = [...tags].sort(() => Math.random() - 0.5);
+  const count = 3 + Math.floor(randomBetween(0, 3));
   const rowTags = [];
-  const count = 2 + Math.floor(randomBetween(0, 2)); // 每行只有 2-3 个标签
   
-  const used = new Set();
   for (let i = 0; i < count; i++) {
-    let idx;
-    do {
-      idx = Math.floor(Math.random() * tags.length);
-    } while (used.has(idx));
-    used.add(idx);
-    
+    const tagIdx = (r + i * 3) % tags.length;
     const sizeIdx = Math.floor(Math.random() * sizes.length);
     const padIdx = Math.floor(Math.random() * allPaddings.length);
     
     rowTags.push({
-      text: tags[idx],
+      text: tags[tagIdx],
       fontSize: sizes[sizeIdx],
       padding: allPaddings[padIdx],
-      marginRight: randomBetween(60, 150), // 水平间距拉大
+      // 行内间距随机 20-60px
+      marginRight: randomBetween(20, 60),
     });
   }
+  
+  // 每行随机打乱
+  rowTags.sort(() => Math.random() - 0.5);
   
   rows.push({
     tags: rowTags,
     dir: r % 2 === 0 ? 'left' : 'right',
-    speed: randomBetween(18, 35),
-    // 垂直均匀分散
-    top: 5 + r * 15 + randomBetween(-2, 2),
+    speed: randomBetween(15, 35),
+    // 垂直位置随机分布（top% 值）
+    top: 2 + (r * 13) + randomBetween(-3, 3),
   });
 }
 
@@ -56,28 +56,28 @@ function buildTagWall() {
   const container = document.createElement('div');
   container.className = 'tag-container';
   
-  rows.forEach((rowData) => {
+  rows.forEach((rowData, ri) => {
     const row = document.createElement('div');
     row.className = `scroll-row scroll-${rowData.dir}`;
     row.style.top = rowData.top + '%';
     row.style.animationDuration = rowData.speed + 's';
     
+    // 生成两组标签实现无缝循环
     const group1 = document.createElement('div');
     group1.className = 'scroll-group';
-    group1.style.gap = randomBetween(60, 150) + 'px'; // 组内间距大
     const group2 = document.createElement('div');
     group2.className = 'scroll-group';
-    group2.style.gap = group1.style.gap;
     
     const makeTags = (group) => {
-      rowData.tags.forEach((t) => {
+      rowData.tags.forEach((t, i) => {
         const span = document.createElement('span');
         span.className = 'scroll-tag';
         span.textContent = t.text;
         span.style.fontSize = t.fontSize;
         span.style.padding = t.padding;
         span.style.marginRight = t.marginRight + 'px';
-        span.style.opacity = 0.65 + Math.random() * 0.35;
+        // 随机透明度增加水流感
+        span.style.opacity = randomBetween(0.6, 1);
         group.appendChild(span);
       });
     };
@@ -161,6 +161,7 @@ themeToggle.addEventListener('click', () => {
   document.body.classList.toggle('dark');
 });
 
+// 默认使用黑色背景
 document.body.classList.add('dark');
 
 setPage('home');
