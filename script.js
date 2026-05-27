@@ -138,12 +138,28 @@ const pageContent = document.getElementById('pageContent');
 function setPage(pageKey) {
   const page = pageInfo[pageKey];
   if (!page) return;
+
   pageTitle.textContent = page.title;
+
   if (pageSummary) {
     pageSummary.textContent = page.summary;
   }
   const content = typeof page.content === 'function' ? page.content() : page.content;
   pageContent.innerHTML = `<div class="card">${content}</div>`;
+
+  // 神秘图片页面：卡片内的 h2 标题作为跳转入口
+  if (pageKey === 'mystery') {
+    const cardH2 = pageContent.querySelector('.card h2');
+    if (cardH2) {
+      cardH2.style.cursor = 'pointer';
+      cardH2.title = '点击进入神秘图库';
+      cardH2.onclick = function(e) {
+        e.stopPropagation();
+        window.location.href = 'gallery.html';
+      };
+    }
+  }
+
   navItems.forEach((item) => {
     item.classList.toggle('active', item.dataset.page === pageKey);
   });

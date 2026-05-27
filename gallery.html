@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>神秘图库 - dfsjiv</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .gallery-page {
+      min-height: 100vh;
+      background: var(--bg);
+      padding: 32px 40px;
+    }
+
+    .gallery-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .gallery-title {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .gallery-item {
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 360px;
+      object-fit: cover;
+      display: block;
+      transition: filter 0.3s ease;
+    }
+
+    body.dark .gallery-item {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    body.dark .gallery-item:hover {
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    body.dark .gallery-item img {
+      filter: brightness(0.85) contrast(1.1);
+    }
+
+    body.dark .gallery-item:hover img {
+      filter: brightness(0.95) contrast(1.1);
+    }
+
+    .gallery-item-caption {
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    .gallery-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.22s ease, border-color 0.22s ease;
+    }
+
+    .gallery-back:hover {
+      background: var(--accent-soft);
+      border-color: rgba(37, 99, 235, 0.2);
+    }
+
+    .gallery-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .gallery-page {
+        padding: 20px 16px;
+      }
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+      .gallery-item img {
+        height: 280px;
+      }
+    }
+  </style>
+</head>
+<body class="dark">
+  <div class="gallery-page">
+    <div class="gallery-header">
+      <h1 class="gallery-title">神秘图库</h1>
+      <div class="gallery-header-right">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换主题">
+          <span class="theme-circle"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="gallery-grid">
+      <div class="gallery-item">
+        <img src="110944994_p0_master1200.jpg" alt="神秘图片 1" />
+        <div class="gallery-item-caption">神秘图片 #1</div>
+      </div>
+      <div class="gallery-item">
+        <img src="125625696_p0_master1200.jpg" alt="神秘图片 2" />
+        <div class="gallery-item-caption">神秘图片 #2</div>
+      </div>
+      <div class="gallery-item">
+        <img src="131135880_p0_master1200.jpg" alt="神秘图片 3" />
+        <div class="gallery-item-caption">神秘图片 #3</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>
