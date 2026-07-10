@@ -2,10 +2,22 @@
   const TASKBAR_HEIGHT = 40;
   const MIN_WINDOW_WIDTH = 320;
   const MIN_WINDOW_HEIGHT = 220;
+  const DEFAULT_ICON_WIDTH = 76;
+  const DEFAULT_ICON_HEIGHT = 88;
+  const ICON_DRAG_THRESHOLD = 3;
   const BLOG_URL = 'blog.html';
 
   function padTime(value) {
     return String(value).padStart(2, '0');
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function readPixelValue(value) {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   function readElements(doc) {
@@ -25,6 +37,153 @@
       windowClose: doc.getElementById('windowClose'),
       clockTime: doc.getElementById('clockTime'),
       clockDate: doc.getElementById('clockDate'),
+    };
+  }
+
+  function createDesktopIconDrag(options) {
+    const settings = options || {};
+    const dragDocument = settings.document || document;
+    const viewport = settings.viewport || function () {
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    };
+    const taskbarHeight = settings.taskbarHeight == null ? TASKBAR_HEIGHT : settings.taskbarHeight;
+    const registrations = new Map();
+    const state = {
+      active: null,
+    };
+
+    function availableArea() {
+      const size = viewport();
+      return {
+        width: Math.max(DEFAULT_ICON_WIDTH, size.width),
+        height: Math.max(DEFAULT_ICON_HEIGHT, size.height - taskbarHeight),
+      };
+    }
+
+    function readIconSize(icon) {
+      const rect = icon.getBoundingClientRect ? icon.getBoundingClientRect() : {};
+      return {
+        width: icon.offsetWidth || rect.width || DEFAULT_ICON_WIDTH,
+        height: icon.offsetHeight || rect.height || DEFAULT_ICON_HEIGHT,
+      };
+    }
+
+    function readIconPosition(icon) {
+      const styleLeft = readPixelValue(icon.style.left);
+      const styleTop = readPixelValue(icon.style.top);
+      if (styleLeft !== null && styleTop !== null) {
+        return {
+          left: styleLeft,
+          top: styleTop,
+        };
+      }
+
+      return {
+        left: Number.isFinite(icon.offsetLeft) ? icon.offsetLeft : 0,
+        top: Number.isFinite(icon.offsetTop) ? icon.offsetTop : 0,
+      };
+    }
+
+    function normalizeIconPosition(icon, left, top) {
+      const area = availableArea();
+      const size = readIconSize(icon);
+      return {
+        left: clamp(left, 0, Math.max(0, area.width - size.width)),
+        top: clamp(top, 0, Math.max(0, area.height - size.height)),
+      };
+    }
+
+    function moveIconTo(icon, left, top) {
+      const position = normalizeIconPosition(icon, left, top);
+      icon.style.left = position.left + 'px';
+      icon.style.top = position.top + 'px';
+      return position;
+    }
+
+    function stopIconDrag() {
+      if (!state.active) {
+        return;
+      }
+
+      const active = state.active;
+      state.active = null;
+      active.icon.classList.remove('is-dragging');
+      active.icon.setAttribute('aria-grabbed', 'false');
+      if (dragDocument.removeEventListener) {
+        dragDocument.removeEventListener('pointermove', handleIconDragMove);
+      }
+      if (active.registration.onDragEnd) {
+        active.registration.onDragEnd(active.icon, active.moved);
+      }
+    }
+
+    function handleIconDragMove(event) {
+      if (!state.active) {
+        return;
+      }
+
+      const active = state.active;
+      const deltaX = event.clientX - active.pointerX;
+      const deltaY = event.clientY - active.pointerY;
+      if (Math.abs(deltaX) > ICON_DRAG_THRESHOLD || Math.abs(deltaY) > ICON_DRAG_THRESHOLD) {
+        active.moved = true;
+      }
+
+      moveIconTo(active.icon, active.left + deltaX, active.top + deltaY);
+    }
+
+    function startIconDrag(icon, registration, event) {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      if (event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      const position = readIconPosition(icon);
+      state.active = {
+        icon,
+        registration,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        left: position.left,
+        top: position.top,
+        moved: false,
+      };
+
+      icon.classList.add('is-dragging');
+      icon.setAttribute('aria-grabbed', 'true');
+      if (registration.onDragStart) {
+        registration.onDragStart(icon);
+      }
+
+      dragDocument.addEventListener('pointermove', handleIconDragMove);
+      dragDocument.addEventListener('pointerup', stopIconDrag, { once: true });
+    }
+
+    function registerIcon(icon, registrationOptions) {
+      if (!icon || registrations.has(icon)) {
+        return;
+      }
+
+      const registration = registrationOptions || {};
+      registrations.set(icon, registration);
+      icon.addEventListener('pointerdown', function (event) {
+        startIconDrag(icon, registration, event);
+      });
+    }
+
+    return {
+      registerIcon,
+      moveIconTo,
+      normalizeIconPosition,
     };
   }
 
@@ -50,6 +209,7 @@
       bounds: null,
       restoreBounds: null,
       drag: null,
+      iconDrag: null,
     };
 
     function availableArea() {
@@ -301,6 +461,18 @@
     }
 
     function bindEvents() {
+      state.iconDrag = createDesktopIconDrag({
+        document,
+        surface: elements.desktopSurface,
+        viewport,
+      });
+      state.iconDrag.registerIcon(elements.blogDesktopIcon, {
+        onDragStart: function () {
+          selectDesktopIcon(true);
+          closeStartMenu();
+        },
+      });
+
       elements.blogDesktopIcon.addEventListener('click', function (event) {
         if (event.stopPropagation) {
           event.stopPropagation();
@@ -381,6 +553,9 @@
       selectDesktopIcon,
       moveWindowTo,
       updateClock,
+      getIconDragController: function () {
+        return state.iconDrag;
+      },
       getState: function () {
         return Object.assign({}, state);
       },
@@ -398,6 +573,7 @@
   }
 
   window.HomeDesktop = {
+    createDesktopIconDrag,
     createDesktopController,
     readElements,
   };

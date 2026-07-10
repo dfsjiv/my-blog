@@ -43,6 +43,7 @@ body.is-desktop .desktop-shell {
   color: #ffffff;
   font: inherit;
   text-align: center;
+  touch-action: none;
   cursor: default;
 }
 
@@ -55,6 +56,11 @@ body.is-desktop .desktop-shell {
 .desktop-icon.is-selected {
   outline: 1px solid rgba(255, 255, 255, 0.55);
   outline-offset: -2px;
+}
+
+.desktop-icon.is-dragging {
+  z-index: 20;
+  opacity: 0.86;
 }
 
 .desktop-icon-image {

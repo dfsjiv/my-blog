@@ -49,6 +49,8 @@ class FakeElement {
     this.listeners = {};
     this.textContent = '';
     this.src = '';
+    this.offsetWidth = 76;
+    this.offsetHeight = 88;
   }
 
   addEventListener(eventName, handler) {
@@ -65,6 +67,17 @@ class FakeElement {
 
   contains(target) {
     return target === this;
+  }
+
+  getBoundingClientRect() {
+    return {
+      left: parseInt(this.style.left, 10) || 0,
+      top: parseInt(this.style.top, 10) || 0,
+      width: this.offsetWidth,
+      height: this.offsetHeight,
+      right: (parseInt(this.style.left, 10) || 0) + this.offsetWidth,
+      bottom: (parseInt(this.style.top, 10) || 0) + this.offsetHeight,
+    };
   }
 }
 
@@ -97,6 +110,11 @@ function loadDesktopScript() {
     addEventListener(eventName, handler) {
       listeners[eventName] = handler;
     },
+    removeEventListener(eventName, handler) {
+      if (listeners[eventName] === handler) {
+        delete listeners[eventName];
+      }
+    },
     getElementById(id) {
       return elements[id] || null;
     },
@@ -124,10 +142,11 @@ function loadDesktopScript() {
   return { window, document, elements, listeners };
 }
 
-const { window, elements } = loadDesktopScript();
+const { window, elements, listeners } = loadDesktopScript();
 
 assert.ok(window.HomeDesktop, 'HomeDesktop should be exposed');
 assert.strictEqual(typeof window.HomeDesktop.createDesktopController, 'function');
+assert.strictEqual(typeof window.HomeDesktop.createDesktopIconDrag, 'function');
 
 const controller = window.HomeDesktop.createDesktopController(elements, {
   viewport: () => ({ width: 1366, height: 768 }),
@@ -135,6 +154,25 @@ const controller = window.HomeDesktop.createDesktopController(elements, {
 });
 
 controller.init();
+
+assert.strictEqual(typeof elements.blogDesktopIcon.listeners.pointerdown, 'function');
+elements.blogDesktopIcon.listeners.pointerdown({
+  button: 0,
+  clientX: 18,
+  clientY: 22,
+  preventDefault() {},
+  stopPropagation() {},
+});
+assert.strictEqual(typeof listeners.pointermove, 'function');
+listeners.pointermove({ clientX: -500, clientY: -500 });
+assert.strictEqual(elements.blogDesktopIcon.style.left, '0px');
+assert.strictEqual(elements.blogDesktopIcon.style.top, '0px');
+listeners.pointermove({ clientX: 5000, clientY: 5000 });
+assert.ok(parseInt(elements.blogDesktopIcon.style.left, 10) <= 1366 - 76);
+assert.ok(parseInt(elements.blogDesktopIcon.style.top, 10) <= 768 - 40 - 88);
+assert.strictEqual(elements.blogDesktopIcon.classList.contains('is-dragging'), true);
+listeners.pointerup();
+assert.strictEqual(elements.blogDesktopIcon.classList.contains('is-dragging'), false);
 
 assert.strictEqual(elements.clockTime.textContent, '12:34');
 assert.ok(elements.clockDate.textContent.includes('2026'));
