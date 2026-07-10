@@ -9,10 +9,6 @@ body.is-desktop {
   background: #0c3f5f;
 }
 
-body.is-desktop .home-entry {
-  display: none;
-}
-
 .desktop-shell {
   display: none;
 }

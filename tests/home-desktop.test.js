@@ -185,6 +185,8 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
   assert.match(indexHtml, /id="desktopShell"/);
   assert.match(indexHtml, /id="blogWindow"/);
   assert.match(indexHtml, /id="blogFrame"[^>]+src="blog\.html"/);
+  assert.doesNotMatch(indexHtml, /class="home-entry"/);
+  assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
