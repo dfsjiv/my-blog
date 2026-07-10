@@ -80,6 +80,7 @@
       background: rgba(156, 165, 255, 0.22);
     }
   </style>
+  <link rel="stylesheet" href="home-desktop.css" />
 </head>
 <body>
   <main class="home-entry">
@@ -87,5 +88,77 @@
     <p>欢迎来到我的主页。</p>
     <a class="blog-button" href="blog.html">进入我的博客</a>
   </main>
+
+  <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面">
+    <div class="desktop-surface" id="desktopSurface">
+      <button class="desktop-icon" id="blogDesktopIcon" type="button" aria-label="博客" aria-selected="false">
+        <span class="desktop-icon-image document-app-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" focusable="false">
+            <path d="M11 5h18l8 8v30H11z" fill="#f4f8ff" />
+            <path d="M29 5v9h8z" fill="#c9ddff" />
+            <path d="M17 21h14M17 27h16M17 33h12" stroke="#1769aa" stroke-width="2" stroke-linecap="square" />
+          </svg>
+        </span>
+        <span class="desktop-icon-label">博客</span>
+      </button>
+
+      <section class="blog-window is-hidden" id="blogWindow" aria-label="博客窗口">
+        <header class="window-titlebar" id="blogTitlebar">
+          <span class="window-app-icon document-app-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" focusable="false">
+              <path d="M11 5h18l8 8v30H11z" fill="#f4f8ff" />
+              <path d="M29 5v9h8z" fill="#c9ddff" />
+              <path d="M17 21h14M17 27h16M17 33h12" stroke="#1769aa" stroke-width="2" stroke-linecap="square" />
+            </svg>
+          </span>
+          <span class="window-title">博客</span>
+          <div class="window-controls" aria-label="窗口控制">
+            <button class="window-control" id="windowMinimize" type="button" aria-label="最小化">—</button>
+            <button class="window-control" id="windowMaximize" type="button" aria-label="最大化">□</button>
+            <button class="window-control close" id="windowClose" type="button" aria-label="关闭">×</button>
+          </div>
+        </header>
+        <iframe class="blog-frame" id="blogFrame" src="blog.html" title="博客内容"></iframe>
+      </section>
+    </div>
+
+    <nav class="start-menu" id="startMenu" aria-label="开始菜单">
+      <button class="start-menu-app" id="startBlogButton" type="button">
+        <span class="start-menu-icon document-app-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" focusable="false">
+            <path d="M11 5h18l8 8v30H11z" fill="#f4f8ff" />
+            <path d="M29 5v9h8z" fill="#c9ddff" />
+            <path d="M17 21h14M17 27h16M17 33h12" stroke="#1769aa" stroke-width="2" stroke-linecap="square" />
+          </svg>
+        </span>
+        <span>博客</span>
+      </button>
+    </nav>
+
+    <footer class="taskbar" aria-label="任务栏">
+      <button class="start-button" id="startButton" type="button" aria-label="开始" aria-expanded="false">
+        <span class="windows-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+      </button>
+      <button class="taskbar-app" id="blogTaskbarButton" type="button" aria-label="博客" aria-pressed="false">
+        <span class="taskbar-app-icon document-app-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" focusable="false">
+            <path d="M11 5h18l8 8v30H11z" fill="#f4f8ff" />
+            <path d="M29 5v9h8z" fill="#c9ddff" />
+            <path d="M17 21h14M17 27h16M17 33h12" stroke="#1769aa" stroke-width="2" stroke-linecap="square" />
+          </svg>
+        </span>
+      </button>
+      <div class="taskbar-spacer"></div>
+      <time class="taskbar-clock" aria-label="当前时间">
+        <span id="clockTime"></span>
+        <span id="clockDate"></span>
+      </time>
+    </footer>
+  </div>
+
+  <script src="home-device.js"></script>
+  <script src="home-desktop.js"></script>
 </body>
 </html>
