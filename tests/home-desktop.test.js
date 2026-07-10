@@ -7,9 +7,11 @@ const rootDir = path.resolve(__dirname, '..');
 const scriptPath = path.join(rootDir, 'home-desktop.js');
 const cssPath = path.join(rootDir, 'home-desktop.css');
 const indexPath = path.join(rootDir, 'index.html');
+const blogIconPath = path.join(rootDir, 'assets', 'blog-icon.png');
 
 assert.ok(fs.existsSync(scriptPath), 'home-desktop.js should exist');
 assert.ok(fs.existsSync(cssPath), 'home-desktop.css should exist');
+assert.ok(fs.existsSync(blogIconPath), 'assets/blog-icon.png should exist');
 
 class FakeClassList {
   constructor() {
@@ -185,6 +187,8 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
   assert.match(indexHtml, /id="blogFrame"[^>]+src="blog\.html"/);
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
+  assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
+  assert.doesNotMatch(indexHtml, /document-app-icon[\s\S]*?<svg/);
 }
 
 console.log('home-desktop tests passed');
