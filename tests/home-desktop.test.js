@@ -51,6 +51,7 @@ class FakeElement {
     this.src = '';
     this.offsetWidth = 76;
     this.offsetHeight = 88;
+    this.capturedPointerId = null;
   }
 
   addEventListener(eventName, handler) {
@@ -78,6 +79,10 @@ class FakeElement {
       right: (parseInt(this.style.left, 10) || 0) + this.offsetWidth,
       bottom: (parseInt(this.style.top, 10) || 0) + this.offsetHeight,
     };
+  }
+
+  setPointerCapture(pointerId) {
+    this.capturedPointerId = pointerId;
   }
 }
 
@@ -158,11 +163,14 @@ controller.init();
 assert.strictEqual(typeof elements.blogDesktopIcon.listeners.pointerdown, 'function');
 elements.blogDesktopIcon.listeners.pointerdown({
   button: 0,
+  pointerId: 7,
   clientX: 18,
   clientY: 22,
   preventDefault() {},
   stopPropagation() {},
 });
+assert.strictEqual(elements.blogDesktopIcon.capturedPointerId, 7);
+assert.strictEqual(typeof elements.blogDesktopIcon.listeners.dragstart, 'function');
 assert.strictEqual(typeof listeners.pointermove, 'function');
 listeners.pointermove({ clientX: -500, clientY: -500 });
 assert.strictEqual(elements.blogDesktopIcon.style.left, '0px');
@@ -228,6 +236,7 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
+  assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 4);
   assert.doesNotMatch(indexHtml, /document-app-icon[\s\S]*?<svg/);
 }
 

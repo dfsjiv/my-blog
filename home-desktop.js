@@ -146,6 +146,9 @@
       if (event.stopPropagation) {
         event.stopPropagation();
       }
+      if (event.pointerId !== undefined && icon.setPointerCapture) {
+        icon.setPointerCapture(event.pointerId);
+      }
 
       const position = readIconPosition(icon);
       state.active = {
@@ -177,6 +180,11 @@
       registrations.set(icon, registration);
       icon.addEventListener('pointerdown', function (event) {
         startIconDrag(icon, registration, event);
+      });
+      icon.addEventListener('dragstart', function (event) {
+        if (event.preventDefault) {
+          event.preventDefault();
+        }
       });
     }
 
