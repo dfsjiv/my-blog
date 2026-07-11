@@ -420,8 +420,17 @@ function jsonResponse(status, data, invalidJson = false) {
     const titleInput = form.children[0].children[1];
     const categorySelect = form.children[1].children[1];
     const summaryInput = form.children[2].children[1];
-    const contentInput = form.children[3].children[1];
+    const contentInput = findByClass(form, 'article-editor-content');
     const message = form.children[4];
+    const preview = findByClass(form, 'markdown-preview');
+
+    assert.match(textTree(preview), /预览将在这里显示/);
+    contentInput.value = '# 实时预览\n\n**粗体内容**';
+    contentInput.listeners.input();
+    assert.ok(findByTag(preview, 'h1'));
+    assert.ok(findByTag(preview, 'strong'));
+    contentInput.value = '';
+    contentInput.listeners.input();
 
     await form.listeners.submit({ preventDefault() {} });
     assert.strictEqual(message.textContent, '请输入文章标题');
@@ -454,7 +463,8 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(form.children[0].children[1].value, '树状数组学习记录');
     assert.strictEqual(form.children[1].children[1].value, 'algorithm');
     assert.strictEqual(form.children[2].children[1].value, '记录 Fenwick Tree 的基本思想。');
-    assert.strictEqual(form.children[3].children[1].value, '这是测试正文。');
+    assert.strictEqual(findByClass(form, 'article-editor-content').value, '这是测试正文。');
+    assert.match(textTree(findByClass(form, 'markdown-preview')), /这是测试正文/);
     assert.strictEqual(form.children[5].children[1].textContent, '保存修改');
 
     form.children[5].children[0].listeners.click();
@@ -468,7 +478,7 @@ function jsonResponse(status, data, invalidJson = false) {
     form.children[0].children[1].value = 'Fenwick Tree 学习记录';
     form.children[1].children[1].value = 'computer';
     form.children[2].children[1].value = '修改后的摘要。';
-    form.children[3].children[1].value = '修改后的正文。';
+    findByClass(form, 'article-editor-content').value = '修改后的正文。';
     await form.listeners.submit({ preventDefault() {} });
 
     const put = adminRequests.find((request) => request.options.method === 'PUT');
@@ -548,7 +558,7 @@ function jsonResponse(status, data, invalidJson = false) {
     expired.elements.pageActions.children[0].listeners.click();
     const form = findByClass(expired.elements.pageContent, 'article-editor');
     form.children[0].children[1].value = '测试标题';
-    form.children[3].children[1].value = '测试正文';
+    findByClass(form, 'article-editor-content').value = '测试正文';
     await form.listeners.submit({ preventDefault() {} });
     assert.strictEqual(logoutMessage, '登录已失效，请重新登录');
   }
@@ -571,7 +581,7 @@ function jsonResponse(status, data, invalidJson = false) {
     duplicate.elements.pageActions.children[0].listeners.click();
     const form = findByClass(duplicate.elements.pageContent, 'article-editor');
     form.children[0].children[1].value = '防重复测试';
-    form.children[3].children[1].value = '正文';
+    findByClass(form, 'article-editor-content').value = '正文';
     const firstSubmit = form.listeners.submit({ preventDefault() {} });
     await form.listeners.submit({ preventDefault() {} });
     assert.strictEqual(postCount, 1);

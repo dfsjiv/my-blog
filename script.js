@@ -591,6 +591,48 @@ function createEditorField(labelText, control) {
   return label;
 }
 
+function createMarkdownWorkspace(contentInput) {
+  const field = document.createElement('div');
+  field.className = 'article-editor-field article-markdown-field';
+  const label = document.createElement('span');
+  label.textContent = '正文';
+
+  const workspace = document.createElement('div');
+  workspace.className = 'markdown-workspace';
+  const editorPane = document.createElement('section');
+  editorPane.className = 'markdown-pane markdown-editor-pane';
+  const editorTitle = document.createElement('div');
+  editorTitle.className = 'markdown-pane-title';
+  editorTitle.textContent = 'Markdown';
+  editorPane.append(editorTitle, contentInput);
+
+  const previewPane = document.createElement('section');
+  previewPane.className = 'markdown-pane markdown-preview-pane';
+  const previewTitle = document.createElement('div');
+  previewTitle.className = 'markdown-pane-title';
+  previewTitle.textContent = '预览';
+  const preview = document.createElement('div');
+  preview.className = 'article-body markdown-preview';
+  preview.setAttribute('aria-live', 'polite');
+  previewPane.append(previewTitle, preview);
+  workspace.append(editorPane, previewPane);
+  field.append(label, workspace);
+
+  function updatePreview() {
+    renderMarkdown(contentInput.value, preview);
+    if (!contentInput.value.trim()) {
+      const empty = document.createElement('p');
+      empty.className = 'markdown-preview-empty';
+      empty.textContent = '预览将在这里显示';
+      preview.appendChild(empty);
+    }
+  }
+
+  contentInput.addEventListener('input', updatePreview);
+  updatePreview();
+  return field;
+}
+
 function renderArticleCreate(pageKey) {
   const page = pageInfo[pageKey];
   if (!page || !page.category || !isCurrentUserAdmin()) return;
@@ -657,6 +699,7 @@ function renderArticleEditor(mode, pageKey, article) {
   const contentInput = document.createElement('textarea');
   contentInput.className = 'article-editor-input article-editor-content';
   contentInput.rows = 12;
+  contentInput.placeholder = '使用 Markdown 编写正文...';
   contentInput.value = isEdit && typeof article.content === 'string' ? article.content : '';
 
   const message = document.createElement('p');
@@ -698,7 +741,7 @@ function renderArticleEditor(mode, pageKey, article) {
     createEditorField('标题', titleInput),
     createEditorField('分类', categorySelect),
     createEditorField('摘要', summaryInput),
-    createEditorField('正文', contentInput),
+    createMarkdownWorkspace(contentInput),
     message,
     actions
   );
