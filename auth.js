@@ -1,8 +1,6 @@
 (function () {
   const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';
-  const TOKEN_KEY = 'blogAuthSessionToken';
-  const USER_KEY = 'blogAuthUser';
-  const EXPIRES_KEY = 'blogAuthExpiresAt';
+  const TOKEN_KEY = 'blog_session_token';
   const ACCOUNT_ROLES = new Set(['admin', 'user']);
 
   class AuthError extends Error {
@@ -33,6 +31,8 @@
       token: null,
       expiresAt: null,
       isAuthenticated: false,
+      isGuest: false,
+      isRestoring: false,
     };
 
     function readStorage(key) {
@@ -64,8 +64,6 @@
 
     function clearStoredSession() {
       removeStorage(TOKEN_KEY);
-      removeStorage(USER_KEY);
-      removeStorage(EXPIRES_KEY);
     }
 
     function clearState() {
@@ -73,6 +71,8 @@
       state.token = null;
       state.expiresAt = null;
       state.isAuthenticated = false;
+      state.isGuest = false;
+      state.isRestoring = false;
       clearStoredSession();
     }
 
@@ -93,10 +93,9 @@
       state.user = user;
       state.expiresAt = typeof expiresAt === 'string' ? expiresAt : null;
       state.isAuthenticated = true;
+      state.isGuest = false;
 
       writeStorage(TOKEN_KEY, token);
-      writeStorage(USER_KEY, JSON.stringify(user));
-      writeStorage(EXPIRES_KEY, state.expiresAt || '');
     }
 
     async function apiRequest(path, requestOptions) {
@@ -175,10 +174,11 @@
 
     function enterAsGuest() {
       clearStoredSession();
-      state.user = { username: 'Guest', role: 'guest' };
+      state.user = { id: null, username: 'Guest', role: 'guest' };
       state.token = null;
       state.expiresAt = null;
       state.isAuthenticated = true;
+      state.isGuest = true;
       return state.user;
     }
 
@@ -194,6 +194,7 @@
         return { success: false, reason: 'no_session' };
       }
 
+      state.isRestoring = true;
       try {
         const data = await apiRequest('/api/me', { token });
         const user = normalizeAccountUser(data.user);
@@ -208,6 +209,8 @@
           success: false,
           reason: error.status === 401 || error.status === 403 ? 'expired' : 'unavailable',
         };
+      } finally {
+        state.isRestoring = false;
       }
     }
 
@@ -244,6 +247,7 @@
       hasStoredToken,
       getCurrentUser,
       getRole,
+      getCurrentRole: getRole,
       isAdmin: function () { return getRole() === 'admin'; },
       isUser: function () { return getRole() === 'user'; },
       isGuest: function () { return getRole() === 'guest'; },
@@ -295,7 +299,15 @@
       window.homeDesktop.selectDesktopIcon(false);
     }
 
-    function showLogin(message) {
+    function updateUserIdentityUI(user) {
+      const roleLabel = user.role === 'admin'
+        ? 'Administrator'
+        : (user.role === 'user' ? '普通用户' : '游客模式');
+      elements.startUserName.textContent = user.username;
+      elements.startUserRole.textContent = roleLabel;
+    }
+
+    function showLoginScreen(message) {
       document.body.classList.remove('auth-pending', 'auth-desktop');
       document.body.classList.add('auth-login');
       elements.desktopShell.setAttribute('aria-hidden', 'true');
@@ -307,11 +319,7 @@
     }
 
     function showDesktop(user) {
-      const roleLabel = user.role === 'admin'
-        ? 'Administrator'
-        : (user.role === 'user' ? '普通用户' : '游客模式');
-      elements.startUserName.textContent = user.username;
-      elements.startUserRole.textContent = roleLabel;
+      updateUserIdentityUI(user);
       document.body.classList.remove('auth-pending', 'auth-login');
       document.body.classList.add('auth-desktop');
       elements.desktopShell.setAttribute('aria-hidden', 'false');
@@ -342,7 +350,7 @@
         const user = await auth.login(username, password);
         showDesktop(user);
       } catch (error) {
-        showLogin(error && error.message ? error.message : '无法连接服务器，请稍后重试');
+        showLoginScreen(error && error.message ? error.message : '无法连接服务器，请稍后重试');
       }
     });
 
@@ -358,14 +366,14 @@
       } finally {
         resetDesktopUi();
         elements.logoutButton.disabled = false;
-        showLogin('');
+        showLoginScreen('');
       }
     });
 
     (async function restoreOnStartup() {
       const hadToken = auth.hasStoredToken();
       if (!hadToken) {
-        showLogin('');
+        showLoginScreen('');
         return;
       }
 
@@ -374,15 +382,22 @@
       if (result.success) {
         showDesktop(result.user);
       } else {
-        showLogin(result.reason === 'expired'
+        showLoginScreen(result.reason === 'expired'
           ? '登录状态已失效，请重新登录'
           : '无法连接服务器，请稍后重试');
       }
     }());
+
+    window.authUi = {
+      showLoginScreen,
+      showDesktop,
+      updateUserIdentityUI,
+    };
   }
 
   window.BlogAuth = {
     API_BASE_URL,
+    TOKEN_KEY,
     AuthError,
     createAuthManager,
     initAuthUi,

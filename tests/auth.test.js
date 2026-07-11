@@ -61,6 +61,7 @@ function response(status, data, jsonError) {
 (async function run() {
   const BlogAuth = loadAuthModule();
   assert.ok(BlogAuth);
+  assert.strictEqual(BlogAuth.TOKEN_KEY, 'blog_session_token');
   assert.strictEqual(typeof BlogAuth.createAuthManager, 'function');
 
   {
@@ -95,8 +96,8 @@ function response(status, data, jsonError) {
     const user = await auth.login(' dfsjiv ', 'top-secret');
     assert.strictEqual(user.role, 'admin');
     assert.strictEqual(auth.isAdmin(), true);
-    assert.strictEqual(storage.values.blogAuthSessionToken, 'admin-token');
-    assert.strictEqual(storage.values.blogAuthExpiresAt, '2026-07-12T00:00:00Z');
+    assert.strictEqual(storage.values.blog_session_token, 'admin-token');
+    assert.strictEqual(auth.state.expiresAt, '2026-07-12T00:00:00Z');
     assert.strictEqual(request.url, BlogAuth.API_BASE_URL + '/api/login');
     assert.strictEqual(request.options.headers['Content-Type'], 'application/json');
     assert.deepStrictEqual(JSON.parse(request.options.body), {
@@ -113,11 +114,11 @@ function response(status, data, jsonError) {
       fetch: async () => response(401, { success: false, message: 'invalid' }),
     });
     await assert.rejects(auth.login('dfsjiv', 'wrong-password'), /用户名或密码错误/);
-    assert.strictEqual(storage.values.blogAuthSessionToken, undefined);
+    assert.strictEqual(storage.values.blog_session_token, undefined);
   }
 
   {
-    const storage = createStorage({ blogAuthSessionToken: 'user-token' });
+    const storage = createStorage({ blog_session_token: 'user-token' });
     let authorization;
     const auth = BlogAuth.createAuthManager({
       storage,
@@ -138,8 +139,7 @@ function response(status, data, jsonError) {
 
   {
     const storage = createStorage({
-      blogAuthSessionToken: 'invalid-token',
-      blogAuthUser: JSON.stringify({ username: 'fake', role: 'admin' }),
+      blog_session_token: 'invalid-token',
     });
     const auth = BlogAuth.createAuthManager({
       storage,
@@ -149,18 +149,18 @@ function response(status, data, jsonError) {
     assert.strictEqual(result.success, false);
     assert.strictEqual(result.reason, 'expired');
     assert.strictEqual(auth.getCurrentUser(), null);
-    assert.strictEqual(storage.values.blogAuthSessionToken, undefined);
-    assert.strictEqual(storage.values.blogAuthUser, undefined);
+    assert.strictEqual(storage.values.blog_session_token, undefined);
   }
 
   {
     const storage = createStorage();
     const auth = BlogAuth.createAuthManager({ storage, fetch: async () => response(200, {}) });
     const guest = auth.enterAsGuest();
+    assert.strictEqual(guest.id, null);
     assert.strictEqual(guest.username, 'Guest');
     assert.strictEqual(guest.role, 'guest');
     assert.strictEqual(auth.isGuest(), true);
-    assert.strictEqual(storage.values.blogAuthSessionToken, undefined);
+    assert.strictEqual(storage.values.blog_session_token, undefined);
   }
 
   {
@@ -182,7 +182,7 @@ function response(status, data, jsonError) {
     await auth.login('dfsjiv', 'secret');
     await assert.doesNotReject(auth.logout());
     assert.strictEqual(auth.getCurrentUser(), null);
-    assert.strictEqual(storage.values.blogAuthSessionToken, undefined);
+    assert.strictEqual(storage.values.blog_session_token, undefined);
   }
 
   {
