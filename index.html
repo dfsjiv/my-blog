@@ -73,12 +73,28 @@
     </div>
 
     <nav class="start-menu" id="startMenu" aria-label="开始菜单">
-      <button class="start-menu-app" id="startBlogButton" type="button">
-        <span class="start-menu-icon document-app-icon" aria-hidden="true">
-          <img src="assets/blog-icon.png" alt="" draggable="false" />
-        </span>
-        <span>博客</span>
-      </button>
+      <header class="start-menu-user">
+        <strong>dfsjiv</strong>
+        <span>个人博客</span>
+      </header>
+
+      <section class="start-menu-apps" aria-labelledby="startAppsTitle">
+        <h2 id="startAppsTitle">应用</h2>
+        <button class="start-menu-app" id="startBlogButton" type="button">
+          <span class="start-menu-icon document-app-icon" aria-hidden="true">
+            <img src="assets/blog-icon.png" alt="" draggable="false" />
+          </span>
+          <span class="start-menu-app-copy">
+            <strong>博客</strong>
+            <small id="startBlogStatus">文章、随笔与图片</small>
+          </span>
+        </button>
+      </section>
+
+      <div class="start-menu-actions">
+        <a class="start-menu-action" href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">GitHub</a>
+        <button class="start-menu-action" id="startThemeButton" type="button" aria-pressed="false">切换主题</button>
+      </div>
     </nav>
 
     <footer class="taskbar" aria-label="任务栏">

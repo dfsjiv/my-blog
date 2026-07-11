@@ -27,6 +27,8 @@
       startButton: doc.getElementById('startButton'),
       startMenu: doc.getElementById('startMenu'),
       startBlogButton: doc.getElementById('startBlogButton'),
+      startBlogStatus: doc.getElementById('startBlogStatus'),
+      startThemeButton: doc.getElementById('startThemeButton'),
       blogDesktopIcon: doc.getElementById('blogDesktopIcon'),
       blogTaskbarButton: doc.getElementById('blogTaskbarButton'),
       blogWindow: doc.getElementById('blogWindow'),
@@ -311,6 +313,12 @@
       setAttribute(elements.blogTaskbarButton, 'aria-pressed', state.open && !state.minimized ? 'true' : 'false');
       setAttribute(elements.windowMaximize, 'aria-label', state.maximized ? '还原' : '最大化');
 
+      if (elements.startBlogStatus) {
+        elements.startBlogStatus.textContent = state.open
+          ? (state.minimized ? '已最小化' : '正在运行')
+          : '文章、随笔与图片';
+      }
+
       if (state.open && elements.blogFrame && !elements.blogFrame.src) {
         elements.blogFrame.src = BLOG_URL;
       }
@@ -338,6 +346,20 @@
 
     function toggleStartMenu() {
       setStartMenuOpen(!state.startMenuOpen);
+    }
+
+    function toggleDesktopTheme() {
+      elements.desktopShell.classList.toggle(
+        'is-light-theme',
+        !elements.desktopShell.classList.contains('is-light-theme')
+      );
+      const lightTheme = elements.desktopShell.classList.contains('is-light-theme');
+      setAttribute(elements.startThemeButton, 'aria-pressed', lightTheme ? 'true' : 'false');
+
+      const frameDocument = elements.blogFrame && elements.blogFrame.contentDocument;
+      if (frameDocument && frameDocument.body) {
+        frameDocument.body.classList.toggle('dark', !lightTheme);
+      }
     }
 
     function openBlogWindow() {
@@ -602,6 +624,7 @@
         toggleStartMenu();
       });
       elements.startBlogButton.addEventListener('click', openBlogWindow);
+      elements.startThemeButton.addEventListener('click', toggleDesktopTheme);
       elements.blogTaskbarButton.addEventListener('click', toggleBlogFromTaskbar);
       elements.windowMinimize.addEventListener('click', minimizeBlogWindow);
       elements.windowMaximize.addEventListener('click', toggleMaximizeBlogWindow);

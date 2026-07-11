@@ -117,6 +117,8 @@ function makeElements() {
     startButton: new FakeElement('startButton'),
     startMenu: new FakeElement('startMenu'),
     startBlogButton: new FakeElement('startBlogButton'),
+    startBlogStatus: new FakeElement('startBlogStatus'),
+    startThemeButton: new FakeElement('startThemeButton'),
     blogDesktopIcon: new FakeElement('blogDesktopIcon'),
     blogTaskbarButton: new FakeElement('blogTaskbarButton'),
     blogWindow: new FakeElement('blogWindow'),
@@ -220,6 +222,7 @@ assert.strictEqual(elements.blogWindow.classList.contains('is-hidden'), false);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-active'), true);
 assert.strictEqual(elements.blogFrame.src, 'blog.html');
+assert.strictEqual(elements.startBlogStatus.textContent, '正在运行');
 
 assert.strictEqual(typeof elements.resizeSE.listeners.pointerdown, 'function');
 elements.resizeSE.listeners.pointerdown({
@@ -257,6 +260,7 @@ controller.minimizeBlogWindow();
 assert.strictEqual(elements.blogWindow.classList.contains('is-minimized'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-active'), false);
+assert.strictEqual(elements.startBlogStatus.textContent, '已最小化');
 
 controller.toggleBlogFromTaskbar();
 assert.strictEqual(elements.blogWindow.classList.contains('is-minimized'), false);
@@ -272,6 +276,10 @@ assert.strictEqual(elements.startMenu.classList.contains('is-open'), true);
 controller.closeStartMenu();
 assert.strictEqual(elements.startMenu.classList.contains('is-open'), false);
 
+elements.startThemeButton.listeners.click();
+assert.strictEqual(elements.desktopShell.classList.contains('is-light-theme'), true);
+assert.strictEqual(elements.startThemeButton.getAttribute('aria-pressed'), 'true');
+
 controller.moveWindowTo(-200, -200);
 assert.strictEqual(elements.blogWindow.style.left, '0px');
 assert.strictEqual(elements.blogWindow.style.top, '0px');
@@ -283,6 +291,7 @@ assert.ok(parseInt(elements.blogWindow.style.top, 10) <= 768 - 40 - 220);
 controller.closeBlogWindow();
 assert.strictEqual(elements.blogWindow.classList.contains('is-hidden'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), false);
+assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图片');
 
 {
   const indexHtml = fs.readFileSync(indexPath, 'utf8');
@@ -296,6 +305,8 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 4);
+  assert.match(indexHtml, /id="startBlogStatus"/);
+  assert.match(indexHtml, /id="startThemeButton"/);
   assert.doesNotMatch(indexHtml, /document-app-icon[\s\S]*?<svg/);
 }
 

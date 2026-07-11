@@ -25,6 +25,13 @@ body.is-desktop .desktop-shell {
     linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
 }
 
+body.is-desktop .desktop-shell.is-light-theme {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
+    linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.22) 42% 44%, transparent 44% 100%),
+    linear-gradient(135deg, #5ba3c7 0%, #347eaa 48%, #1f5f88 100%);
+}
+
 .desktop-surface {
   position: absolute;
   inset: 0 0 40px;
@@ -266,46 +273,175 @@ body.is-desktop .desktop-shell {
 
 .start-menu {
   position: absolute;
-  left: 0;
-  bottom: 40px;
-  width: 320px;
-  height: 420px;
-  display: none;
-  padding: 10px 0;
-  background: rgba(31, 31, 31, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.34);
-  z-index: 50;
+  left: 6px;
+  bottom: 46px;
+  width: clamp(340px, 28vw, 370px);
+  height: clamp(420px, 62vh, 480px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  background: rgba(28, 28, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.24), 0 -10px 28px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 150ms ease, transform 150ms ease, visibility 150ms;
+  z-index: 70;
 }
 
 .start-menu.is-open {
-  display: block;
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.start-menu-user {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 82px;
+  padding: 17px 22px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.start-menu-user strong {
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.start-menu-user span {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+}
+
+.start-menu-apps {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 14px;
+}
+
+.start-menu-apps h2 {
+  margin: 0 8px 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .start-menu-app {
   width: 100%;
-  height: 44px;
+  min-height: 68px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 18px;
-  border: 0;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
   border-radius: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.035);
   color: #ffffff;
   font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
   text-align: left;
   cursor: default;
 }
 
-.start-menu-app:hover {
+.start-menu-app:hover,
+.start-menu-app:focus-visible {
   background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.1);
+  outline: none;
 }
 
 .start-menu-icon {
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
+}
+
+.start-menu-app-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.start-menu-app-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.start-menu-app-copy small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-menu-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 50px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.start-menu-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font: 13px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  text-decoration: none;
+  cursor: default;
+}
+
+.start-menu-action:last-child {
+  border-right: 0;
+}
+
+.start-menu-action:hover,
+.start-menu-action:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.desktop-shell.is-light-theme .taskbar {
+  background: rgba(238, 238, 238, 0.94);
+  border-top-color: rgba(0, 0, 0, 0.16);
+}
+
+.desktop-shell.is-light-theme .start-button,
+.desktop-shell.is-light-theme .taskbar-app,
+.desktop-shell.is-light-theme .taskbar-clock {
+  color: #151515;
+}
+
+.desktop-shell.is-light-theme .windows-mark span {
+  background: #151515;
+}
+
+@media (max-height: 560px) {
+  .start-menu {
+    height: calc(100vh - 52px);
+  }
+}
+
+@media (max-width: 390px) {
+  .start-menu {
+    left: 0;
+    width: 100vw;
+  }
 }
 
 .taskbar {
