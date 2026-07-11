@@ -276,7 +276,7 @@ body.is-desktop .desktop-shell.is-light-theme {
   left: 6px;
   bottom: 46px;
   width: clamp(340px, 28vw, 370px);
-  height: clamp(420px, 62vh, 480px);
+  height: clamp(320px, 46vh, 350px);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -358,6 +358,10 @@ body.is-desktop .desktop-shell.is-light-theme {
   outline: none;
 }
 
+.start-menu-app:active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
 .start-menu-icon {
   width: 40px;
   height: 40px;
@@ -433,7 +437,7 @@ body.is-desktop .desktop-shell.is-light-theme {
 
 @media (max-height: 560px) {
   .start-menu {
-    height: calc(100vh - 52px);
+    height: min(320px, calc(100vh - 52px));
   }
 }
 

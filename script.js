@@ -5,12 +5,6 @@ const pageInfo = {
     content: `
       <h2>欢迎来到我的博客</h2>
       <p>这里记录算法、计算机技术、个人随笔以及一些其他内容。所有文章都来自日常学习、实践和思考。</p>
-      <h3>最近更新</h3>
-      <ul class="update-list">
-        <li class="update-item"><time class="update-date">2026.07.11</time><span>二分查找</span></li>
-        <li class="update-item"><time class="update-date">2026.07.09</time><span>图与拓扑排序</span></li>
-        <li class="update-item"><time class="update-date">2026.07.07</time><span>文件系统学习记录</span></li>
-      </ul>
       <h3>技术标签</h3>
       <ul class="tech-tags">
         <li>算法</li><li>数据结构</li><li>计算机系统</li><li>网络</li><li>开发实践</li>
