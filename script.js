@@ -462,16 +462,21 @@ async function publishArticle(event, fields) {
   event.preventDefault();
   if (blogState.publishing) return;
 
+  if (!isCurrentUserAdmin()) {
+    setEditorMessage(fields, '无管理员权限');
+    return;
+  }
+
   const title = fields.titleInput.value.trim();
   const summary = fields.summaryInput.value.trim();
-  const content = fields.contentInput.value.trim();
+  const content = fields.contentInput.value;
   const category = fields.categorySelect.value;
   if (!title) {
     setEditorMessage(fields, '请输入文章标题');
     fields.titleInput.focus();
     return;
   }
-  if (!content) {
+  if (!content.trim()) {
     setEditorMessage(fields, '请输入文章正文');
     fields.contentInput.focus();
     return;

@@ -250,12 +250,31 @@ function jsonResponse(status, data, invalidJson = false) {
   assert.match(textTree(invalidJson.elements.pageContent), /无法加载文章，请稍后重试/);
 
   {
+    let userRequests = 0;
     const user = createContext(
-      async () => jsonResponse(200, { success: true, articles: [] }),
+      async () => {
+        userRequests += 1;
+        return jsonResponse(200, { success: true, articles: [] });
+      },
       { authManager: { state: { token: 'user-token' }, isAdmin() { return false; } } }
     );
     await user.window.BlogContent.loadArticleList('algorithm', { force: true });
     assert.strictEqual(user.elements.pageActions.children.length, 0, 'user should not see create action');
+    const fields = {
+      titleInput: new FakeElement('input'),
+      categorySelect: new FakeElement('select'),
+      summaryInput: new FakeElement('textarea'),
+      contentInput: new FakeElement('textarea'),
+      message: new FakeElement('p'),
+      cancelButton: new FakeElement('button'),
+      publishButton: new FakeElement('button'),
+    };
+    fields.titleInput.value = '不应发布';
+    fields.categorySelect.value = 'algorithm';
+    fields.contentInput.value = '正文';
+    await user.window.BlogContent.publishArticle({ preventDefault() {} }, fields);
+    assert.strictEqual(fields.message.textContent, '无管理员权限');
+    assert.strictEqual(userRequests, 1, 'user publish must not send a POST request');
   }
 
   {
@@ -332,7 +351,7 @@ function jsonResponse(status, data, invalidJson = false) {
 
     categorySelect.value = 'algorithm';
     summaryInput.value = '记录 Fenwick Tree 的基本思想。';
-    contentInput.value = '这是测试正文。';
+    contentInput.value = '这是测试正文。\n第二行\n';
     await form.listeners.submit({ preventDefault() {} });
 
     const post = adminRequests.find((request) => request.options.method === 'POST');
@@ -341,7 +360,7 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.deepStrictEqual(JSON.parse(post.options.body), {
       title: '树状数组学习记录',
       summary: '记录 Fenwick Tree 的基本思想。',
-      content: '这是测试正文。',
+      content: '这是测试正文。\n第二行\n',
       category: 'algorithm',
     });
     assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
