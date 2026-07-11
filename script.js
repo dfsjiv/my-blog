@@ -54,6 +54,7 @@ const blogState = {
   publishing: false,
   deleting: false,
   deleteDialog: null,
+  readingCleanup: null,
 };
 
 const sidebar = document.getElementById('sidebar');
@@ -186,11 +187,19 @@ function setActiveNavigation(pageKey) {
 }
 
 function createContentShell() {
+  cleanupReadingEnhancements();
   const article = document.createElement('article');
   article.className = 'card';
   pageContent.replaceChildren(article);
   pageContent.scrollTop = 0;
   return article;
+}
+
+function cleanupReadingEnhancements() {
+  if (typeof blogState.readingCleanup === 'function') {
+    blogState.readingCleanup();
+  }
+  blogState.readingCleanup = null;
 }
 
 function renderStatus(message, className) {
@@ -271,9 +280,35 @@ function appendInlineMarkdown(container, text) {
   }
 }
 
+function createHeadingId(text, slugCounts) {
+  const normalized = String(text || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[`*_]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}_-]/gu, '') || 'section';
+  const count = (slugCounts[normalized] || 0) + 1;
+  slugCounts[normalized] = count;
+  return count === 1 ? normalized : normalized + '-' + count;
+}
+
+async function copyCodeText(text, button) {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard');
+    await navigator.clipboard.writeText(text);
+    button.textContent = '已复制';
+  } catch (error) {
+    button.textContent = '复制失败';
+  }
+  window.setTimeout(() => { button.textContent = '复制'; }, 1500);
+}
+
 function renderMarkdown(markdown, container) {
   container.replaceChildren();
   const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+  const headings = [];
+  const slugCounts = {};
   let paragraphLines = [];
   let codeLines = [];
   let codeLanguage = '';
@@ -289,10 +324,17 @@ function renderMarkdown(markdown, container) {
 
   function flushCodeBlock() {
     const pre = document.createElement('pre');
+    pre.className = 'markdown-code-block';
     const code = document.createElement('code');
+    const codeText = codeLines.join('\n');
     if (codeLanguage) code.setAttribute('data-language', codeLanguage);
-    code.textContent = codeLines.join('\n');
-    pre.appendChild(code);
+    code.textContent = codeText;
+    const copyButton = document.createElement('button');
+    copyButton.className = 'code-copy-button';
+    copyButton.type = 'button';
+    copyButton.textContent = '复制';
+    copyButton.addEventListener('click', () => copyCodeText(codeText, copyButton));
+    pre.append(copyButton, code);
     container.appendChild(pre);
     codeLines = [];
     codeLanguage = '';
@@ -324,8 +366,16 @@ function renderMarkdown(markdown, container) {
     if (heading) {
       flushParagraph();
       const element = document.createElement('h' + heading[1].length);
+      const headingText = heading[2].replace(/[`*_]/g, '').trim();
+      element.id = createHeadingId(headingText, slugCounts);
       appendInlineMarkdown(element, heading[2]);
       container.appendChild(element);
+      headings.push({
+        id: element.id,
+        level: heading[1].length,
+        text: headingText,
+        element,
+      });
       return;
     }
     paragraphLines.push(line.trim());
@@ -333,6 +383,95 @@ function renderMarkdown(markdown, container) {
 
   flushParagraph();
   if (inCodeBlock || codeLines.length) flushCodeBlock();
+  return headings;
+}
+
+function createArticleToc(headings, mobile) {
+  const container = document.createElement(mobile ? 'details' : 'aside');
+  container.className = mobile ? 'article-toc-mobile' : 'article-toc-desktop';
+  if (mobile) {
+    const summary = document.createElement('summary');
+    summary.textContent = '文章目录';
+    container.appendChild(summary);
+  } else {
+    const title = document.createElement('div');
+    title.className = 'article-toc-title';
+    title.textContent = '文章目录';
+    container.appendChild(title);
+  }
+
+  const nav = document.createElement('nav');
+  nav.className = 'article-toc-nav';
+  const links = [];
+  headings.forEach((heading) => {
+    const link = document.createElement('a');
+    link.className = 'article-toc-link level-' + heading.level;
+    link.href = '#' + heading.id;
+    link.textContent = heading.text;
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (heading.element.scrollIntoView) {
+        heading.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (mobile) container.open = false;
+    });
+    nav.appendChild(link);
+    links.push({ id: heading.id, link });
+  });
+  container.appendChild(nav);
+  return { element: container, links };
+}
+
+function setupReadingEnhancements(headings, tocGroups) {
+  const progress = document.createElement('div');
+  progress.className = 'reading-progress';
+  progress.setAttribute('aria-hidden', 'true');
+  const progressValue = document.createElement('span');
+  progress.appendChild(progressValue);
+  document.body.appendChild(progress);
+
+  let frameId = null;
+  function updateProgress() {
+    frameId = null;
+    const maxScroll = Math.max(0, pageContent.scrollHeight - pageContent.clientHeight);
+    const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, pageContent.scrollTop / maxScroll)) : 0;
+    progressValue.style.width = Math.round(ratio * 100) + '%';
+  }
+  function handleScroll() {
+    if (frameId !== null) return;
+    const schedule = window.requestAnimationFrame || function (callback) { callback(); return 0; };
+    frameId = schedule(updateProgress);
+  }
+  pageContent.addEventListener('scroll', handleScroll, { passive: true });
+  updateProgress();
+
+  const allLinks = tocGroups.flatMap((group) => group.links);
+  function setActiveHeading(id) {
+    allLinks.forEach((item) => item.link.classList.toggle('active', item.id === id));
+  }
+  if (headings.length) setActiveHeading(headings[0].id);
+
+  let observer = null;
+  if (headings.length && window.IntersectionObserver) {
+    observer = new window.IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible.length) setActiveHeading(visible[0].target.id);
+    }, {
+      root: pageContent,
+      rootMargin: '-8% 0px -76% 0px',
+      threshold: [0, 1],
+    });
+    headings.forEach((heading) => observer.observe(heading.element));
+  }
+
+  blogState.readingCleanup = function () {
+    pageContent.removeEventListener('scroll', handleScroll);
+    if (observer) observer.disconnect();
+    if (frameId !== null && window.cancelAnimationFrame) window.cancelAnimationFrame(frameId);
+    progress.remove();
+  };
 }
 
 function renderArticleList(pageKey, articles) {
@@ -440,9 +579,27 @@ function renderArticleDetail(article) {
 
   const body = document.createElement('div');
   body.className = 'article-body';
-  renderMarkdown(typeof article.content === 'string' ? article.content : '', body);
+  const headings = renderMarkdown(typeof article.content === 'string' ? article.content : '', body);
 
-  shell.append(back, title, createArticleMeta(article), body);
+  const main = document.createElement('div');
+  main.className = 'article-detail-main';
+  main.append(title, createArticleMeta(article), body);
+
+  const layout = document.createElement('div');
+  layout.className = 'article-detail-layout';
+  const tocGroups = [];
+  if (headings.length) {
+    const desktopToc = createArticleToc(headings, false);
+    const mobileToc = createArticleToc(headings, true);
+    layout.append(main, desktopToc.element);
+    shell.append(back, mobileToc.element, layout);
+    tocGroups.push(desktopToc, mobileToc);
+  } else {
+    layout.appendChild(main);
+    shell.append(back, layout);
+  }
+
+  setupReadingEnhancements(headings, tocGroups);
 }
 
 function renderArticleAdminActions(article) {

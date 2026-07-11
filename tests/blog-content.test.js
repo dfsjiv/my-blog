@@ -50,6 +50,9 @@ class FakeElement {
   addEventListener(name, handler) {
     this.listeners[name] = handler;
   }
+  removeEventListener(name, handler) {
+    if (this.listeners[name] === handler) delete this.listeners[name];
+  }
   setAttribute(name, value) {
     this.attributes[name] = String(value);
   }
@@ -211,7 +214,7 @@ function jsonResponse(status, data, invalidJson = false) {
         article: {
           id: 1,
           title: '二分查找学习记录',
-          content: '第一行\n<script>bad()</script>\n第三行',
+          content: '# 二分查找\n\n## 注意事项\n\n第一行\n<script>bad()</script>\n第三行\n\n## 注意事项',
           author: 'admin',
           created_at: '2026-07-11 04:56:15',
         },
@@ -251,12 +254,23 @@ function jsonResponse(status, data, invalidJson = false) {
   assert.strictEqual(BlogContent.blogState.currentSection, 'article-detail');
   assert.strictEqual(navItems[1].classList.contains('active'), true);
   assert.strictEqual(elements.pageActions.children.length, 0, 'guest should not see edit action');
+  const articleBody = findByClass(elements.pageContent, 'article-body');
+  assert.strictEqual(findByTag(articleBody, 'h1').id, '二分查找');
+  const desktopToc = findByClass(elements.pageContent, 'article-toc-desktop');
+  const tocNav = findByClass(desktopToc, 'article-toc-nav');
+  assert.strictEqual(tocNav.children.length, 3);
+  assert.strictEqual(tocNav.children[0].href, '#二分查找');
+  assert.strictEqual(tocNav.children[1].href, '#注意事项');
+  assert.strictEqual(tocNav.children[2].href, '#注意事项-2');
+  assert.strictEqual(tocNav.children[0].classList.contains('active'), true);
+  assert.ok(findByClass(window.document.body, 'reading-progress'));
 
   const backButton = findByClass(elements.pageContent, 'article-back');
   backButton.listeners.click();
   assert.strictEqual(BlogContent.blogState.currentSection, 'article-list');
   assert.match(textTree(elements.pageContent), /整数二分与边界处理/);
   assert.strictEqual(requests.length, 2, 'return should use the cached list');
+  assert.strictEqual(findByClass(window.document.body, 'reading-progress'), null);
 
   await BlogContent.loadArticleList('tech', { force: true });
   assert.match(textTree(elements.pageContent), /暂无文章/);
@@ -664,6 +678,7 @@ function jsonResponse(status, data, invalidJson = false) {
     const code = findByTag(findByTag(markdownContainer, 'pre'), 'code');
     assert.strictEqual(code.textContent, 'int main() {}');
     assert.strictEqual(code.attributes['data-language'], 'cpp');
+    assert.strictEqual(findByClass(markdownContainer, 'code-copy-button').textContent, '复制');
   }
 
   const css = fs.readFileSync(stylePath, 'utf8');
