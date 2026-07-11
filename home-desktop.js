@@ -6,6 +6,7 @@
   const DEFAULT_ICON_HEIGHT = 88;
   const ICON_DRAG_THRESHOLD = 3;
   const BLOG_URL = 'blog.html';
+  const STORAGE_KEY = 'myBlogDesktopState';
 
   function padTime(value) {
     return String(value).padStart(2, '0');
@@ -18,6 +19,31 @@
   function readPixelValue(value) {
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function readStoredState(storage) {
+    if (!storage) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(storage.getItem(STORAGE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function writeStoredState(storage, updates) {
+    if (!storage) {
+      return;
+    }
+
+    try {
+      storage.setItem(STORAGE_KEY, JSON.stringify(Object.assign({}, readStoredState(storage), updates)));
+    } catch (error) {
+      // Storage may be unavailable or full; the desktop must continue with defaults.
+    }
   }
 
   function readElements(doc) {
@@ -218,6 +244,14 @@
     const now = settings.now || function () {
       return new Date();
     };
+    let storage = settings.storage || null;
+    if (!storage && settings.storage !== null) {
+      try {
+        storage = window.localStorage;
+      } catch (error) {
+        storage = null;
+      }
+    }
 
     const state = {
       initialized: false,
@@ -276,6 +310,43 @@
 
       state.bounds = normalizeBounds(state.bounds);
       return state.bounds;
+    }
+
+    function restorePersistentState() {
+      const saved = readStoredState(storage);
+      const savedWindow = saved.window;
+
+      if (savedWindow && typeof savedWindow === 'object') {
+        const values = [savedWindow.x, savedWindow.y, savedWindow.width, savedWindow.height];
+        if (values.every(Number.isFinite)) {
+          state.bounds = normalizeBounds({
+            left: savedWindow.x,
+            top: savedWindow.y,
+            width: savedWindow.width,
+            height: savedWindow.height,
+          });
+        }
+        if (typeof savedWindow.maximized === 'boolean') {
+          state.maximized = savedWindow.maximized;
+        }
+      }
+
+      const lightTheme = saved.theme === 'light';
+      setElementState(elements.desktopShell, 'is-light-theme', lightTheme);
+      setAttribute(elements.startThemeButton, 'aria-pressed', lightTheme ? 'true' : 'false');
+    }
+
+    function saveWindowState() {
+      const bounds = ensureBounds();
+      writeStoredState(storage, {
+        window: {
+          x: bounds.left,
+          y: bounds.top,
+          width: bounds.width,
+          height: bounds.height,
+          maximized: state.maximized,
+        },
+      });
     }
 
     function applyWindowBounds() {
@@ -355,6 +426,7 @@
       );
       const lightTheme = elements.desktopShell.classList.contains('is-light-theme');
       setAttribute(elements.startThemeButton, 'aria-pressed', lightTheme ? 'true' : 'false');
+      writeStoredState(storage, { theme: lightTheme ? 'light' : 'dark' });
 
       const frameDocument = elements.blogFrame && elements.blogFrame.contentDocument;
       if (frameDocument && frameDocument.body) {
@@ -396,6 +468,7 @@
       state.maximized = false;
       state.restoreBounds = null;
       updateBlogWindowState();
+      saveWindowState();
     }
 
     function toggleBlogFromTaskbar() {
@@ -427,6 +500,7 @@
       }
 
       updateBlogWindowState();
+      saveWindowState();
     }
 
     function moveWindowTo(left, top) {
@@ -530,6 +604,7 @@
     function stopDrag() {
       state.drag = null;
       setElementState(elements.blogWindow, 'is-dragging', false);
+      saveWindowState();
       if (document.removeEventListener) {
         document.removeEventListener('pointermove', handleDragMove);
       }
@@ -580,6 +655,7 @@
     function stopResize() {
       state.resize = null;
       setElementState(elements.blogWindow, 'is-resizing', false);
+      saveWindowState();
       if (document.removeEventListener) {
         document.removeEventListener('pointermove', handleResizeMove);
       }
@@ -658,6 +734,7 @@
         if (!state.maximized) {
           ensureBounds();
           applyWindowBounds();
+          saveWindowState();
         }
       });
     }
@@ -668,6 +745,7 @@
       }
 
       state.initialized = true;
+      restorePersistentState();
       ensureBounds();
       updateClock();
       updateBlogWindowState();

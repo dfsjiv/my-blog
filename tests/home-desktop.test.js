@@ -294,6 +294,67 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
 assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图片');
 
 {
+  const values = {
+    myBlogDesktopState: JSON.stringify({
+      theme: 'light',
+      blogPage: 'algorithm',
+      window: { x: 9999, y: -80, width: 700, height: 500, maximized: true },
+    }),
+  };
+  const storage = {
+    getItem(key) {
+      return values[key] || null;
+    },
+    setItem(key, value) {
+      values[key] = value;
+    },
+  };
+  const restoredElements = makeElements();
+  const restoredController = window.HomeDesktop.createDesktopController(restoredElements, {
+    viewport: () => ({ width: 900, height: 640 }),
+    storage,
+  });
+
+  restoredController.init();
+  const restoredState = restoredController.getState();
+  assert.strictEqual(restoredState.maximized, true);
+  assert.strictEqual(restoredState.bounds.left, 200);
+  assert.strictEqual(restoredState.bounds.top, 0);
+  assert.strictEqual(restoredElements.desktopShell.classList.contains('is-light-theme'), true);
+
+  restoredController.openBlogWindow();
+  restoredController.toggleMaximizeBlogWindow();
+  restoredController.moveWindowTo(50, 60);
+  restoredController.resizeWindowFromEdge('se', -100, -80);
+  restoredController.closeBlogWindow();
+
+  restoredElements.startThemeButton.listeners.click();
+  const saved = JSON.parse(values.myBlogDesktopState);
+  assert.strictEqual(saved.theme, 'dark');
+  assert.strictEqual(saved.blogPage, 'algorithm');
+  assert.deepStrictEqual(saved.window, {
+    x: 50,
+    y: 60,
+    width: 600,
+    height: 420,
+    maximized: false,
+  });
+}
+
+{
+  const invalidElements = makeElements();
+  const invalidController = window.HomeDesktop.createDesktopController(invalidElements, {
+    viewport: () => ({ width: 900, height: 640 }),
+    storage: {
+      getItem() { return '{invalid'; },
+      setItem() {},
+    },
+  });
+  assert.doesNotThrow(() => invalidController.init());
+  assert.strictEqual(invalidController.getState().maximized, false);
+}
+
+{
   const indexHtml = fs.readFileSync(indexPath, 'utf8');
   assert.match(indexHtml, /id="desktopShell"/);
   assert.match(indexHtml, /id="blogWindow"/);

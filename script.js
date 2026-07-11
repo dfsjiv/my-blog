@@ -33,6 +33,25 @@ const pageInfo = {
   },
 };
 
+const STORAGE_KEY = 'myBlogDesktopState';
+
+function readStoredState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveStoredState(updates) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.assign({}, readStoredState(), updates)));
+  } catch (error) {
+    // Keep navigation usable when storage is unavailable or contains invalid data.
+  }
+}
+
 const sidebar = document.getElementById('sidebar');
 const toggleBtn = document.getElementById('toggleBtn');
 const themeToggle = document.getElementById('themeToggle');
@@ -41,7 +60,7 @@ const pageTitle = document.getElementById('pageTitle');
 const pageSummary = document.getElementById('pageSummary');
 const pageContent = document.getElementById('pageContent');
 
-function setPage(pageKey) {
+function setPage(pageKey, persist = true) {
   const page = pageInfo[pageKey];
   if (!page) return;
 
@@ -63,6 +82,10 @@ function setPage(pageKey) {
   navItems.forEach((item) => {
     item.classList.toggle('active', item.dataset.page === pageKey);
   });
+
+  if (persist) {
+    saveStoredState({ blogPage: pageKey });
+  }
 }
 
 navItems.forEach((item) => {
@@ -75,7 +98,9 @@ toggleBtn.addEventListener('click', () => {
 
 themeToggle.addEventListener('click', () => {
   document.body.classList.toggle('dark');
+  saveStoredState({ theme: document.body.classList.contains('dark') ? 'dark' : 'light' });
 });
 
-document.body.classList.add('dark');
-setPage('home');
+const storedState = readStoredState();
+document.body.classList.toggle('dark', storedState.theme !== 'light');
+setPage(pageInfo[storedState.blogPage] ? storedState.blogPage : 'home', false);
