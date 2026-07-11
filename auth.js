@@ -282,7 +282,9 @@
       elements.password.disabled = pending;
       elements.loginButton.disabled = pending;
       elements.guestButton.disabled = pending;
-      elements.loginButton.textContent = pending ? '正在登录...' : '登录';
+      elements.loginButton.textContent = pending ? '' : '→';
+      elements.loginButton.classList.toggle('is-loading', pending);
+      elements.loginButton.setAttribute('aria-label', pending ? '正在登录' : '登录');
       setMessage(message || '', pending);
     }
 
@@ -335,7 +337,7 @@
         return;
       }
 
-      setLoginPending(true, '正在登录...');
+      setLoginPending(true, '');
       try {
         const user = await auth.login(username, password);
         showDesktop(user);

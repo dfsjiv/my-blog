@@ -42,20 +42,27 @@
   <main class="login-screen" id="loginScreen" aria-label="登录">
     <div class="login-panel">
       <img class="login-avatar" src="assets/blog-icon.png" alt="" draggable="false" />
-      <h1>欢迎</h1>
+      <h1>账户登录</h1>
       <form class="login-form" id="loginForm" novalidate>
         <label class="login-field">
           <span>用户名</span>
-          <input id="loginUsername" name="username" type="text" autocomplete="username" />
+          <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="用户名" />
         </label>
-        <label class="login-field">
-          <span>密码</span>
-          <input id="loginPassword" name="password" type="password" autocomplete="current-password" />
-        </label>
+        <div class="login-password-row">
+          <label class="login-field login-password-field">
+            <span>密码</span>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="密码" />
+          </label>
+          <button class="login-submit" id="loginButton" type="submit" aria-label="登录">→</button>
+        </div>
         <p class="login-message" id="loginMessage" role="alert" aria-live="polite"></p>
-        <button class="login-primary" id="loginButton" type="submit">登录</button>
-        <button class="login-guest" id="guestButton" type="button">游客进入</button>
+        <button class="login-guest" id="guestButton" type="button">以游客身份进入</button>
       </form>
+    </div>
+    <div class="login-system-icons" aria-label="系统状态">
+      <span class="login-system-icon network-icon" title="网络" aria-label="网络"><i></i><i></i><i></i></span>
+      <span class="login-system-icon accessibility-icon" title="辅助功能" aria-label="辅助功能">♿</span>
+      <span class="login-system-icon power-icon" title="电源" aria-label="电源">⏻</span>
     </div>
   </main>
 
