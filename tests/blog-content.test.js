@@ -100,6 +100,15 @@ function findByClass(element, className) {
   return null;
 }
 
+function findByTag(element, tagName) {
+  if (element.tagName === tagName.toUpperCase()) return element;
+  for (const child of element.children) {
+    const match = findByTag(child, tagName);
+    if (match) return match;
+  }
+  return null;
+}
+
 function createContext(fetchImpl, options = {}) {
   const elements = {
     sidebar: new FakeElement('aside', 'sidebar'),
@@ -125,6 +134,11 @@ function createContext(fetchImpl, options = {}) {
     },
     createElement(tagName) {
       return new FakeElement(tagName);
+    },
+    createTextNode(text) {
+      const node = new FakeElement('#text');
+      node.textContent = String(text);
+      return node;
     },
   };
   const storageValues = {};
@@ -230,7 +244,9 @@ function jsonResponse(status, data, invalidJson = false) {
   await titleButton.listeners.click();
   assert.ok(requests[1].endsWith('/api/articles/1'));
   const detailText = textTree(elements.pageContent);
-  assert.match(detailText, /第一行\n<script>bad\(\)<\/script>\n第三行/);
+  assert.match(detailText, /第一行/);
+  assert.match(detailText, /<script>bad\(\)<\/script>/);
+  assert.strictEqual(findByTag(elements.pageContent, 'script'), null);
   assert.strictEqual(elements.pageContent.innerHTML, '');
   assert.strictEqual(BlogContent.blogState.currentSection, 'article-detail');
   assert.strictEqual(navItems[1].classList.contains('active'), true);
@@ -621,6 +637,23 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(missingArticle.window.BlogContent.blogState.currentSection, 'article-list');
     assert.strictEqual(missingArticle.window.BlogContent.blogState.currentCategory, 'essay');
     assert.strictEqual(findByClass(missingArticle.window.document.body, 'delete-confirm-dialog'), null);
+  }
+
+  {
+    const markdownContainer = new FakeElement('div');
+    BlogContent.renderMarkdown(
+      '# 一级标题\n\n## 二级标题\n\n### 三级标题\n\n**粗体**、*斜体*、`行内代码`\n\n```cpp\nint main() {}\n```',
+      markdownContainer
+    );
+    assert.ok(findByTag(markdownContainer, 'h1'));
+    assert.ok(findByTag(markdownContainer, 'h2'));
+    assert.ok(findByTag(markdownContainer, 'h3'));
+    assert.ok(findByTag(markdownContainer, 'strong'));
+    assert.ok(findByTag(markdownContainer, 'em'));
+    assert.ok(findByTag(markdownContainer, 'pre'));
+    const code = findByTag(findByTag(markdownContainer, 'pre'), 'code');
+    assert.strictEqual(code.textContent, 'int main() {}');
+    assert.strictEqual(code.attributes['data-language'], 'cpp');
   }
 
   const css = fs.readFileSync(stylePath, 'utf8');

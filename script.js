@@ -243,6 +243,98 @@ function createArticleMeta(article) {
   return meta;
 }
 
+function appendInlineMarkdown(container, text) {
+  const pattern = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+    const token = match[0];
+    let element;
+    if (token.startsWith('`')) {
+      element = document.createElement('code');
+      element.textContent = token.slice(1, -1);
+    } else if (token.startsWith('**')) {
+      element = document.createElement('strong');
+      element.textContent = token.slice(2, -2);
+    } else {
+      element = document.createElement('em');
+      element.textContent = token.slice(1, -1);
+    }
+    container.appendChild(element);
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
+function renderMarkdown(markdown, container) {
+  container.replaceChildren();
+  const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+  let paragraphLines = [];
+  let codeLines = [];
+  let codeLanguage = '';
+  let inCodeBlock = false;
+
+  function flushParagraph() {
+    if (!paragraphLines.length) return;
+    const paragraph = document.createElement('p');
+    appendInlineMarkdown(paragraph, paragraphLines.join(' '));
+    container.appendChild(paragraph);
+    paragraphLines = [];
+  }
+
+  function flushCodeBlock() {
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    if (codeLanguage) code.setAttribute('data-language', codeLanguage);
+    code.textContent = codeLines.join('\n');
+    pre.appendChild(code);
+    container.appendChild(pre);
+    codeLines = [];
+    codeLanguage = '';
+  }
+
+  lines.forEach((line) => {
+    const fence = line.match(/^```\s*([\w+-]*)\s*$/);
+    if (fence) {
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        flushParagraph();
+        inCodeBlock = true;
+        codeLanguage = fence[1] || '';
+      }
+      return;
+    }
+    if (inCodeBlock) {
+      codeLines.push(line);
+      return;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      return;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      const element = document.createElement('h' + heading[1].length);
+      appendInlineMarkdown(element, heading[2]);
+      container.appendChild(element);
+      return;
+    }
+    paragraphLines.push(line.trim());
+  });
+
+  flushParagraph();
+  if (inCodeBlock || codeLines.length) flushCodeBlock();
+}
+
 function renderArticleList(pageKey, articles) {
   const page = pageInfo[pageKey];
   setHeader(page);
@@ -348,7 +440,7 @@ function renderArticleDetail(article) {
 
   const body = document.createElement('div');
   body.className = 'article-body';
-  body.textContent = typeof article.content === 'string' ? article.content : '';
+  renderMarkdown(typeof article.content === 'string' ? article.content : '', body);
 
   shell.append(back, title, createArticleMeta(article), body);
 }
@@ -834,4 +926,5 @@ window.BlogContent = {
   getSessionToken,
   setPage,
   formatDate,
+  renderMarkdown,
 };

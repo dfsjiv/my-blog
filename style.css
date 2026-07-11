@@ -559,6 +559,63 @@ body.dark .article-status.is-error {
   overflow-wrap: anywhere;
 }
 
+.article-body h1,
+.article-body h2,
+.article-body h3 {
+  margin: 1.5em 0 0.65em;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.article-body h1 {
+  font-size: 24px;
+}
+
+.article-body h2 {
+  font-size: 20px;
+}
+
+.article-body h3 {
+  font-size: 17px;
+}
+
+.article-body p {
+  margin: 0 0 1em;
+  color: var(--text);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.article-body code {
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--accent);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+}
+
+.article-body pre {
+  margin: 1.2em 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  white-space: pre;
+}
+
+.article-body pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
 .article-editor {
   display: flex;
   flex-direction: column;
