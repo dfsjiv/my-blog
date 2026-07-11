@@ -55,6 +55,13 @@ const blogState = {
   deleting: false,
   deleteDialog: null,
   readingCleanup: null,
+  allArticlesCache: null,
+  allArticlesRequest: null,
+  searchQuery: '',
+  searchResults: [],
+  searchOrigin: null,
+  detailReturnView: null,
+  searchVersion: 0,
 };
 
 const sidebar = document.getElementById('sidebar');
@@ -65,6 +72,7 @@ const pageTitle = document.getElementById('pageTitle');
 const pageSummary = document.getElementById('pageSummary');
 const pageContent = document.getElementById('pageContent');
 const pageActions = document.getElementById('pageActions');
+const articleSearchInput = document.getElementById('articleSearchInput');
 
 function readStoredState() {
   try {
@@ -498,7 +506,7 @@ function renderArticleList(pageKey, articles) {
     title.className = 'article-title-button';
     title.type = 'button';
     title.textContent = typeof article.title === 'string' ? article.title : '未命名文章';
-    title.addEventListener('click', () => loadArticleDetail(article.id));
+    title.addEventListener('click', () => loadArticleDetail(article.id, { returnView: null }));
 
     const summary = document.createElement('p');
     summary.className = 'article-summary';
@@ -510,6 +518,170 @@ function renderArticleList(pageKey, articles) {
     list.appendChild(item);
   });
   shell.appendChild(list);
+}
+
+function getCategoryLabel(category) {
+  const pageKey = PAGE_BY_CATEGORY[category];
+  return pageKey && pageInfo[pageKey] ? pageInfo[pageKey].title : category || '';
+}
+
+function appendHighlightedText(container, text, query) {
+  const source = String(text || '');
+  const needle = String(query || '').toLowerCase();
+  if (!needle) {
+    container.textContent = source;
+    return;
+  }
+
+  const lowerSource = source.toLowerCase();
+  let cursor = 0;
+  let matchIndex = lowerSource.indexOf(needle, cursor);
+  while (matchIndex !== -1) {
+    if (matchIndex > cursor) {
+      container.appendChild(document.createTextNode(source.slice(cursor, matchIndex)));
+    }
+    const mark = document.createElement('mark');
+    mark.className = 'search-highlight';
+    mark.textContent = source.slice(matchIndex, matchIndex + needle.length);
+    container.appendChild(mark);
+    cursor = matchIndex + needle.length;
+    matchIndex = lowerSource.indexOf(needle, cursor);
+  }
+  if (cursor < source.length) {
+    container.appendChild(document.createTextNode(source.slice(cursor)));
+  }
+}
+
+function filterArticles(articles, query) {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  if (!normalizedQuery) return [];
+  return articles.filter((article) => [
+    article.title,
+    article.summary,
+    article.author,
+    getCategoryLabel(article.category),
+  ].some((value) => String(value || '').toLowerCase().includes(normalizedQuery)));
+}
+
+async function loadAllArticles() {
+  if (blogState.allArticlesCache) return blogState.allArticlesCache;
+  if (!blogState.allArticlesRequest) {
+    blogState.allArticlesRequest = apiRequest('/api/articles');
+  }
+  try {
+    const data = await blogState.allArticlesRequest;
+    if (!Array.isArray(data.articles)) throw new Error('invalid-data');
+    blogState.allArticlesCache = data.articles;
+    return data.articles;
+  } finally {
+    blogState.allArticlesRequest = null;
+  }
+}
+
+function captureSearchOrigin() {
+  if (blogState.searchOrigin) return;
+  blogState.searchOrigin = {
+    section: blogState.currentSection,
+    pageKey: blogState.currentPageKey,
+    article: blogState.currentArticle,
+  };
+}
+
+function renderSearchResults(query, articles) {
+  blogState.currentSection = 'search-results';
+  blogState.searchQuery = query;
+  blogState.searchResults = articles;
+  blogState.currentArticleId = null;
+  blogState.currentArticle = null;
+  blogState.detailReturnView = null;
+  pageTitle.textContent = '搜索结果';
+  pageSummary.textContent = '搜索：“' + query + '”';
+  clearPageActions();
+  setActiveNavigation(null);
+  const shell = createContentShell();
+
+  const count = document.createElement('p');
+  count.className = 'search-result-count';
+  count.textContent = articles.length ? '找到 ' + articles.length + ' 篇文章' : '未找到相关文章。';
+  shell.appendChild(count);
+  if (!articles.length) return;
+
+  const list = document.createElement('div');
+  list.className = 'article-list search-result-list';
+  articles.forEach((article) => {
+    const item = document.createElement('section');
+    item.className = 'article-list-item';
+    const title = document.createElement('button');
+    title.className = 'article-title-button';
+    title.type = 'button';
+    appendHighlightedText(title, article.title || '未命名文章', query);
+    title.addEventListener('click', () => loadArticleDetail(article.id, {
+      returnView: 'search-results',
+    }));
+
+    const summary = document.createElement('p');
+    summary.className = 'article-summary';
+    appendHighlightedText(summary, article.summary || '暂无摘要', query);
+
+    const meta = document.createElement('p');
+    meta.className = 'article-meta';
+    const author = article.author || '未知作者';
+    const date = formatDate(article.created_at);
+    meta.textContent = author + ' · ' + getCategoryLabel(article.category) + (date ? ' · ' + date : '');
+    item.append(title, summary, meta);
+    list.appendChild(item);
+  });
+  shell.appendChild(list);
+}
+
+async function executeSearch(rawQuery) {
+  const query = String(rawQuery || '').trim();
+  if (!query) {
+    exitSearch();
+    return;
+  }
+  captureSearchOrigin();
+  const searchVersion = ++blogState.searchVersion;
+  blogState.searchQuery = query;
+  if (articleSearchInput) articleSearchInput.value = query;
+  pageTitle.textContent = '搜索结果';
+  pageSummary.textContent = '搜索：“' + query + '”';
+  clearPageActions();
+  setActiveNavigation(null);
+  renderStatus('正在搜索文章...');
+
+  try {
+    const articles = await loadAllArticles();
+    if (searchVersion !== blogState.searchVersion || blogState.searchQuery !== query) return;
+    renderSearchResults(query, filterArticles(articles, query));
+  } catch (error) {
+    if (searchVersion !== blogState.searchVersion) return;
+    blogState.currentSection = 'search-results';
+    renderStatus('无法加载文章，请稍后重试。', 'is-error');
+  }
+}
+
+function exitSearch() {
+  blogState.searchVersion += 1;
+  blogState.searchQuery = '';
+  blogState.searchResults = [];
+  blogState.detailReturnView = null;
+  if (articleSearchInput) articleSearchInput.value = '';
+  const origin = blogState.searchOrigin;
+  blogState.searchOrigin = null;
+  if (!origin) return;
+
+  if (origin.section === 'article-detail' && origin.article) {
+    const pageKey = PAGE_BY_CATEGORY[origin.article.category] || origin.pageKey;
+    blogState.currentPageKey = pageKey;
+    blogState.currentCategory = origin.article.category;
+    setActiveNavigation(pageKey);
+    renderArticleDetail(origin.article);
+  } else if (origin.section === 'article-list' && pageInfo[origin.pageKey]) {
+    loadArticleList(origin.pageKey);
+  } else {
+    renderStaticPage(pageInfo[origin.pageKey] ? origin.pageKey : 'home');
+  }
 }
 
 async function loadArticleList(pageKey, options) {
@@ -571,7 +743,7 @@ function renderArticleDetail(article) {
   back.className = 'article-back';
   back.type = 'button';
   back.textContent = '← 返回' + page.title;
-  back.addEventListener('click', returnToArticleList);
+  back.addEventListener('click', returnFromArticleDetail);
 
   const title = document.createElement('h2');
   title.className = 'article-detail-title';
@@ -702,6 +874,7 @@ async function deleteArticle(article, controls) {
     ? article.category
     : blogState.currentCategory;
   const pageKey = PAGE_BY_CATEGORY[category] || blogState.currentPageKey;
+  const returnToSearch = blogState.detailReturnView === 'search-results' && blogState.searchQuery;
 
   try {
     await apiRequest('/api/articles/' + encodeURIComponent(article.id), {
@@ -709,10 +882,16 @@ async function deleteArticle(article, controls) {
       token,
     });
     delete blogState.articlesCache[category];
+    blogState.allArticlesCache = null;
+    blogState.allArticlesRequest = null;
     blogState.currentArticleId = null;
     blogState.currentArticle = null;
     closeDeleteConfirmation();
-    await loadArticleList(pageKey, { force: true });
+    if (returnToSearch) {
+      await executeSearch(blogState.searchQuery);
+    } else {
+      await loadArticleList(pageKey, { force: true });
+    }
   } catch (error) {
     if (error.status === 401) {
       controls.message.textContent = '登录已失效，请重新登录';
@@ -722,10 +901,16 @@ async function deleteArticle(article, controls) {
       controls.message.textContent = '无管理员权限';
     } else if (error.status === 404) {
       delete blogState.articlesCache[category];
+      blogState.allArticlesCache = null;
+      blogState.allArticlesRequest = null;
       blogState.currentArticleId = null;
       blogState.currentArticle = null;
       closeDeleteConfirmation();
-      await loadArticleList(pageKey, { force: true });
+      if (returnToSearch) {
+        await executeSearch(blogState.searchQuery);
+      } else {
+        await loadArticleList(pageKey, { force: true });
+      }
     } else if (error.code === 'network') {
       controls.message.textContent = '无法连接服务器，请稍后重试';
     } else {
@@ -994,6 +1179,8 @@ async function submitArticleEditor(event, fields, editorContext) {
       delete blogState.articlesCache[originalCategory];
     }
     delete blogState.articlesCache[articleCategory];
+    blogState.allArticlesCache = null;
+    blogState.allArticlesRequest = null;
     blogState.currentSection = 'article-detail';
     blogState.currentCategory = articleCategory;
     blogState.currentArticleId = data.article.id;
@@ -1026,18 +1213,25 @@ async function submitArticleEditor(event, fields, editorContext) {
   }
 }
 
-async function loadArticleDetail(articleId) {
+async function loadArticleDetail(articleId, options) {
   if (articleId === undefined || articleId === null) return;
+  const settings = options || {};
   const requestVersion = ++blogState.requestVersion;
   blogState.currentSection = 'article-detail';
   blogState.currentArticleId = articleId;
   blogState.currentArticle = null;
+  blogState.detailReturnView = settings.returnView || null;
   renderStatus('正在加载文章内容...');
 
   try {
     const data = await apiRequest('/api/articles/' + encodeURIComponent(articleId));
     if (!data.article || typeof data.article !== 'object') throw new Error('invalid-data');
     if (requestVersion !== blogState.requestVersion || blogState.currentArticleId !== articleId) return;
+    if (PAGE_BY_CATEGORY[data.article.category]) {
+      blogState.currentCategory = data.article.category;
+      blogState.currentPageKey = PAGE_BY_CATEGORY[data.article.category];
+      setActiveNavigation(blogState.currentPageKey);
+    }
     renderArticleDetail(data.article);
   } catch (error) {
     if (requestVersion !== blogState.requestVersion || blogState.currentArticleId !== articleId) return;
@@ -1047,7 +1241,16 @@ async function loadArticleDetail(articleId) {
   }
 }
 
+function returnFromArticleDetail() {
+  if (blogState.detailReturnView === 'search-results' && blogState.searchQuery) {
+    renderSearchResults(blogState.searchQuery, blogState.searchResults);
+    return;
+  }
+  returnToArticleList();
+}
+
 function returnToArticleList() {
+  blogState.detailReturnView = null;
   const pageKey = blogState.currentPageKey;
   const page = pageInfo[pageKey];
   if (!page || !page.category) return;
@@ -1068,6 +1271,12 @@ function setPage(pageKey, persist = true) {
   const page = pageInfo[pageKey];
   if (!page) return;
 
+  blogState.searchVersion += 1;
+  blogState.searchQuery = '';
+  blogState.searchResults = [];
+  blogState.searchOrigin = null;
+  blogState.detailReturnView = null;
+  if (articleSearchInput) articleSearchInput.value = '';
   if (persist) saveStoredState({ blogPage: pageKey });
   if (page.category) {
     loadArticleList(pageKey);
@@ -1079,6 +1288,37 @@ function setPage(pageKey, persist = true) {
 navItems.forEach((item) => {
   item.addEventListener('click', () => setPage(item.dataset.page));
 });
+
+let searchDebounceTimer = null;
+if (articleSearchInput) {
+  articleSearchInput.addEventListener('input', () => {
+    if (searchDebounceTimer !== null) window.clearTimeout(searchDebounceTimer);
+    if (!articleSearchInput.value.trim()) {
+      searchDebounceTimer = null;
+      exitSearch();
+      return;
+    }
+    searchDebounceTimer = window.setTimeout(() => {
+      searchDebounceTimer = null;
+      executeSearch(articleSearchInput.value);
+    }, 220);
+  });
+
+  articleSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (searchDebounceTimer !== null) window.clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+      executeSearch(articleSearchInput.value);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      if (searchDebounceTimer !== null) window.clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+      exitSearch();
+      articleSearchInput.focus();
+    }
+  });
+}
 
 toggleBtn.addEventListener('click', () => {
   sidebar.classList.toggle('collapsed');
@@ -1115,6 +1355,10 @@ window.BlogContent = {
   apiRequest,
   loadArticleList,
   loadArticleDetail,
+  loadAllArticles,
+  executeSearch,
+  exitSearch,
+  filterArticles,
   returnToArticleList,
   renderArticleCreate,
   renderArticleEdit,

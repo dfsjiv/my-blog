@@ -121,6 +121,7 @@ function createContext(fetchImpl, options = {}) {
     pageSummary: new FakeElement('p', 'pageSummary'),
     pageContent: new FakeElement('section', 'pageContent'),
     pageActions: new FakeElement('div', 'pageActions'),
+    articleSearchInput: new FakeElement('input', 'articleSearchInput'),
   };
   const navItems = ['home', 'algorithm', 'tech', 'essay', 'mystery'].map((page) => {
     const item = new FakeElement('button');
@@ -159,6 +160,8 @@ function createContext(fetchImpl, options = {}) {
     document,
     location: { href: '' },
     addEventListener() {},
+    setTimeout,
+    clearTimeout,
     authManager: options.authManager || null,
   };
   window.parent = options.parent || window;
@@ -345,6 +348,93 @@ function jsonResponse(status, data, invalidJson = false) {
   }
 
   {
+    let allArticleRequests = 0;
+    const search = createContext(async (url) => {
+      if (url === '/api/articles') {
+        allArticleRequests += 1;
+        return jsonResponse(200, {
+          success: true,
+          articles: [
+            {
+              id: 11,
+              title: '二分查找学习记录',
+              summary: '记录整数二分的理解。',
+              author: 'admin',
+              category: 'algorithm',
+              created_at: '2026-07-11 04:56:15',
+            },
+            {
+              id: 12,
+              title: 'Fenwick Tree Notes',
+              summary: 'Prefix sums',
+              author: 'reader',
+              category: 'computer',
+            },
+          ],
+        });
+      }
+      if (url.endsWith('/api/articles/11')) {
+        return jsonResponse(200, {
+          success: true,
+          article: {
+            id: 11,
+            title: '二分查找学习记录',
+            summary: '记录整数二分的理解。',
+            content: '# 二分查找\n\n正文',
+            author: 'admin',
+            category: 'algorithm',
+          },
+        });
+      }
+      throw new Error('unexpected request');
+    });
+
+    await search.window.BlogContent.executeSearch('  二分  ');
+    assert.strictEqual(search.window.BlogContent.blogState.searchResults.length, 1);
+    assert.ok(findByTag(search.elements.pageContent, 'mark'));
+    await search.window.BlogContent.executeSearch('admin');
+    assert.strictEqual(search.window.BlogContent.blogState.searchResults.length, 1);
+    await search.window.BlogContent.executeSearch('算法');
+    assert.strictEqual(search.window.BlogContent.blogState.searchResults.length, 1);
+    await search.window.BlogContent.executeSearch('FENWICK');
+    assert.strictEqual(search.window.BlogContent.blogState.searchResults[0].id, 12);
+    await search.window.BlogContent.executeSearch('不存在的内容');
+    assert.match(textTree(search.elements.pageContent), /未找到相关文章/);
+    assert.strictEqual(allArticleRequests, 1, 'cached searches should reuse GET /api/articles');
+
+    await search.window.BlogContent.executeSearch('二分');
+    const resultTitle = findByClass(search.elements.pageContent, 'article-title-button');
+    await resultTitle.listeners.click();
+    assert.strictEqual(search.window.BlogContent.blogState.currentSection, 'article-detail');
+    assert.ok(findByClass(search.window.document.body, 'reading-progress'));
+    findByClass(search.elements.pageContent, 'article-back').listeners.click();
+    assert.strictEqual(search.window.BlogContent.blogState.currentSection, 'search-results');
+    assert.strictEqual(search.elements.articleSearchInput.value, '二分');
+    assert.match(textTree(search.elements.pageContent), /二分[\s\S]*查找学习记录/);
+
+    search.elements.articleSearchInput.listeners.keydown({
+      key: 'Escape',
+      preventDefault() {},
+    });
+    assert.strictEqual(search.elements.articleSearchInput.value, '');
+    assert.match(search.elements.pageContent.innerHTML, /欢迎来到我的博客/);
+  }
+
+  {
+    let requestCount = 0;
+    const debounce = createContext(async () => {
+      requestCount += 1;
+      return jsonResponse(200, { success: true, articles: [] });
+    });
+    debounce.elements.articleSearchInput.value = '二';
+    debounce.elements.articleSearchInput.listeners.input();
+    debounce.elements.articleSearchInput.value = '二分';
+    debounce.elements.articleSearchInput.listeners.input();
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    assert.strictEqual(requestCount, 1);
+  }
+
+  {
     const adminRequests = [];
     let articleDeleted = false;
     const adminManager = {
@@ -455,6 +545,7 @@ function jsonResponse(status, data, invalidJson = false) {
     categorySelect.value = 'algorithm';
     summaryInput.value = '记录 Fenwick Tree 的基本思想。';
     contentInput.value = '这是测试正文。\n第二行\n';
+    admin.window.BlogContent.blogState.allArticlesCache = [{ id: 99 }];
     await form.listeners.submit({ preventDefault() {} });
 
     const post = adminRequests.find((request) => request.options.method === 'POST');
@@ -469,6 +560,7 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
     assert.match(textTree(admin.elements.pageContent), /这是测试正文/);
     assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.algorithm, undefined);
+    assert.strictEqual(admin.window.BlogContent.blogState.allArticlesCache, null);
 
     assert.strictEqual(admin.elements.pageActions.children[0].textContent, '编辑文章');
     admin.elements.pageActions.children[0].listeners.click();
@@ -493,6 +585,7 @@ function jsonResponse(status, data, invalidJson = false) {
     form.children[1].children[1].value = 'computer';
     form.children[2].children[1].value = '修改后的摘要。';
     findByClass(form, 'article-editor-content').value = '修改后的正文。';
+    admin.window.BlogContent.blogState.allArticlesCache = [{ id: 2 }];
     await form.listeners.submit({ preventDefault() {} });
 
     const put = adminRequests.find((request) => request.options.method === 'PUT');
@@ -509,6 +602,7 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(admin.navItems[2].classList.contains('active'), true);
     assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.algorithm, undefined);
     assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.computer, undefined);
+    assert.strictEqual(admin.window.BlogContent.blogState.allArticlesCache, null);
     assert.match(findByClass(admin.elements.pageContent, 'article-back').textContent, /返回计算机技术/);
 
     findByClass(admin.elements.pageContent, 'article-back').listeners.click();
@@ -541,6 +635,7 @@ function jsonResponse(status, data, invalidJson = false) {
     admin.elements.pageActions.children[1].listeners.click();
     dialog = findByClass(admin.window.document.body, 'delete-confirm-dialog');
     dialogActions = findByClass(dialog, 'delete-confirm-actions');
+    admin.window.BlogContent.blogState.allArticlesCache = [{ id: 2 }];
     await dialogActions.children[1].listeners.click();
 
     const deleteRequest = adminRequests.find((request) => request.options.method === 'DELETE');
@@ -550,6 +645,7 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(admin.window.BlogContent.blogState.currentArticleId, null);
     assert.strictEqual(admin.window.BlogContent.blogState.currentArticle, null);
     assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-list');
+    assert.strictEqual(admin.window.BlogContent.blogState.allArticlesCache, null);
     assert.doesNotMatch(textTree(admin.elements.pageContent), /Fenwick Tree 学习记录/);
   }
 
