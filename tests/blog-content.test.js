@@ -35,6 +35,9 @@ class FakeElement {
     this.title = '';
     this.style = {};
     this.scrollTop = 0;
+    this.value = '';
+    this.disabled = false;
+    this.attributes = {};
     this._innerHTML = '';
   }
   set innerHTML(value) {
@@ -46,6 +49,12 @@ class FakeElement {
   }
   addEventListener(name, handler) {
     this.listeners[name] = handler;
+  }
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+  focus() {
+    this.focused = true;
   }
   appendChild(child) {
     this.children.push(child);
@@ -83,7 +92,7 @@ function findByClass(element, className) {
   return null;
 }
 
-function createContext(fetchImpl) {
+function createContext(fetchImpl, options = {}) {
   const elements = {
     sidebar: new FakeElement('aside', 'sidebar'),
     toggleBtn: new FakeElement('button', 'toggleBtn'),
@@ -91,6 +100,7 @@ function createContext(fetchImpl) {
     pageTitle: new FakeElement('h1', 'pageTitle'),
     pageSummary: new FakeElement('p', 'pageSummary'),
     pageContent: new FakeElement('section', 'pageContent'),
+    pageActions: new FakeElement('div', 'pageActions'),
   };
   const navItems = ['home', 'algorithm', 'tech', 'essay', 'mystery'].map((page) => {
     const item = new FakeElement('button');
@@ -114,11 +124,25 @@ function createContext(fetchImpl) {
     getItem(key) { return storageValues[key] || null; },
     setItem(key, value) { storageValues[key] = String(value); },
   };
-  const window = { document, location: { href: '' } };
+  const sessionValues = {};
+  const sessionStorage = {
+    getItem(key) { return sessionValues[key] || null; },
+    setItem(key, value) { sessionValues[key] = String(value); },
+    removeItem(key) { delete sessionValues[key]; },
+  };
+  const window = {
+    document,
+    location: { href: '' },
+    addEventListener() {},
+    authManager: options.authManager || null,
+  };
+  window.parent = options.parent || window;
+  window.sessionStorage = sessionStorage;
   const sandbox = {
     window,
     document,
     localStorage,
+    sessionStorage,
     fetch: fetchImpl,
     console,
     encodeURIComponent,
@@ -192,6 +216,7 @@ function jsonResponse(status, data, invalidJson = false) {
   assert.match(textTree(elements.pageContent), /<b>二分查找学习记录<\/b>/);
   assert.match(textTree(elements.pageContent), /admin · 2026\.07\.11/);
   assert.strictEqual(elements.pageContent.innerHTML, '');
+  assert.strictEqual(elements.pageActions.children.length, 0, 'guest should not see create action');
 
   const titleButton = findByClass(elements.pageContent, 'article-title-button');
   await titleButton.listeners.click();
@@ -225,6 +250,15 @@ function jsonResponse(status, data, invalidJson = false) {
   assert.match(textTree(invalidJson.elements.pageContent), /无法加载文章，请稍后重试/);
 
   {
+    const user = createContext(
+      async () => jsonResponse(200, { success: true, articles: [] }),
+      { authManager: { state: { token: 'user-token' }, isAdmin() { return false; } } }
+    );
+    await user.window.BlogContent.loadArticleList('algorithm', { force: true });
+    assert.strictEqual(user.elements.pageActions.children.length, 0, 'user should not see create action');
+  }
+
+  {
     const pending = {};
     const switching = createContext((url) => new Promise((resolve) => {
       pending[url.includes('algorithm') ? 'algorithm' : 'computer'] = resolve;
@@ -243,6 +277,130 @@ function jsonResponse(status, data, invalidJson = false) {
     pending.computer(jsonResponse(200, { success: true, articles: [] }));
     await computerLoad;
     assert.match(textTree(switching.elements.pageContent), /暂无文章/);
+  }
+
+  {
+    const adminRequests = [];
+    const adminManager = {
+      state: { token: 'admin-session-token' },
+      isAdmin() { return true; },
+    };
+    const admin = createContext(async (url, options = {}) => {
+      adminRequests.push({ url, options });
+      if (options.method === 'POST') {
+        return jsonResponse(201, {
+          success: true,
+          message: '文章发布成功',
+          article: {
+            id: 2,
+            title: '树状数组学习记录',
+            summary: '记录 Fenwick Tree 的基本思想。',
+            content: '这是测试正文。',
+            category: 'algorithm',
+            author: 'admin',
+            created_at: '2026-07-11 05:00:00',
+          },
+        });
+      }
+      return jsonResponse(200, { success: true, articles: [] });
+    }, { authManager: adminManager });
+
+    await admin.window.BlogContent.loadArticleList('algorithm', { force: true });
+    assert.strictEqual(admin.elements.pageActions.children.length, 1);
+    const createButton = admin.elements.pageActions.children[0];
+    assert.strictEqual(createButton.textContent, '＋ 新建文章');
+    createButton.listeners.click();
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-create');
+
+    let form = findByClass(admin.elements.pageContent, 'article-editor');
+    const firstActions = form.children[5];
+    firstActions.children[0].listeners.click();
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-list');
+    admin.elements.pageActions.children[0].listeners.click();
+    form = findByClass(admin.elements.pageContent, 'article-editor');
+    const titleInput = form.children[0].children[1];
+    const categorySelect = form.children[1].children[1];
+    const summaryInput = form.children[2].children[1];
+    const contentInput = form.children[3].children[1];
+    const message = form.children[4];
+
+    await form.listeners.submit({ preventDefault() {} });
+    assert.strictEqual(message.textContent, '请输入文章标题');
+    titleInput.value = '树状数组学习记录';
+    await form.listeners.submit({ preventDefault() {} });
+    assert.strictEqual(message.textContent, '请输入文章正文');
+
+    categorySelect.value = 'algorithm';
+    summaryInput.value = '记录 Fenwick Tree 的基本思想。';
+    contentInput.value = '这是测试正文。';
+    await form.listeners.submit({ preventDefault() {} });
+
+    const post = adminRequests.find((request) => request.options.method === 'POST');
+    assert.ok(post.url.endsWith('/api/articles'));
+    assert.strictEqual(post.options.headers.Authorization, 'Bearer admin-session-token');
+    assert.deepStrictEqual(JSON.parse(post.options.body), {
+      title: '树状数组学习记录',
+      summary: '记录 Fenwick Tree 的基本思想。',
+      content: '这是测试正文。',
+      category: 'algorithm',
+    });
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
+    assert.match(textTree(admin.elements.pageContent), /这是测试正文/);
+    assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.algorithm, undefined);
+  }
+
+  {
+    let logoutMessage = '';
+    const parent = {
+      authManager: {
+        state: { token: 'expired-token' },
+        isAdmin() { return true; },
+      },
+      authUi: {
+        async logoutToLogin(message) { logoutMessage = message; },
+      },
+    };
+    const expired = createContext(async (url, options = {}) => {
+      if (options.method === 'POST') return jsonResponse(401, { success: false });
+      return jsonResponse(200, { success: true, articles: [] });
+    }, { parent });
+    await expired.window.BlogContent.loadArticleList('algorithm', { force: true });
+    expired.elements.pageActions.children[0].listeners.click();
+    const form = findByClass(expired.elements.pageContent, 'article-editor');
+    form.children[0].children[1].value = '测试标题';
+    form.children[3].children[1].value = '测试正文';
+    await form.listeners.submit({ preventDefault() {} });
+    assert.strictEqual(logoutMessage, '登录已失效，请重新登录');
+  }
+
+  {
+    let resolvePublish;
+    let postCount = 0;
+    const adminManager = {
+      state: { token: 'admin-token' },
+      isAdmin() { return true; },
+    };
+    const duplicate = createContext(async (url, options = {}) => {
+      if (options.method === 'POST') {
+        postCount += 1;
+        return new Promise((resolve) => { resolvePublish = resolve; });
+      }
+      return jsonResponse(200, { success: true, articles: [] });
+    }, { authManager: adminManager });
+    await duplicate.window.BlogContent.loadArticleList('algorithm', { force: true });
+    duplicate.elements.pageActions.children[0].listeners.click();
+    const form = findByClass(duplicate.elements.pageContent, 'article-editor');
+    form.children[0].children[1].value = '防重复测试';
+    form.children[3].children[1].value = '正文';
+    const firstSubmit = form.listeners.submit({ preventDefault() {} });
+    await form.listeners.submit({ preventDefault() {} });
+    assert.strictEqual(postCount, 1);
+    assert.strictEqual(form.children[5].children[1].disabled, true);
+    resolvePublish(jsonResponse(201, {
+      success: true,
+      article: { id: 3, title: '防重复测试', content: '正文', category: 'algorithm' },
+    }));
+    await firstSubmit;
   }
 
   const css = fs.readFileSync(stylePath, 'utf8');

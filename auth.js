@@ -264,6 +264,7 @@
       guestButton: document.getElementById('guestButton'),
       loginMessage: document.getElementById('loginMessage'),
       desktopShell: document.getElementById('desktopShell'),
+      blogFrame: document.getElementById('blogFrame'),
       startUserName: document.getElementById('startUserName'),
       startUserRole: document.getElementById('startUserRole'),
       logoutButton: document.getElementById('logoutButton'),
@@ -299,6 +300,13 @@
       window.homeDesktop.selectDesktopIcon(false);
     }
 
+    function notifyBlogAuthChanged() {
+      const target = elements.blogFrame && elements.blogFrame.contentWindow;
+      if (target && target.postMessage) {
+        target.postMessage({ type: 'blog-auth-changed' }, '*');
+      }
+    }
+
     function updateUserIdentityUI(user) {
       const roleLabel = user.role === 'admin'
         ? 'Administrator'
@@ -316,6 +324,7 @@
       setLoginPending(false, '');
       setMessage(message || '', false);
       elements.username.focus();
+      notifyBlogAuthChanged();
     }
 
     function showDesktop(user) {
@@ -326,6 +335,18 @@
       elements.loginScreen.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
       setLoginPending(false, '');
+      notifyBlogAuthChanged();
+    }
+
+    async function logoutToLogin(message) {
+      elements.logoutButton.disabled = true;
+      try {
+        await auth.logout();
+      } finally {
+        resetDesktopUi();
+        elements.logoutButton.disabled = false;
+        showLoginScreen(message || '');
+      }
     }
 
     elements.loginForm.addEventListener('submit', async function (event) {
@@ -360,14 +381,7 @@
     });
 
     elements.logoutButton.addEventListener('click', async function () {
-      elements.logoutButton.disabled = true;
-      try {
-        await auth.logout();
-      } finally {
-        resetDesktopUi();
-        elements.logoutButton.disabled = false;
-        showLoginScreen('');
-      }
+      await logoutToLogin('');
     });
 
     (async function restoreOnStartup() {
@@ -392,6 +406,7 @@
       showLoginScreen,
       showDesktop,
       updateUserIdentityUI,
+      logoutToLogin,
     };
   }
 

@@ -1,5 +1,11 @@
 const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';
 const STORAGE_KEY = 'myBlogDesktopState';
+const AUTH_TOKEN_KEY = 'blog_session_token';
+const PAGE_BY_CATEGORY = {
+  algorithm: 'algorithm',
+  computer: 'tech',
+  essay: 'essay',
+};
 
 const pageInfo = {
   home: {
@@ -44,6 +50,7 @@ const blogState = {
   articlesCache: {},
   pendingLists: {},
   requestVersion: 0,
+  publishing: false,
 };
 
 const sidebar = document.getElementById('sidebar');
@@ -53,6 +60,7 @@ const navItems = document.querySelectorAll('.nav-item');
 const pageTitle = document.getElementById('pageTitle');
 const pageSummary = document.getElementById('pageSummary');
 const pageContent = document.getElementById('pageContent');
+const pageActions = document.getElementById('pageActions');
 
 function readStoredState() {
   try {
@@ -71,27 +79,96 @@ function saveStoredState(updates) {
   }
 }
 
-async function apiRequest(path) {
+async function apiRequest(path, requestOptions) {
+  const options = requestOptions || {};
+  const headers = Object.assign({ Accept: 'application/json' }, options.headers || {});
+  const fetchOptions = {
+    method: options.method || 'GET',
+    headers,
+  };
+  if (options.token) headers.Authorization = 'Bearer ' + options.token;
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    fetchOptions.body = JSON.stringify(options.body);
+  }
+
   let response;
   try {
-    response = await fetch(API_BASE_URL + path, { headers: { Accept: 'application/json' } });
+    response = await fetch(API_BASE_URL + path, fetchOptions);
   } catch (error) {
-    throw new Error('network');
+    const networkError = new Error('network');
+    networkError.code = 'network';
+    throw networkError;
   }
 
   let data;
   try {
     data = await response.json();
   } catch (error) {
-    throw new Error('invalid-json');
+    const jsonError = new Error('invalid-json');
+    jsonError.code = 'invalid-json';
+    jsonError.status = response.status;
+    throw jsonError;
   }
 
   if (!response.ok || !data || data.success !== true) {
     const error = new Error(response.status === 404 ? 'not-found' : 'api-error');
     error.status = response.status;
+    error.apiMessage = data && typeof data.message === 'string' ? data.message : '';
     throw error;
   }
   return data;
+}
+
+function getParentWindow() {
+  try {
+    return window.parent && window.parent !== window ? window.parent : window;
+  } catch (error) {
+    return window;
+  }
+}
+
+function getAuthManager() {
+  try {
+    const parentWindow = getParentWindow();
+    return parentWindow.authManager || window.authManager || null;
+  } catch (error) {
+    return window.authManager || null;
+  }
+}
+
+function isCurrentUserAdmin() {
+  const auth = getAuthManager();
+  return Boolean(auth && typeof auth.isAdmin === 'function' && auth.isAdmin());
+}
+
+function getSessionToken() {
+  const auth = getAuthManager();
+  if (auth && auth.state && typeof auth.state.token === 'string' && auth.state.token) {
+    return auth.state.token;
+  }
+  try {
+    return sessionStorage.getItem(AUTH_TOKEN_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function clearPageActions() {
+  if (pageActions) pageActions.replaceChildren();
+}
+
+function renderCreateArticleAction(pageKey) {
+  clearPageActions();
+  const page = pageInfo[pageKey];
+  if (!pageActions || !page || !page.category || !isCurrentUserAdmin()) return;
+
+  const button = document.createElement('button');
+  button.className = 'create-article-button';
+  button.type = 'button';
+  button.textContent = '＋ 新建文章';
+  button.addEventListener('click', () => renderArticleCreate(pageKey));
+  pageActions.appendChild(button);
 }
 
 function setHeader(page) {
@@ -136,6 +213,7 @@ function renderStaticPage(pageKey) {
   blogState.currentPageKey = pageKey;
 
   setHeader(page);
+  clearPageActions();
   pageContent.innerHTML = `<article class="card">${page.content}</article>`;
   pageContent.scrollTop = 0;
   setActiveNavigation(pageKey);
@@ -164,6 +242,7 @@ function createArticleMeta(article) {
 function renderArticleList(pageKey, articles) {
   const page = pageInfo[pageKey];
   setHeader(page);
+  renderCreateArticleAction(pageKey);
   const shell = createContentShell();
 
   if (!articles.length) {
@@ -211,6 +290,7 @@ async function loadArticleList(pageKey, options) {
   blogState.currentPageKey = pageKey;
   setHeader(page);
   setActiveNavigation(pageKey);
+  renderCreateArticleAction(pageKey);
 
   if (blogState.articlesCache[category] && !settings.force) {
     renderArticleList(pageKey, blogState.articlesCache[category]);
@@ -245,6 +325,7 @@ function renderArticleDetail(article) {
   const page = pageInfo[pageKey];
   pageTitle.textContent = article.title || page.title;
   pageSummary.textContent = '';
+  clearPageActions();
   const shell = createContentShell();
 
   const back = document.createElement('button');
@@ -262,6 +343,197 @@ function renderArticleDetail(article) {
   body.textContent = typeof article.content === 'string' ? article.content : '';
 
   shell.append(back, title, createArticleMeta(article), body);
+}
+
+function createEditorField(labelText, control) {
+  const label = document.createElement('label');
+  label.className = 'article-editor-field';
+  const labelName = document.createElement('span');
+  labelName.textContent = labelText;
+  label.append(labelName, control);
+  return label;
+}
+
+function renderArticleCreate(pageKey) {
+  const page = pageInfo[pageKey];
+  if (!page || !page.category || !isCurrentUserAdmin()) return;
+
+  blogState.requestVersion += 1;
+  blogState.currentSection = 'article-create';
+  blogState.currentCategory = page.category;
+  blogState.currentArticleId = null;
+  blogState.currentPageKey = pageKey;
+  blogState.publishing = false;
+  pageTitle.textContent = '新建文章';
+  pageSummary.textContent = '发布到' + page.title;
+  setActiveNavigation(pageKey);
+  clearPageActions();
+
+  const shell = createContentShell();
+  const form = document.createElement('form');
+  form.className = 'article-editor';
+  form.noValidate = true;
+
+  const titleInput = document.createElement('input');
+  titleInput.className = 'article-editor-input';
+  titleInput.type = 'text';
+  titleInput.maxLength = 200;
+
+  const categorySelect = document.createElement('select');
+  categorySelect.className = 'article-editor-input';
+  [
+    ['algorithm', '算法文章'],
+    ['computer', '计算机技术'],
+    ['essay', '个人随笔'],
+  ].forEach(([value, text]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    categorySelect.appendChild(option);
+  });
+  categorySelect.value = page.category;
+
+  const summaryInput = document.createElement('textarea');
+  summaryInput.className = 'article-editor-input article-editor-summary';
+  summaryInput.maxLength = 500;
+  summaryInput.rows = 3;
+
+  const contentInput = document.createElement('textarea');
+  contentInput.className = 'article-editor-input article-editor-content';
+  contentInput.rows = 12;
+
+  const message = document.createElement('p');
+  message.className = 'article-editor-message';
+  message.setAttribute('role', 'alert');
+  message.setAttribute('aria-live', 'polite');
+
+  const cancelButton = document.createElement('button');
+  cancelButton.className = 'article-editor-button secondary';
+  cancelButton.type = 'button';
+  cancelButton.textContent = '取消';
+  cancelButton.addEventListener('click', returnToArticleList);
+
+  const publishButton = document.createElement('button');
+  publishButton.className = 'article-editor-button primary';
+  publishButton.type = 'submit';
+  publishButton.textContent = '发布文章';
+
+  const actions = document.createElement('div');
+  actions.className = 'article-editor-actions';
+  actions.append(cancelButton, publishButton);
+
+  const fields = {
+    titleInput,
+    categorySelect,
+    summaryInput,
+    contentInput,
+    message,
+    cancelButton,
+    publishButton,
+  };
+  form.append(
+    createEditorField('标题', titleInput),
+    createEditorField('分类', categorySelect),
+    createEditorField('摘要', summaryInput),
+    createEditorField('正文', contentInput),
+    message,
+    actions
+  );
+  form.addEventListener('submit', (event) => publishArticle(event, fields));
+  shell.appendChild(form);
+  titleInput.focus();
+}
+
+function setEditorMessage(fields, message) {
+  fields.message.textContent = message || '';
+}
+
+async function handleInvalidSession() {
+  const parentWindow = getParentWindow();
+  if (parentWindow.authUi && typeof parentWindow.authUi.logoutToLogin === 'function') {
+    await parentWindow.authUi.logoutToLogin('登录已失效，请重新登录');
+    return;
+  }
+  const auth = getAuthManager();
+  if (auth && typeof auth.logout === 'function') await auth.logout();
+}
+
+async function publishArticle(event, fields) {
+  event.preventDefault();
+  if (blogState.publishing) return;
+
+  const title = fields.titleInput.value.trim();
+  const summary = fields.summaryInput.value.trim();
+  const content = fields.contentInput.value.trim();
+  const category = fields.categorySelect.value;
+  if (!title) {
+    setEditorMessage(fields, '请输入文章标题');
+    fields.titleInput.focus();
+    return;
+  }
+  if (!content) {
+    setEditorMessage(fields, '请输入文章正文');
+    fields.contentInput.focus();
+    return;
+  }
+  if (!PAGE_BY_CATEGORY[category]) {
+    setEditorMessage(fields, '请选择有效分类');
+    fields.categorySelect.focus();
+    return;
+  }
+
+  const token = getSessionToken();
+  if (!token) {
+    setEditorMessage(fields, '登录已失效，请重新登录');
+    await handleInvalidSession();
+    return;
+  }
+
+  blogState.publishing = true;
+  fields.publishButton.disabled = true;
+  fields.cancelButton.disabled = true;
+  fields.publishButton.textContent = '正在发布...';
+  setEditorMessage(fields, '');
+
+  try {
+    const data = await apiRequest('/api/articles', {
+      method: 'POST',
+      token,
+      body: { title, summary, content, category },
+    });
+    if (!data.article || typeof data.article !== 'object' || data.article.id === undefined) {
+      throw new Error('invalid-data');
+    }
+
+    const articleCategory = PAGE_BY_CATEGORY[data.article.category] ? data.article.category : category;
+    const articlePageKey = PAGE_BY_CATEGORY[articleCategory];
+    delete blogState.articlesCache[articleCategory];
+    blogState.currentSection = 'article-detail';
+    blogState.currentCategory = articleCategory;
+    blogState.currentArticleId = data.article.id;
+    blogState.currentPageKey = articlePageKey;
+    saveStoredState({ blogPage: articlePageKey });
+    setActiveNavigation(articlePageKey);
+    renderArticleDetail(data.article);
+  } catch (error) {
+    if (error.status === 401) {
+      setEditorMessage(fields, '登录已失效，请重新登录');
+      await handleInvalidSession();
+    } else if (error.status === 403) {
+      setEditorMessage(fields, '无管理员权限');
+    } else if (error.status === 400) {
+      setEditorMessage(fields, error.apiMessage || '文章内容不符合要求');
+    } else if (error.code === 'network') {
+      setEditorMessage(fields, '无法连接服务器，请稍后重试');
+    } else {
+      setEditorMessage(fields, '文章发布失败，请稍后重试');
+    }
+  } finally {
+    blogState.publishing = false;
+    fields.publishButton.disabled = false;
+    fields.cancelButton.disabled = false;
+    fields.publishButton.textContent = '发布文章';
+  }
 }
 
 async function loadArticleDetail(articleId) {
@@ -293,7 +565,11 @@ function returnToArticleList() {
   blogState.currentArticleId = null;
   setHeader(page);
   setActiveNavigation(pageKey);
-  renderArticleList(pageKey, blogState.articlesCache[page.category] || []);
+  if (blogState.articlesCache[page.category]) {
+    renderArticleList(pageKey, blogState.articlesCache[page.category]);
+  } else {
+    loadArticleList(pageKey);
+  }
 }
 
 function setPage(pageKey, persist = true) {
@@ -321,6 +597,15 @@ themeToggle.addEventListener('click', () => {
   saveStoredState({ theme: document.body.classList.contains('dark') ? 'dark' : 'light' });
 });
 
+if (window.addEventListener) {
+  window.addEventListener('message', (event) => {
+    if (!event.data || event.data.type !== 'blog-auth-changed') return;
+    if (blogState.currentSection === 'article-list') {
+      renderCreateArticleAction(blogState.currentPageKey);
+    }
+  });
+}
+
 const storedState = readStoredState();
 document.body.classList.toggle('dark', storedState.theme !== 'light');
 setPage(pageInfo[storedState.blogPage] ? storedState.blogPage : 'home', false);
@@ -332,6 +617,10 @@ window.BlogContent = {
   loadArticleList,
   loadArticleDetail,
   returnToArticleList,
+  renderArticleCreate,
+  publishArticle,
+  isCurrentUserAdmin,
+  getSessionToken,
   setPage,
   formatDate,
 };
