@@ -38,8 +38,28 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
 </head>
-<body>
-  <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面">
+<body class="auth-pending">
+  <main class="login-screen" id="loginScreen" aria-label="登录">
+    <div class="login-panel">
+      <img class="login-avatar" src="assets/blog-icon.png" alt="" draggable="false" />
+      <h1>欢迎</h1>
+      <form class="login-form" id="loginForm" novalidate>
+        <label class="login-field">
+          <span>用户名</span>
+          <input id="loginUsername" name="username" type="text" autocomplete="username" />
+        </label>
+        <label class="login-field">
+          <span>密码</span>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" />
+        </label>
+        <p class="login-message" id="loginMessage" role="alert" aria-live="polite"></p>
+        <button class="login-primary" id="loginButton" type="submit">登录</button>
+        <button class="login-guest" id="guestButton" type="button">游客进入</button>
+      </form>
+    </div>
+  </main>
+
+  <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面" aria-hidden="true">
     <div class="desktop-surface" id="desktopSurface">
       <button class="desktop-icon" id="blogDesktopIcon" type="button" aria-label="博客" aria-selected="false">
         <span class="desktop-icon-image document-app-icon" aria-hidden="true">
@@ -74,8 +94,8 @@
 
     <nav class="start-menu" id="startMenu" aria-label="开始菜单">
       <header class="start-menu-user">
-        <strong>dfsjiv</strong>
-        <span>Personal Digital Space</span>
+        <strong id="startUserName">Guest</strong>
+        <span id="startUserRole">游客模式</span>
       </header>
 
       <section class="start-menu-apps" aria-labelledby="startAppsTitle">
@@ -94,6 +114,7 @@
       <div class="start-menu-actions">
         <a class="start-menu-action" href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">GitHub</a>
         <button class="start-menu-action" id="startThemeButton" type="button" aria-pressed="false">切换主题</button>
+        <button class="start-menu-action" id="logoutButton" type="button">退出登录</button>
       </div>
     </nav>
 
@@ -118,5 +139,6 @@
 
   <script src="home-device.js"></script>
   <script src="home-desktop.js"></script>
+  <script src="auth.js"></script>
 </body>
 </html>

@@ -13,7 +13,7 @@ body.is-desktop {
   display: none;
 }
 
-body.is-desktop .desktop-shell {
+body.is-desktop.auth-desktop .desktop-shell {
   position: fixed;
   inset: 0;
   display: block;
@@ -23,6 +23,142 @@ body.is-desktop .desktop-shell {
     linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
     linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.12) 42% 44%, transparent 44% 100%),
     linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
+}
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #ffffff;
+  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  background:
+    linear-gradient(rgba(3, 20, 32, 0.48), rgba(3, 20, 32, 0.48)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
+    linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.12) 42% 44%, transparent 44% 100%),
+    linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
+}
+
+.auth-desktop .login-screen {
+  display: none;
+}
+
+.login-panel {
+  width: min(320px, calc(100vw - 40px));
+  text-align: center;
+}
+
+.login-avatar {
+  display: block;
+  width: 82px;
+  height: 82px;
+  margin: 0 auto 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.42));
+}
+
+.login-panel h1 {
+  margin: 0 0 24px;
+  font-size: 27px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-field {
+  display: block;
+  text-align: left;
+}
+
+.login-field span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.login-field input {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 0;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.94);
+  color: #111111;
+  font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.login-field input:focus {
+  border-color: #6fc2f0;
+  box-shadow: inset 0 -2px #0078d7;
+}
+
+.login-field input:disabled {
+  opacity: 0.72;
+}
+
+.login-message {
+  min-height: 18px;
+  margin: 0;
+  color: #ffe0e0;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+}
+
+.login-message.is-status {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.login-primary,
+.login-guest {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0;
+  color: #ffffff;
+  font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  cursor: default;
+}
+
+.login-primary {
+  background: #0067b8;
+  border-color: #1683d8;
+}
+
+.login-primary:hover:not(:disabled) {
+  background: #0878c9;
+}
+
+.login-primary:active:not(:disabled) {
+  background: #005a9e;
+}
+
+.login-primary:disabled {
+  opacity: 0.68;
+}
+
+.login-guest {
+  background: rgba(22, 22, 22, 0.56);
+}
+
+.login-guest:hover:not(:disabled) {
+  background: rgba(56, 56, 56, 0.72);
+}
+
+.login-guest:active:not(:disabled) {
+  background: rgba(18, 18, 18, 0.72);
 }
 
 body.is-desktop .desktop-shell.is-light-theme {
@@ -390,7 +526,7 @@ body.is-desktop .desktop-shell.is-light-theme {
 
 .start-menu-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   min-height: 50px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
