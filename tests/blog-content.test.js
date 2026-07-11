@@ -57,15 +57,23 @@ class FakeElement {
     this.focused = true;
   }
   appendChild(child) {
+    child.parentElement = this;
     this.children.push(child);
     return child;
   }
   append(...children) {
+    children.forEach((child) => { child.parentElement = this; });
     this.children.push(...children);
   }
   replaceChildren(...children) {
     this._innerHTML = '';
+    children.forEach((child) => { child.parentElement = this; });
     this.children = children;
+  }
+  remove() {
+    if (!this.parentElement) return;
+    this.parentElement.children = this.parentElement.children.filter((child) => child !== this);
+    this.parentElement = null;
   }
   querySelector(selector) {
     if (selector === '.card h2' && this._innerHTML.includes('<h2>')) {
@@ -226,6 +234,7 @@ function jsonResponse(status, data, invalidJson = false) {
   assert.strictEqual(elements.pageContent.innerHTML, '');
   assert.strictEqual(BlogContent.blogState.currentSection, 'article-detail');
   assert.strictEqual(navItems[1].classList.contains('active'), true);
+  assert.strictEqual(elements.pageActions.children.length, 0, 'guest should not see edit action');
 
   const backButton = findByClass(elements.pageContent, 'article-back');
   backButton.listeners.click();
@@ -260,6 +269,13 @@ function jsonResponse(status, data, invalidJson = false) {
     );
     await user.window.BlogContent.loadArticleList('algorithm', { force: true });
     assert.strictEqual(user.elements.pageActions.children.length, 0, 'user should not see create action');
+    user.window.BlogContent.renderArticleEdit({
+      id: 1,
+      title: '不可编辑',
+      content: '正文',
+      category: 'algorithm',
+    });
+    assert.strictEqual(user.window.BlogContent.blogState.currentSection, 'article-list');
     const fields = {
       titleInput: new FakeElement('input'),
       categorySelect: new FakeElement('select'),
@@ -300,6 +316,7 @@ function jsonResponse(status, data, invalidJson = false) {
 
   {
     const adminRequests = [];
+    let articleDeleted = false;
     const adminManager = {
       state: { token: 'admin-session-token' },
       isAdmin() { return true; },
@@ -319,6 +336,53 @@ function jsonResponse(status, data, invalidJson = false) {
             author: 'admin',
             created_at: '2026-07-11 05:00:00',
           },
+        });
+      }
+      if (options.method === 'PUT') {
+        return jsonResponse(200, {
+          success: true,
+          message: '文章修改成功',
+          article: {
+            id: 2,
+            title: 'Fenwick Tree 学习记录',
+            summary: '修改后的摘要。',
+            content: '修改后的正文。',
+            category: 'computer',
+            author: 'admin',
+            created_at: '2026-07-11 05:00:00',
+            updated_at: '2026-07-11 06:00:00',
+          },
+        });
+      }
+      if (options.method === 'DELETE') {
+        articleDeleted = true;
+        return jsonResponse(200, { success: true, message: '文章删除成功' });
+      }
+      if (url.endsWith('/api/articles/2')) {
+        if (articleDeleted) return jsonResponse(404, { success: false });
+        return jsonResponse(200, {
+          success: true,
+          article: {
+            id: 2,
+            title: 'Fenwick Tree 学习记录',
+            summary: '修改后的摘要。',
+            content: '修改后的正文。',
+            category: 'computer',
+            author: 'admin',
+            created_at: '2026-07-11 05:00:00',
+          },
+        });
+      }
+      if (url.includes('category=computer')) {
+        return jsonResponse(200, {
+          success: true,
+          articles: articleDeleted ? [] : [{
+            id: 2,
+            title: 'Fenwick Tree 学习记录',
+            summary: '修改后的摘要。',
+            category: 'computer',
+            author: 'admin',
+          }],
         });
       }
       return jsonResponse(200, { success: true, articles: [] });
@@ -366,6 +430,87 @@ function jsonResponse(status, data, invalidJson = false) {
     assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
     assert.match(textTree(admin.elements.pageContent), /这是测试正文/);
     assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.algorithm, undefined);
+
+    assert.strictEqual(admin.elements.pageActions.children[0].textContent, '编辑文章');
+    admin.elements.pageActions.children[0].listeners.click();
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-edit');
+    form = findByClass(admin.elements.pageContent, 'article-editor');
+    assert.strictEqual(form.children[0].children[1].value, '树状数组学习记录');
+    assert.strictEqual(form.children[1].children[1].value, 'algorithm');
+    assert.strictEqual(form.children[2].children[1].value, '记录 Fenwick Tree 的基本思想。');
+    assert.strictEqual(form.children[3].children[1].value, '这是测试正文。');
+    assert.strictEqual(form.children[5].children[1].textContent, '保存修改');
+
+    form.children[5].children[0].listeners.click();
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
+    assert.match(textTree(admin.elements.pageContent), /这是测试正文/);
+
+    admin.window.BlogContent.blogState.articlesCache.algorithm = [{ id: 2 }];
+    admin.window.BlogContent.blogState.articlesCache.computer = [{ id: 8 }];
+    admin.elements.pageActions.children[0].listeners.click();
+    form = findByClass(admin.elements.pageContent, 'article-editor');
+    form.children[0].children[1].value = 'Fenwick Tree 学习记录';
+    form.children[1].children[1].value = 'computer';
+    form.children[2].children[1].value = '修改后的摘要。';
+    form.children[3].children[1].value = '修改后的正文。';
+    await form.listeners.submit({ preventDefault() {} });
+
+    const put = adminRequests.find((request) => request.options.method === 'PUT');
+    assert.ok(put.url.endsWith('/api/articles/2'));
+    assert.strictEqual(put.options.headers.Authorization, 'Bearer admin-session-token');
+    assert.deepStrictEqual(JSON.parse(put.options.body), {
+      title: 'Fenwick Tree 学习记录',
+      summary: '修改后的摘要。',
+      content: '修改后的正文。',
+      category: 'computer',
+    });
+    assert.strictEqual(admin.window.BlogContent.blogState.currentArticleId, 2);
+    assert.strictEqual(admin.window.BlogContent.blogState.currentPageKey, 'tech');
+    assert.strictEqual(admin.navItems[2].classList.contains('active'), true);
+    assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.algorithm, undefined);
+    assert.strictEqual(admin.window.BlogContent.blogState.articlesCache.computer, undefined);
+    assert.match(findByClass(admin.elements.pageContent, 'article-back').textContent, /返回计算机技术/);
+
+    findByClass(admin.elements.pageContent, 'article-back').listeners.click();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.match(textTree(admin.elements.pageContent), /Fenwick Tree 学习记录/);
+
+    const updatedTitle = findByClass(admin.elements.pageContent, 'article-title-button');
+    await updatedTitle.listeners.click();
+    assert.strictEqual(admin.elements.pageActions.children.length, 2);
+    assert.strictEqual(admin.elements.pageActions.children[0].textContent, '编辑文章');
+    assert.strictEqual(admin.elements.pageActions.children[1].textContent, '删除文章');
+
+    const deleteCountBeforeCancel = adminRequests.filter(
+      (request) => request.options.method === 'DELETE'
+    ).length;
+    admin.elements.pageActions.children[1].listeners.click();
+    let dialog = findByClass(admin.window.document.body, 'delete-confirm-dialog');
+    assert.ok(dialog);
+    assert.match(textTree(dialog), /《Fenwick Tree 学习记录》/);
+    assert.match(textTree(dialog), /删除后无法恢复/);
+    let dialogActions = findByClass(dialog, 'delete-confirm-actions');
+    dialogActions.children[0].listeners.click();
+    assert.strictEqual(findByClass(admin.window.document.body, 'delete-confirm-dialog'), null);
+    assert.strictEqual(
+      adminRequests.filter((request) => request.options.method === 'DELETE').length,
+      deleteCountBeforeCancel
+    );
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-detail');
+
+    admin.elements.pageActions.children[1].listeners.click();
+    dialog = findByClass(admin.window.document.body, 'delete-confirm-dialog');
+    dialogActions = findByClass(dialog, 'delete-confirm-actions');
+    await dialogActions.children[1].listeners.click();
+
+    const deleteRequest = adminRequests.find((request) => request.options.method === 'DELETE');
+    assert.ok(deleteRequest.url.endsWith('/api/articles/2'));
+    assert.strictEqual(deleteRequest.options.headers.Authorization, 'Bearer admin-session-token');
+    assert.strictEqual(deleteRequest.options.body, undefined);
+    assert.strictEqual(admin.window.BlogContent.blogState.currentArticleId, null);
+    assert.strictEqual(admin.window.BlogContent.blogState.currentArticle, null);
+    assert.strictEqual(admin.window.BlogContent.blogState.currentSection, 'article-list');
+    assert.doesNotMatch(textTree(admin.elements.pageContent), /Fenwick Tree 学习记录/);
   }
 
   {
@@ -420,6 +565,62 @@ function jsonResponse(status, data, invalidJson = false) {
       article: { id: 3, title: '防重复测试', content: '正文', category: 'algorithm' },
     }));
     await firstSubmit;
+  }
+
+  {
+    let logoutMessage = '';
+    const parent = {
+      authManager: {
+        state: { token: 'expired-delete-token' },
+        isAdmin() { return true; },
+      },
+      authUi: {
+        async logoutToLogin(message) { logoutMessage = message; },
+      },
+    };
+    const unauthorizedDelete = createContext(
+      async (url, options = {}) => options.method === 'DELETE'
+        ? jsonResponse(401, { success: false })
+        : jsonResponse(200, { success: true, articles: [] }),
+      { parent }
+    );
+    unauthorizedDelete.window.BlogContent.showDeleteConfirmation({
+      id: 7,
+      title: '失效 Session 文章',
+      category: 'algorithm',
+    });
+    const dialog = findByClass(unauthorizedDelete.window.document.body, 'delete-confirm-dialog');
+    const actions = findByClass(dialog, 'delete-confirm-actions');
+    await actions.children[1].listeners.click();
+    assert.strictEqual(logoutMessage, '登录已失效，请重新登录');
+    assert.strictEqual(
+      findByClass(unauthorizedDelete.window.document.body, 'delete-confirm-dialog'),
+      null
+    );
+  }
+
+  {
+    const adminManager = {
+      state: { token: 'admin-token' },
+      isAdmin() { return true; },
+    };
+    const missingArticle = createContext(
+      async (url, options = {}) => options.method === 'DELETE'
+        ? jsonResponse(404, { success: false })
+        : jsonResponse(200, { success: true, articles: [] }),
+      { authManager: adminManager }
+    );
+    missingArticle.window.BlogContent.showDeleteConfirmation({
+      id: 404,
+      title: '已删除文章',
+      category: 'essay',
+    });
+    const dialog = findByClass(missingArticle.window.document.body, 'delete-confirm-dialog');
+    const actions = findByClass(dialog, 'delete-confirm-actions');
+    await actions.children[1].listeners.click();
+    assert.strictEqual(missingArticle.window.BlogContent.blogState.currentSection, 'article-list');
+    assert.strictEqual(missingArticle.window.BlogContent.blogState.currentCategory, 'essay');
+    assert.strictEqual(findByClass(missingArticle.window.document.body, 'delete-confirm-dialog'), null);
   }
 
   const css = fs.readFileSync(stylePath, 'utf8');

@@ -218,6 +218,9 @@ a {
 }
 
 .page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
   padding-top: 4px;
 }
@@ -241,6 +244,129 @@ a {
 
 .create-article-button:active {
   background: var(--hover);
+}
+
+.delete-article-button {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid #c42b1c;
+  border-radius: 0;
+  background: transparent;
+  color: #c42b1c;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+body.dark .delete-article-button {
+  color: #ff8d80;
+  border-color: #d84a3b;
+}
+
+.delete-article-button:hover,
+.delete-article-button:focus-visible {
+  background: rgba(196, 43, 28, 0.12);
+  outline: none;
+}
+
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.delete-confirm-dialog {
+  width: min(380px, 100%);
+  padding: 22px 24px 20px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+}
+
+.delete-confirm-dialog h2 {
+  margin: 0 0 18px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.delete-confirm-dialog p {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.delete-confirm-article-title {
+  display: block;
+  margin: 0 0 15px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.delete-confirm-warning {
+  color: #c42b1c !important;
+}
+
+body.dark .delete-confirm-warning {
+  color: #ff8d80 !important;
+}
+
+.delete-confirm-message {
+  min-height: 18px;
+  margin-top: 10px !important;
+  color: #c42b1c !important;
+  font-size: 12px !important;
+}
+
+body.dark .delete-confirm-message {
+  color: #ff8d80 !important;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.delete-confirm-button {
+  min-width: 88px;
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-confirm-button:hover:not(:disabled),
+.delete-confirm-button:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.delete-confirm-button.danger {
+  border-color: #c42b1c;
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+.delete-confirm-button.danger:hover:not(:disabled) {
+  background: #a4261c;
+}
+
+.delete-confirm-button:disabled {
+  cursor: default;
+  opacity: 0.62;
 }
 
 .page-title {
