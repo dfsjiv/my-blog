@@ -272,7 +272,11 @@ function jsonResponse(status, data, invalidJson = false) {
   backButton.listeners.click();
   assert.strictEqual(BlogContent.blogState.currentSection, 'article-list');
   assert.match(textTree(elements.pageContent), /整数二分与边界处理/);
-  assert.strictEqual(requests.length, 2, 'return should use the cached list');
+  assert.strictEqual(
+    requests.filter((url) => !url.endsWith('/comments')).length,
+    2,
+    'return should use the cached list'
+  );
   assert.strictEqual(findByClass(window.document.body, 'reading-progress'), null);
 
   await BlogContent.loadArticleList('tech', { force: true });

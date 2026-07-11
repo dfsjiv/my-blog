@@ -62,6 +62,8 @@ const blogState = {
   searchOrigin: null,
   detailReturnView: null,
   searchVersion: 0,
+  commentsVersion: 0,
+  commentsSection: null,
 };
 
 const sidebar = document.getElementById('sidebar');
@@ -166,6 +168,13 @@ function getSessionToken() {
   }
 }
 
+function getCurrentUser() {
+  const auth = getAuthManager();
+  return auth && typeof auth.getCurrentUser === 'function'
+    ? auth.getCurrentUser()
+    : (auth && auth.state ? auth.state.user : null);
+}
+
 function clearPageActions() {
   if (pageActions) pageActions.replaceChildren();
 }
@@ -196,6 +205,8 @@ function setActiveNavigation(pageKey) {
 
 function createContentShell() {
   cleanupReadingEnhancements();
+  blogState.commentsVersion += 1;
+  blogState.commentsSection = null;
   const article = document.createElement('article');
   article.className = 'card';
   pageContent.replaceChildren(article);
@@ -482,6 +493,340 @@ function setupReadingEnhancements(headings, tocGroups) {
   };
 }
 
+function formatCommentDate(value) {
+  if (typeof value !== 'string') return '';
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  return match ? `${match[1]}.${match[2]}.${match[3]} ${match[4]}:${match[5]}` : value;
+}
+
+function renderCommentComposer(section, articleId) {
+  const user = getCurrentUser();
+  if (!user || user.role === 'guest') {
+    const prompt = document.createElement('p');
+    prompt.className = 'comment-login-prompt';
+    prompt.textContent = '登录后可以发表评论。';
+    section.appendChild(prompt);
+    return;
+  }
+
+  const form = document.createElement('form');
+  form.className = 'comment-form';
+  const label = document.createElement('label');
+  label.textContent = '发表评论';
+  const input = document.createElement('textarea');
+  input.className = 'comment-input';
+  input.maxLength = 2000;
+  input.rows = 4;
+  input.placeholder = '输入评论内容……';
+  const message = document.createElement('p');
+  message.className = 'comment-message';
+  message.setAttribute('role', 'alert');
+  const button = document.createElement('button');
+  button.className = 'comment-submit-button';
+  button.type = 'submit';
+  button.textContent = '发表评论';
+  label.appendChild(input);
+  form.append(label, message, button);
+  form.addEventListener('submit', (event) => submitComment(event, articleId, input, message, button, null));
+  section.appendChild(form);
+}
+
+function findDirectChildByClass(element, className) {
+  return Array.from(element.children || []).find((child) => (
+    child.className && child.className.split(/\s+/).includes(className)
+  ));
+}
+
+function toggleReplyComposer(container, articleId, comment) {
+  const existing = findDirectChildByClass(container, 'comment-reply-form');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const form = document.createElement('form');
+  form.className = 'comment-reply-form';
+  const label = document.createElement('label');
+  const username = comment.author && comment.author.username ? comment.author.username : '用户';
+  label.textContent = '回复 @' + username;
+  const input = document.createElement('textarea');
+  input.className = 'comment-input comment-reply-input';
+  input.maxLength = 2000;
+  input.rows = 3;
+  input.placeholder = '输入回复内容...';
+  const message = document.createElement('p');
+  message.className = 'comment-message';
+  message.setAttribute('role', 'alert');
+  const actions = document.createElement('div');
+  actions.className = 'comment-reply-actions';
+  const cancel = document.createElement('button');
+  cancel.className = 'comment-reply-cancel';
+  cancel.type = 'button';
+  cancel.textContent = '取消';
+  cancel.addEventListener('click', () => form.remove());
+  const submit = document.createElement('button');
+  submit.className = 'comment-submit-button';
+  submit.type = 'submit';
+  submit.textContent = '发送回复';
+  actions.append(cancel, submit);
+  label.appendChild(input);
+  form.append(label, message, actions);
+  form.addEventListener('submit', (event) => (
+    submitComment(event, articleId, input, message, submit, comment.id)
+  ));
+  container.appendChild(form);
+  input.focus();
+}
+
+function createCommentItem(comment, articleId, section, isReply) {
+  const item = document.createElement('article');
+  item.className = isReply ? 'comment-item comment-reply-item' : 'comment-item';
+  const header = document.createElement('div');
+  header.className = 'comment-header';
+  const author = document.createElement('strong');
+  author.textContent = comment.author && comment.author.username
+    ? comment.author.username
+    : '未知用户';
+  const time = document.createElement('time');
+  time.textContent = formatCommentDate(comment.created_at);
+  header.append(author, time);
+
+  const currentUser = getCurrentUser();
+  if (!isReply && currentUser && currentUser.role !== 'guest') {
+    const replyButton = document.createElement('button');
+    replyButton.className = 'comment-reply-button';
+    replyButton.type = 'button';
+    replyButton.textContent = '回复';
+    replyButton.addEventListener('click', () => toggleReplyComposer(item, articleId, comment));
+    header.appendChild(replyButton);
+  }
+  if (isCurrentUserAdmin()) {
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'comment-delete-button';
+    deleteButton.type = 'button';
+    deleteButton.textContent = '删除';
+    deleteButton.addEventListener('click', () => showDeleteCommentConfirmation(comment, articleId, section));
+    header.appendChild(deleteButton);
+  }
+
+  const content = document.createElement('p');
+  content.className = 'comment-content';
+  content.textContent = typeof comment.content === 'string' ? comment.content : '';
+  item.append(header, content);
+  if (!isReply && Array.isArray(comment.replies) && comment.replies.length) {
+    const replies = document.createElement('div');
+    replies.className = 'comment-replies';
+    comment.replies.forEach((reply) => {
+      replies.appendChild(createCommentItem(reply, articleId, section, true));
+    });
+    item.appendChild(replies);
+  }
+  return item;
+}
+
+function renderComments(section, articleId, comments) {
+  section.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.className = 'comments-title';
+  heading.textContent = '评论 ' + comments.length;
+  section.appendChild(heading);
+
+  if (!comments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'comments-empty';
+    empty.textContent = '暂无评论。';
+    section.appendChild(empty);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'comment-list';
+    comments.forEach((comment) => {
+      const item = document.createElement('article');
+      item.className = 'comment-item';
+      const header = document.createElement('div');
+      header.className = 'comment-header';
+      const author = document.createElement('strong');
+      author.textContent = comment.author && comment.author.username
+        ? comment.author.username
+        : '未知用户';
+      const time = document.createElement('time');
+      time.textContent = formatCommentDate(comment.created_at);
+      header.append(author, time);
+      const currentUser = getCurrentUser();
+      if (currentUser && currentUser.role !== 'guest') {
+        const replyButton = document.createElement('button');
+        replyButton.className = 'comment-reply-button';
+        replyButton.type = 'button';
+        replyButton.textContent = '回复';
+        replyButton.addEventListener('click', () => toggleReplyComposer(item, articleId, comment));
+        header.appendChild(replyButton);
+      }
+      if (isCurrentUserAdmin()) {
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'comment-delete-button';
+        deleteButton.type = 'button';
+        deleteButton.textContent = '删除';
+        deleteButton.addEventListener('click', () => showDeleteCommentConfirmation(comment, articleId, section));
+        header.appendChild(deleteButton);
+      }
+      const content = document.createElement('p');
+      content.className = 'comment-content';
+      content.textContent = typeof comment.content === 'string' ? comment.content : '';
+      item.append(header, content);
+      if (Array.isArray(comment.replies) && comment.replies.length) {
+        const replies = document.createElement('div');
+        replies.className = 'comment-replies';
+        comment.replies.forEach((reply) => {
+          replies.appendChild(createCommentItem(reply, articleId, section, true));
+        });
+        item.appendChild(replies);
+      }
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  }
+  renderCommentComposer(section, articleId);
+}
+
+async function loadComments(articleId, section) {
+  const version = ++blogState.commentsVersion;
+  section.replaceChildren();
+  const loading = document.createElement('p');
+  loading.className = 'comments-status';
+  loading.textContent = '正在加载评论...';
+  section.appendChild(loading);
+  try {
+    const data = await apiRequest('/api/articles/' + encodeURIComponent(articleId) + '/comments');
+    if (!Array.isArray(data.comments)) throw new Error('invalid-data');
+    if (version !== blogState.commentsVersion || blogState.currentArticleId !== articleId) return;
+    renderComments(section, articleId, data.comments);
+  } catch (error) {
+    if (version !== blogState.commentsVersion || blogState.currentArticleId !== articleId) return;
+    section.replaceChildren();
+    const message = document.createElement('p');
+    message.className = 'comments-status is-error';
+    message.textContent = '评论加载失败，请稍后重试。';
+    section.appendChild(message);
+    renderCommentComposer(section, articleId);
+  }
+}
+
+async function submitComment(event, articleId, input, message, button, parentId) {
+  event.preventDefault();
+  const content = input.value.trim();
+  if (!content) {
+    message.textContent = '请输入评论内容。';
+    input.focus();
+    return;
+  }
+  const token = getSessionToken();
+  if (!token) {
+    message.textContent = '登录已失效，请重新登录';
+    await handleInvalidSession();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '正在发表...';
+  message.textContent = '';
+  try {
+    await apiRequest('/api/articles/' + encodeURIComponent(articleId) + '/comments', {
+      method: 'POST',
+      token,
+      body: parentId ? { content, parent_id: parentId } : { content },
+    });
+    input.value = '';
+    if (blogState.commentsSection) await loadComments(articleId, blogState.commentsSection);
+  } catch (error) {
+    if (error.status === 401) {
+      message.textContent = '登录已失效，请重新登录';
+      await handleInvalidSession();
+    } else if (error.status === 403) {
+      message.textContent = '无权限执行此操作';
+    } else if (error.status === 404) {
+      message.textContent = '文章或评论不存在';
+    } else if (error.status === 400) {
+      message.textContent = error.apiMessage || '评论内容不符合要求';
+    } else if (error.code === 'network') {
+      message.textContent = '无法连接服务器，请稍后重试';
+    } else {
+      message.textContent = '操作失败，请稍后重试';
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = '发表评论';
+  }
+}
+
+function showDeleteCommentConfirmation(comment, articleId, section) {
+  if (!isCurrentUserAdmin()) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'delete-confirm-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  const panel = document.createElement('section');
+  panel.className = 'delete-confirm-dialog';
+  const title = document.createElement('h2');
+  title.textContent = '删除评论？';
+  const prompt = document.createElement('p');
+  prompt.textContent = '确定要删除这条评论吗？';
+  const message = document.createElement('p');
+  message.className = 'delete-confirm-message';
+  const actions = document.createElement('div');
+  actions.className = 'delete-confirm-actions';
+  const cancel = document.createElement('button');
+  cancel.className = 'delete-confirm-button secondary';
+  cancel.type = 'button';
+  cancel.textContent = '取消';
+  cancel.addEventListener('click', () => overlay.remove());
+  const confirm = document.createElement('button');
+  confirm.className = 'delete-confirm-button danger';
+  confirm.type = 'button';
+  confirm.textContent = '确认删除';
+  confirm.addEventListener('click', () => deleteComment(comment.id, articleId, section, overlay, message, cancel, confirm));
+  actions.append(cancel, confirm);
+  panel.append(title, prompt, message, actions);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  confirm.focus();
+}
+
+async function deleteComment(commentId, articleId, section, overlay, message, cancel, confirm) {
+  const token = getSessionToken();
+  if (!token) {
+    overlay.remove();
+    await handleInvalidSession();
+    return;
+  }
+  cancel.disabled = true;
+  confirm.disabled = true;
+  confirm.textContent = '正在删除...';
+  try {
+    await apiRequest('/api/comments/' + encodeURIComponent(commentId), {
+      method: 'DELETE',
+      token,
+    });
+    overlay.remove();
+    await loadComments(articleId, section);
+  } catch (error) {
+    if (error.status === 401) {
+      overlay.remove();
+      await handleInvalidSession();
+    } else if (error.status === 403) {
+      message.textContent = '无权限执行此操作';
+    } else if (error.status === 404) {
+      message.textContent = '文章或评论不存在';
+    } else if (error.code === 'network') {
+      message.textContent = '无法连接服务器，请稍后重试';
+    } else {
+      message.textContent = '操作失败，请稍后重试';
+    }
+  } finally {
+    cancel.disabled = false;
+    confirm.disabled = false;
+    confirm.textContent = '确认删除';
+  }
+}
+
 function renderArticleList(pageKey, articles) {
   const page = pageInfo[pageKey];
   setHeader(page);
@@ -755,7 +1100,9 @@ function renderArticleDetail(article) {
 
   const main = document.createElement('div');
   main.className = 'article-detail-main';
-  main.append(title, createArticleMeta(article), body);
+  const commentsSection = document.createElement('section');
+  commentsSection.className = 'article-comments';
+  main.append(title, createArticleMeta(article), body, commentsSection);
 
   const layout = document.createElement('div');
   layout.className = 'article-detail-layout';
@@ -772,6 +1119,8 @@ function renderArticleDetail(article) {
   }
 
   setupReadingEnhancements(headings, tocGroups);
+  blogState.commentsSection = commentsSection;
+  loadComments(article.id, commentsSection);
 }
 
 function renderArticleAdminActions(article) {
@@ -1337,6 +1686,9 @@ if (window.addEventListener) {
       renderCreateArticleAction(blogState.currentPageKey);
     } else if (blogState.currentSection === 'article-detail') {
       renderArticleAdminActions(blogState.currentArticle);
+      if (blogState.currentArticle && blogState.commentsSection) {
+        loadComments(blogState.currentArticle.id, blogState.commentsSection);
+      }
     } else if (!isCurrentUserAdmin() && blogState.currentSection === 'article-edit') {
       renderArticleDetail(blogState.currentArticle);
     } else if (!isCurrentUserAdmin() && blogState.currentSection === 'article-create') {
@@ -1364,6 +1716,9 @@ window.BlogContent = {
   renderArticleEdit,
   showDeleteConfirmation,
   deleteArticle,
+  loadComments,
+  submitComment,
+  deleteComment,
   publishArticle,
   updateArticle,
   isCurrentUserAdmin,

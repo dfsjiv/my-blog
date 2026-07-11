@@ -790,6 +790,231 @@ body.dark .article-status.is-error {
   transition: width 80ms linear;
 }
 
+.article-comments {
+  margin-top: 42px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.comments-title {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.comments-status,
+.comments-empty,
+.comment-login-prompt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.comments-status.is-error,
+.comment-message {
+  color: #d83b01;
+}
+
+body.dark .comments-status.is-error,
+body.dark .comment-message {
+  color: #ff9b82;
+}
+
+.comment-list {
+  border-top: 1px solid var(--border);
+}
+
+.comment-item {
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.comment-header strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.comment-delete-button {
+  margin-left: 0;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #c42b1c;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.comment-reply-button {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.comment-reply-button:hover,
+.comment-reply-button:focus-visible {
+  background: rgba(0, 120, 215, 0.12);
+  outline: none;
+}
+
+body.dark .comment-delete-button {
+  color: #ff8d80;
+}
+
+.comment-delete-button:hover,
+.comment-delete-button:focus-visible {
+  background: rgba(196, 43, 28, 0.12);
+  outline: none;
+}
+
+.comment-content {
+  margin: 9px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-replies {
+  margin: 12px 0 0 24px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+
+.comment-reply-item {
+  padding: 10px 0;
+}
+
+.comment-reply-item:last-child {
+  border-bottom: 0;
+}
+
+.comment-reply-form {
+  margin: 12px 0 0 24px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent);
+}
+
+.comment-reply-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.comment-reply-input {
+  min-height: 68px;
+}
+
+.comment-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.comment-reply-actions .comment-submit-button {
+  margin: 0;
+}
+
+.comment-reply-cancel {
+  min-height: 33px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.comment-reply-cancel:hover,
+.comment-reply-cancel:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .comment-replies,
+  .comment-reply-form {
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+}
+
+.comment-login-prompt,
+.comment-form {
+  margin-top: 20px;
+}
+
+.comment-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.comment-input {
+  width: 100%;
+  min-height: 92px;
+  padding: 8px 9px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.6 "Segoe UI", Arial, sans-serif;
+}
+
+.comment-input:focus {
+  border-color: var(--accent);
+}
+
+.comment-message {
+  min-height: 18px;
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.comment-submit-button {
+  display: block;
+  min-width: 88px;
+  min-height: 33px;
+  margin: 7px 0 0 auto;
+  padding: 6px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.comment-submit-button:disabled {
+  opacity: 0.62;
+}
+
 .article-editor {
   display: flex;
   flex-direction: column;

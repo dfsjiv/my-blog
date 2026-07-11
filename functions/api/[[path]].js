@@ -11,6 +11,7 @@ const ALLOWED_ARTICLE_CATEGORIES = [
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_SUMMARY_LENGTH = 500;
+const MAX_COMMENT_LENGTH = 2000;
 
 
 /* =========================================================
@@ -43,6 +44,12 @@ export async function onRequest(context) {
     // /api/articles/123
     const articleMatch =
         url.pathname.match(/^\/api\/articles\/(\d+)$/);
+
+    const articleCommentsMatch =
+        url.pathname.match(/^\/api\/articles\/(\d+)\/comments$/);
+
+    const commentMatch =
+        url.pathname.match(/^\/api\/comments\/(\d+)$/);
 
     try {
         let response;
@@ -102,6 +109,38 @@ export async function onRequest(context) {
             response = await handleCreateArticle(request, env);
         }
 
+        else if (
+            articleCommentsMatch &&
+            request.method === "GET"
+        ) {
+            response = await handleGetComments(
+                articleCommentsMatch[1],
+                env
+            );
+        }
+
+        else if (
+            articleCommentsMatch &&
+            request.method === "POST"
+        ) {
+            response = await handleCreateComment(
+                request,
+                articleCommentsMatch[1],
+                env
+            );
+        }
+
+        else if (
+            commentMatch &&
+            request.method === "DELETE"
+        ) {
+            response = await handleDeleteComment(
+                request,
+                commentMatch[1],
+                env
+            );
+        }
+
         /* ==============================================
            获取单篇文章
            GET /api/articles/:id
@@ -154,7 +193,9 @@ export async function onRequest(context) {
             url.pathname === "/api/me" ||
             url.pathname === "/api/logout" ||
             url.pathname === "/api/articles" ||
-            articleMatch
+            articleMatch ||
+            articleCommentsMatch ||
+            commentMatch
         ) {
             response = jsonResponse(
                 {
@@ -988,6 +1029,210 @@ async function getArticleById(
    2. Session 是否有效
    3. 当前用户 role 是否为 admin
    ========================================================= */
+
+async function handleGetComments(articleId, env) {
+    const article = await getArticleById(articleId, env);
+    if (!article) {
+        return jsonResponse({ success: false, message: "文章不存在" }, 404);
+    }
+
+    const result = await env.DB
+        .prepare(`
+            SELECT
+                c.id,
+                c.article_id,
+                c.parent_id,
+                c.content,
+                c.created_at,
+                u.id AS author_id,
+                u.username AS author_username,
+                u.role AS author_role
+            FROM comments AS c
+            JOIN users AS u ON u.id = c.user_id
+            WHERE c.article_id = ?
+            ORDER BY c.created_at ASC, c.id ASC
+        `)
+        .bind(articleId)
+        .all();
+
+    const rows = (result.results || []).map((row) => ({
+        id: row.id,
+        article_id: row.article_id,
+        parent_id: row.parent_id,
+        content: row.content,
+        created_at: row.created_at,
+        author: {
+            id: row.author_id,
+            username: row.author_username,
+            role: row.author_role
+        }
+    }));
+
+    const topLevelComments = [];
+    const commentsById = new Map();
+    rows.forEach((comment) => {
+        if (comment.parent_id === null) {
+            comment.replies = [];
+            topLevelComments.push(comment);
+            commentsById.set(comment.id, comment);
+        }
+    });
+    rows.forEach((comment) => {
+        if (comment.parent_id === null) return;
+        const parent = commentsById.get(comment.parent_id);
+        if (parent) parent.replies.push(comment);
+    });
+
+    return jsonResponse({ success: true, comments: topLevelComments });
+}
+
+async function handleCreateComment(request, articleId, env) {
+    const sessionToken = getBearerToken(request);
+    if (!sessionToken) {
+        return jsonResponse({ success: false, message: "请先登录" }, 401);
+    }
+
+    const currentUser = await getAuthenticatedUser(sessionToken, env);
+    if (!currentUser) {
+        return jsonResponse({ success: false, message: "登录已失效" }, 401);
+    }
+
+    const article = await getArticleById(articleId, env);
+    if (!article) {
+        return jsonResponse({ success: false, message: "文章不存在" }, 404);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    }
+    catch {
+        return jsonResponse({ success: false, message: "请求数据格式错误" }, 400);
+    }
+
+    const content =
+        typeof body?.content === "string"
+            ? body.content.trim()
+            : "";
+
+    if (!content) {
+        return jsonResponse({ success: false, message: "评论内容不能为空" }, 400);
+    }
+
+    if (content.length > MAX_COMMENT_LENGTH) {
+        return jsonResponse(
+            {
+                success: false,
+                message: `评论内容不能超过 ${MAX_COMMENT_LENGTH} 个字符`
+            },
+            400
+        );
+    }
+
+    let parentId = null;
+    if (body?.parent_id !== undefined && body.parent_id !== null) {
+        const requestedParentId = Number(body.parent_id);
+        if (!Number.isInteger(requestedParentId) || requestedParentId <= 0) {
+            return jsonResponse({ success: false, message: "回复的评论无效" }, 400);
+        }
+
+        const parentComment = await getCommentById(requestedParentId, env);
+        if (!parentComment || Number(parentComment.article_id) !== Number(articleId)) {
+            return jsonResponse({ success: false, message: "回复的评论不属于当前文章" }, 400);
+        }
+        parentId = parentComment.parent_id || parentComment.id;
+    }
+
+    const result = await env.DB
+        .prepare(`
+            INSERT INTO comments (
+                article_id,
+                user_id,
+                content,
+                parent_id
+            )
+            VALUES (?, ?, ?, ?)
+        `)
+        .bind(articleId, currentUser.id, content, parentId)
+        .run();
+
+    const comment = await getCommentById(result.meta?.last_row_id, env);
+
+    return jsonResponse(
+        {
+            success: true,
+            message: "评论发表成功",
+            comment
+        },
+        201
+    );
+}
+
+async function handleDeleteComment(request, commentId, env) {
+    const authResult = await requireAdmin(request, env);
+    if (!authResult.success) {
+        return authResult.response;
+    }
+
+    const comment = await getCommentById(commentId, env);
+    if (!comment) {
+        return jsonResponse({ success: false, message: "评论不存在" }, 404);
+    }
+
+    if (comment.parent_id === null) {
+        await env.DB.batch([
+            env.DB.prepare("DELETE FROM comments WHERE parent_id = ?").bind(commentId),
+            env.DB.prepare("DELETE FROM comments WHERE id = ?").bind(commentId)
+        ]);
+    }
+    else {
+        await env.DB
+            .prepare("DELETE FROM comments WHERE id = ?")
+            .bind(commentId)
+            .run();
+    }
+
+    return jsonResponse({ success: true, message: "评论删除成功" });
+}
+
+async function getCommentById(commentId, env) {
+    if (commentId === undefined || commentId === null) return null;
+
+    const row = await env.DB
+        .prepare(`
+            SELECT
+                c.id,
+                c.article_id,
+                c.parent_id,
+                c.content,
+                c.created_at,
+                u.id AS author_id,
+                u.username AS author_username,
+                u.role AS author_role
+            FROM comments AS c
+            JOIN users AS u ON u.id = c.user_id
+            WHERE c.id = ?
+            LIMIT 1
+        `)
+        .bind(commentId)
+        .first();
+
+    if (!row) return null;
+
+    return {
+        id: row.id,
+        article_id: row.article_id,
+        parent_id: row.parent_id,
+        content: row.content,
+        created_at: row.created_at,
+        author: {
+            id: row.author_id,
+            username: row.author_username,
+            role: row.author_role
+        }
+    };
+}
+
 
 async function requireAdmin(
     request,
