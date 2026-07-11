@@ -227,7 +227,7 @@ function jsonResponse(status, data, invalidJson = false) {
   const BlogContent = window.BlogContent;
   assert.strictEqual(
     BlogContent.API_BASE_URL,
-    'https://blog-api.lilinzheng200811.workers.dev'
+    ''
   );
   assert.match(elements.pageContent.innerHTML, /欢迎来到我的博客/);
 

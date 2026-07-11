@@ -1,0 +1,37 @@
+warning: in the working copy of 'auth.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'script.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/blog-content.test.js', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/auth.js b/auth.js[m
+[1mindex 7ee6cae..e79827b 100644[m
+[1m--- a/auth.js[m
+[1m+++ b/auth.js[m
+[36m@@ -1,5 +1,5 @@[m
+ (function () {[m
+[31m-  const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';[m
+[32m+[m[32m  const API_BASE_URL = '';[m
+   const TOKEN_KEY = 'blog_session_token';[m
+   const ACCOUNT_ROLES = new Set(['admin', 'user']);[m
+ [m
+[1mdiff --git a/script.js b/script.js[m
+[1mindex a4b0068..4d84bf8 100644[m
+[1m--- a/script.js[m
+[1m+++ b/script.js[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';[m
+[32m+[m[32mconst API_BASE_URL = '';[m
+ const STORAGE_KEY = 'myBlogDesktopState';[m
+ const AUTH_TOKEN_KEY = 'blog_session_token';[m
+ const PAGE_BY_CATEGORY = {[m
+[1mdiff --git a/tests/blog-content.test.js b/tests/blog-content.test.js[m
+[1mindex afe8ad6..97f12b0 100644[m
+[1m--- a/tests/blog-content.test.js[m
+[1m+++ b/tests/blog-content.test.js[m
+[36m@@ -227,7 +227,7 @@[m [mfunction jsonResponse(status, data, invalidJson = false) {[m
+   const BlogContent = window.BlogContent;[m
+   assert.strictEqual([m
+     BlogContent.API_BASE_URL,[m
+[31m-    'https://blog-api.lilinzheng200811.workers.dev'[m
+[32m+[m[32m    ''[m
+   );[m
+   assert.match(elements.pageContent.innerHTML, /欢迎来到我的博客/);[m
+ [m

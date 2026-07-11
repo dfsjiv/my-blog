@@ -1,5 +1,5 @@
 (function () {
-  const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';
+  const API_BASE_URL = '';
   const TOKEN_KEY = 'blog_session_token';
   const ACCOUNT_ROLES = new Set(['admin', 'user']);
 

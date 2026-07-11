@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://blog-api.lilinzheng200811.workers.dev';
+const API_BASE_URL = '';
 const STORAGE_KEY = 'myBlogDesktopState';
 const AUTH_TOKEN_KEY = 'blog_session_token';
 const PAGE_BY_CATEGORY = {
