@@ -35,6 +35,16 @@
       windowMinimize: doc.getElementById('windowMinimize'),
       windowMaximize: doc.getElementById('windowMaximize'),
       windowClose: doc.getElementById('windowClose'),
+      resizeHandles: [
+        doc.getElementById('resizeN'),
+        doc.getElementById('resizeE'),
+        doc.getElementById('resizeS'),
+        doc.getElementById('resizeW'),
+        doc.getElementById('resizeNE'),
+        doc.getElementById('resizeSE'),
+        doc.getElementById('resizeSW'),
+        doc.getElementById('resizeNW'),
+      ],
       clockTime: doc.getElementById('clockTime'),
       clockDate: doc.getElementById('clockDate'),
     };
@@ -217,6 +227,7 @@
       bounds: null,
       restoreBounds: null,
       drag: null,
+      resize: null,
       iconDrag: null,
     };
 
@@ -411,6 +422,40 @@
       applyWindowBounds();
     }
 
+    function resizeWindowFromEdge(edge, deltaX, deltaY) {
+      if (!state.open || state.minimized || state.maximized) {
+        return;
+      }
+
+      const area = availableArea();
+      const original = state.resize ? state.resize.bounds : ensureBounds();
+      let left = original.left;
+      let top = original.top;
+      let right = original.left + original.width;
+      let bottom = original.top + original.height;
+
+      if (edge.indexOf('e') !== -1) {
+        right = clamp(right + deltaX, left + MIN_WINDOW_WIDTH, area.width);
+      }
+      if (edge.indexOf('s') !== -1) {
+        bottom = clamp(bottom + deltaY, top + MIN_WINDOW_HEIGHT, area.height);
+      }
+      if (edge.indexOf('w') !== -1) {
+        left = clamp(left + deltaX, 0, right - MIN_WINDOW_WIDTH);
+      }
+      if (edge.indexOf('n') !== -1) {
+        top = clamp(top + deltaY, 0, bottom - MIN_WINDOW_HEIGHT);
+      }
+
+      state.bounds = {
+        left,
+        top,
+        width: right - left,
+        height: bottom - top,
+      };
+      applyWindowBounds();
+    }
+
     function updateClock() {
       const date = now();
       if (elements.clockTime) {
@@ -468,6 +513,56 @@
       }
     }
 
+    function startResize(event, edge) {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+      if (!state.open || state.minimized || state.maximized) {
+        return;
+      }
+
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      if (event.stopPropagation) {
+        event.stopPropagation();
+      }
+      if (event.pointerId !== undefined && event.currentTarget && event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+
+      state.resize = {
+        edge,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        bounds: Object.assign({}, ensureBounds()),
+      };
+      setElementState(elements.blogWindow, 'is-resizing', true);
+
+      document.addEventListener('pointermove', handleResizeMove);
+      document.addEventListener('pointerup', stopResize, { once: true });
+    }
+
+    function handleResizeMove(event) {
+      if (!state.resize) {
+        return;
+      }
+
+      resizeWindowFromEdge(
+        state.resize.edge,
+        event.clientX - state.resize.pointerX,
+        event.clientY - state.resize.pointerY
+      );
+    }
+
+    function stopResize() {
+      state.resize = null;
+      setElementState(elements.blogWindow, 'is-resizing', false);
+      if (document.removeEventListener) {
+        document.removeEventListener('pointermove', handleResizeMove);
+      }
+    }
+
     function bindEvents() {
       state.iconDrag = createDesktopIconDrag({
         document,
@@ -513,6 +608,15 @@
       elements.windowClose.addEventListener('click', closeBlogWindow);
       elements.blogTitlebar.addEventListener('pointerdown', startDrag);
       elements.blogTitlebar.addEventListener('dblclick', toggleMaximizeBlogWindow);
+      elements.resizeHandles.forEach(function (handle) {
+        if (!handle) {
+          return;
+        }
+
+        handle.addEventListener('pointerdown', function (event) {
+          startResize(event, handle.dataset.resizeEdge);
+        });
+      });
       elements.desktopSurface.addEventListener('click', function (event) {
         if (event.target === elements.desktopSurface) {
           selectDesktopIcon(false);
@@ -560,6 +664,7 @@
       closeStartMenu,
       selectDesktopIcon,
       moveWindowTo,
+      resizeWindowFromEdge,
       updateClock,
       getIconDragController: function () {
         return state.iconDrag;

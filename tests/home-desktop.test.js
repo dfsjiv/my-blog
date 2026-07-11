@@ -55,7 +55,12 @@ class FakeElement {
   }
 
   addEventListener(eventName, handler) {
-    this.listeners[eventName] = handler;
+    this.listeners[eventName] = (event = {}) => {
+      if (!event.currentTarget) {
+        event.currentTarget = this;
+      }
+      return handler(event);
+    };
   }
 
   setAttribute(name, value) {
@@ -87,6 +92,25 @@ class FakeElement {
 }
 
 function makeElements() {
+  const resizeHandles = {
+    resizeN: new FakeElement('resizeN'),
+    resizeE: new FakeElement('resizeE'),
+    resizeS: new FakeElement('resizeS'),
+    resizeW: new FakeElement('resizeW'),
+    resizeNE: new FakeElement('resizeNE'),
+    resizeSE: new FakeElement('resizeSE'),
+    resizeSW: new FakeElement('resizeSW'),
+    resizeNW: new FakeElement('resizeNW'),
+  };
+  resizeHandles.resizeN.dataset.resizeEdge = 'n';
+  resizeHandles.resizeE.dataset.resizeEdge = 'e';
+  resizeHandles.resizeS.dataset.resizeEdge = 's';
+  resizeHandles.resizeW.dataset.resizeEdge = 'w';
+  resizeHandles.resizeNE.dataset.resizeEdge = 'ne';
+  resizeHandles.resizeSE.dataset.resizeEdge = 'se';
+  resizeHandles.resizeSW.dataset.resizeEdge = 'sw';
+  resizeHandles.resizeNW.dataset.resizeEdge = 'nw';
+
   return {
     desktopShell: new FakeElement('desktopShell'),
     desktopSurface: new FakeElement('desktopSurface'),
@@ -101,8 +125,10 @@ function makeElements() {
     windowMinimize: new FakeElement('windowMinimize'),
     windowMaximize: new FakeElement('windowMaximize'),
     windowClose: new FakeElement('windowClose'),
+    resizeHandles: Object.values(resizeHandles),
     clockTime: new FakeElement('clockTime'),
     clockDate: new FakeElement('clockDate'),
+    ...resizeHandles,
   };
 }
 
@@ -195,6 +221,38 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-active'), true);
 assert.strictEqual(elements.blogFrame.src, 'blog.html');
 
+assert.strictEqual(typeof elements.resizeSE.listeners.pointerdown, 'function');
+elements.resizeSE.listeners.pointerdown({
+  button: 0,
+  pointerId: 21,
+  clientX: 1000,
+  clientY: 600,
+  preventDefault() {},
+  stopPropagation() {},
+});
+assert.strictEqual(elements.resizeSE.capturedPointerId, 21);
+assert.strictEqual(elements.blogWindow.classList.contains('is-resizing'), true);
+listeners.pointermove({ clientX: 1100, clientY: 660 });
+assert.ok(parseInt(elements.blogWindow.style.width, 10) > 1040);
+assert.ok(parseInt(elements.blogWindow.style.height, 10) > 680);
+listeners.pointerup();
+assert.strictEqual(elements.blogWindow.classList.contains('is-resizing'), false);
+
+elements.resizeNW.listeners.pointerdown({
+  button: 0,
+  pointerId: 22,
+  clientX: 100,
+  clientY: 100,
+  preventDefault() {},
+  stopPropagation() {},
+});
+listeners.pointermove({ clientX: 2000, clientY: 2000 });
+assert.strictEqual(parseInt(elements.blogWindow.style.width, 10), 320);
+assert.strictEqual(parseInt(elements.blogWindow.style.height, 10), 220);
+assert.ok(parseInt(elements.blogWindow.style.left, 10) >= 0);
+assert.ok(parseInt(elements.blogWindow.style.top, 10) >= 0);
+listeners.pointerup();
+
 controller.minimizeBlogWindow();
 assert.strictEqual(elements.blogWindow.classList.contains('is-minimized'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), true);
@@ -231,6 +289,7 @@ assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), 
   assert.match(indexHtml, /id="desktopShell"/);
   assert.match(indexHtml, /id="blogWindow"/);
   assert.match(indexHtml, /id="blogFrame"[^>]+src="blog\.html"/);
+  assert.strictEqual((indexHtml.match(/data-resize-edge="/g) || []).length, 8);
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
