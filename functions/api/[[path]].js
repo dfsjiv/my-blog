@@ -12,6 +12,7 @@ const ALLOWED_ARTICLE_CATEGORIES = [
 const MAX_TITLE_LENGTH = 200;
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_COMMENT_LENGTH = 2000;
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
 
 
 /* =========================================================
@@ -85,6 +86,20 @@ export async function onRequest(context) {
             request.method === "POST"
         ) {
             response = await handleLogout(request, env);
+        }
+
+        else if (
+            url.pathname === "/api/chat/messages" &&
+            request.method === "GET"
+        ) {
+            response = await handleGetChatMessages(env);
+        }
+
+        else if (
+            url.pathname === "/api/chat/messages" &&
+            request.method === "POST"
+        ) {
+            response = await handleSendChatMessage(request, env);
         }
 
         /* ==============================================
@@ -192,6 +207,7 @@ export async function onRequest(context) {
             url.pathname === "/api/login" ||
             url.pathname === "/api/me" ||
             url.pathname === "/api/logout" ||
+            url.pathname === "/api/chat/messages" ||
             url.pathname === "/api/articles" ||
             articleMatch ||
             articleCommentsMatch ||
@@ -1029,6 +1045,102 @@ async function getArticleById(
    2. Session 是否有效
    3. 当前用户 role 是否为 admin
    ========================================================= */
+
+async function handleGetChatMessages(env) {
+    const result = await env.DB
+        .prepare(`
+            SELECT
+                m.id,
+                m.content,
+                m.created_at,
+                u.username,
+                u.role
+            FROM chat_messages AS m
+            JOIN users AS u ON u.id = m.user_id
+            ORDER BY m.created_at DESC, m.id DESC
+            LIMIT 50
+        `)
+        .all();
+
+    const messages = (result.results || []).reverse().map((row) => ({
+        id: row.id,
+        content: row.content,
+        created_at: row.created_at,
+        username: row.username,
+        role: row.role
+    }));
+
+    return jsonResponse({ success: true, messages });
+}
+
+async function handleSendChatMessage(request, env) {
+    const sessionToken = getBearerToken(request);
+    if (!sessionToken) {
+        return jsonResponse({ success: false, message: "请先登录" }, 401);
+    }
+
+    const currentUser = await getAuthenticatedUser(sessionToken, env);
+    if (!currentUser) {
+        return jsonResponse({ success: false, message: "登录已失效" }, 401);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    }
+    catch {
+        return jsonResponse({ success: false, message: "请求数据格式错误" }, 400);
+    }
+
+    const content = typeof body?.content === "string" ? body.content.trim() : "";
+    if (!content) {
+        return jsonResponse({ success: false, message: "消息内容不能为空" }, 400);
+    }
+    if (content.length > MAX_CHAT_MESSAGE_LENGTH) {
+        return jsonResponse(
+            { success: false, message: `消息内容不能超过 ${MAX_CHAT_MESSAGE_LENGTH} 个字符` },
+            400
+        );
+    }
+
+    const result = await env.DB
+        .prepare(`
+            INSERT INTO chat_messages (user_id, content)
+            VALUES (?, ?)
+        `)
+        .bind(currentUser.id, content)
+        .run();
+
+    const message = await getChatMessageById(result.meta?.last_row_id, env);
+    return jsonResponse({ success: true, message }, 201);
+}
+
+async function getChatMessageById(messageId, env) {
+    const row = await env.DB
+        .prepare(`
+            SELECT
+                m.id,
+                m.content,
+                m.created_at,
+                u.username,
+                u.role
+            FROM chat_messages AS m
+            JOIN users AS u ON u.id = m.user_id
+            WHERE m.id = ?
+            LIMIT 1
+        `)
+        .bind(messageId)
+        .first();
+
+    if (!row) return null;
+    return {
+        id: row.id,
+        content: row.content,
+        created_at: row.created_at,
+        username: row.username,
+        role: row.role
+    };
+}
 
 async function handleGetComments(articleId, env) {
     const article = await getArticleById(articleId, env);

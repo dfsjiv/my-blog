@@ -1,6 +1,7 @@
 (function () {
   const TASKBAR_HEIGHT = 40;
   const STORAGE_KEY = 'myBlogChatWindowState';
+  const CHAT_MESSAGES_PATH = '/api/chat/messages';
   const elements = {
     desktopIcon: document.getElementById('chatDesktopIcon'),
     taskbarButton: document.getElementById('chatTaskbarButton'),
@@ -33,6 +34,26 @@
     return window.authManager && typeof window.authManager.getCurrentUser === 'function'
       ? window.authManager.getCurrentUser()
       : null;
+  }
+
+  async function chatApiRequest(requestOptions) {
+    const options = requestOptions || {};
+    const url = CHAT_MESSAGES_PATH;
+    if (window.authManager && typeof window.authManager.apiRequest === 'function') {
+      return window.authManager.apiRequest(url, options);
+    }
+
+    const headers = Object.assign({}, options.headers || {});
+    const fetchOptions = { method: options.method || 'GET', headers };
+    if (options.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      fetchOptions.body = JSON.stringify(options.body);
+    }
+    if (options.token) headers.Authorization = 'Bearer ' + options.token;
+    const response = await fetch(url, fetchOptions);
+    const data = await response.json();
+    if (!response.ok || !data || data.success === false) throw new Error('request-failed');
+    return data;
   }
 
   function saveWindowState() {
@@ -106,7 +127,7 @@
       return;
     }
 
-    const row = document.createElement('div');
+    const row = document.createElement('form');
     row.className = 'chat-compose-row';
     const input = document.createElement('textarea');
     input.className = 'chat-input';
@@ -115,11 +136,12 @@
     input.setAttribute('aria-label', '消息内容');
     const button = document.createElement('button');
     button.className = 'chat-send-button';
-    button.type = 'button';
+    button.type = 'submit';
     button.textContent = '发送';
-    button.disabled = true;
-    button.title = '消息发送将在后续实时通信阶段开放';
     row.append(input, button);
+    row.addEventListener('submit', function (event) {
+      sendMessage(event, input, button);
+    });
     elements.compose.appendChild(row);
   }
 
@@ -170,14 +192,7 @@
     state.loading = true;
     renderStatus('正在加载历史消息...', false);
     try {
-      let data;
-      if (window.authManager && typeof window.authManager.apiRequest === 'function') {
-        data = await window.authManager.apiRequest('/api/chat/messages');
-      } else {
-        const response = await fetch('/api/chat/messages');
-        data = await response.json();
-        if (!response.ok) throw new Error('request-failed');
-      }
+      const data = await chatApiRequest();
       if (!data || !Array.isArray(data.messages)) throw new Error('invalid-data');
       state.loaded = true;
       renderMessages(data.messages);
@@ -185,6 +200,27 @@
       renderStatus('历史消息加载失败，请稍后重试', true);
     } finally {
       state.loading = false;
+    }
+  }
+
+  async function sendMessage(event, input, button) {
+    event.preventDefault();
+    const content = input.value.trim();
+    if (!content || button.disabled) return;
+    const token = window.authManager && window.authManager.state
+      ? window.authManager.state.token
+      : null;
+    if (!token) return;
+
+    button.disabled = true;
+    try {
+      await chatApiRequest({ method: 'POST', token, body: { content } });
+      input.value = '';
+      await loadMessages(true);
+    } catch (error) {
+      renderStatus('消息发送失败，请稍后重试', true);
+    } finally {
+      button.disabled = false;
     }
   }
 
