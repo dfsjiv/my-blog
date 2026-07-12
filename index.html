@@ -76,7 +76,7 @@
       </button>
 
       <button class="desktop-icon chat-desktop-icon" id="chatDesktopIcon" type="button" aria-label="聊天室" aria-selected="false">
-        <span class="desktop-icon-image chat-app-icon" aria-hidden="true"><span></span></span>
+        <span class="desktop-icon-image chat-app-icon" aria-hidden="true"><img src="assets/chat-icon.png" alt="" draggable="false" /></span>
         <span class="desktop-icon-label">聊天室</span>
       </button>
 
@@ -105,7 +105,7 @@
 
       <section class="chat-window is-hidden" id="chatWindow" aria-label="聊天室窗口">
         <header class="window-titlebar" id="chatTitlebar">
-          <span class="window-app-icon chat-app-icon" aria-hidden="true"><span></span></span>
+          <span class="window-app-icon chat-app-icon" aria-hidden="true"><img src="assets/chat-icon.png" alt="" draggable="false" /></span>
           <span class="window-title">聊天室</span>
           <div class="window-controls" aria-label="聊天室窗口控制">
             <button class="window-control" id="chatMinimize" type="button" aria-label="最小化">—</button>
@@ -153,6 +153,15 @@
             <small id="startBlogStatus">文章、随笔与图片</small>
           </span>
         </button>
+        <button class="start-menu-app" id="startChatButton" type="button">
+          <span class="start-menu-icon chat-app-icon" aria-hidden="true">
+            <img src="assets/chat-icon.png" alt="" draggable="false" />
+          </span>
+          <span class="start-menu-app-copy">
+            <strong>聊天室</strong>
+            <small id="startChatStatus">公共大厅</small>
+          </span>
+        </button>
       </section>
 
       <div class="start-menu-actions">
@@ -174,7 +183,7 @@
         </span>
       </button>
       <button class="taskbar-app" id="chatTaskbarButton" type="button" aria-label="聊天室" aria-pressed="false">
-        <span class="taskbar-app-icon chat-app-icon" aria-hidden="true"><span></span></span>
+        <span class="taskbar-app-icon chat-app-icon" aria-hidden="true"><img src="assets/chat-icon.png" alt="" draggable="false" /></span>
       </button>
       <div class="taskbar-spacer"></div>
       <time class="taskbar-clock" aria-label="当前时间">

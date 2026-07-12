@@ -1,8 +1,11 @@
 (function () {
   const TASKBAR_HEIGHT = 40;
+  const STORAGE_KEY = 'myBlogChatWindowState';
   const elements = {
     desktopIcon: document.getElementById('chatDesktopIcon'),
     taskbarButton: document.getElementById('chatTaskbarButton'),
+    startButton: document.getElementById('startChatButton'),
+    startStatus: document.getElementById('startChatStatus'),
     window: document.getElementById('chatWindow'),
     titlebar: document.getElementById('chatTitlebar'),
     minimize: document.getElementById('chatMinimize'),
@@ -32,6 +35,46 @@
       : null;
   }
 
+  function saveWindowState() {
+    try {
+      const rect = elements.window.getBoundingClientRect();
+      const storedBounds = state.maximized && state.bounds ? state.bounds : {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        bounds: storedBounds,
+        maximized: state.maximized,
+      }));
+    } catch (error) {
+      // Storage is optional; window interaction must continue without it.
+    }
+  }
+
+  function restoreWindowState() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+      if (!saved || typeof saved !== 'object' || !saved.bounds) return;
+      const bounds = saved.bounds;
+      if (![bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite)) return;
+      const width = Math.min(Math.max(540, bounds.width), window.innerWidth);
+      const height = Math.min(Math.max(360, bounds.height), window.innerHeight - TASKBAR_HEIGHT);
+      elements.window.style.width = width + 'px';
+      elements.window.style.height = height + 'px';
+      elements.window.style.left = Math.max(0, Math.min(bounds.left, window.innerWidth - width)) + 'px';
+      elements.window.style.top = Math.max(
+        0,
+        Math.min(bounds.top, window.innerHeight - TASKBAR_HEIGHT - height)
+      ) + 'px';
+      state.bounds = { left: bounds.left, top: bounds.top, width, height };
+      state.maximized = saved.maximized === true;
+    } catch (error) {
+      // Invalid persisted data falls back to the CSS defaults.
+    }
+  }
+
   function setSelected(selected) {
     elements.desktopIcon.classList.toggle('is-selected', selected);
     elements.desktopIcon.setAttribute('aria-selected', selected ? 'true' : 'false');
@@ -45,6 +88,11 @@
     elements.taskbarButton.classList.toggle('is-active', state.open && !state.minimized);
     elements.taskbarButton.setAttribute('aria-pressed', state.open && !state.minimized ? 'true' : 'false');
     elements.maximize.setAttribute('aria-label', state.maximized ? '还原' : '最大化');
+    if (elements.startStatus) {
+      elements.startStatus.textContent = state.open
+        ? (state.minimized ? '已最小化' : '正在运行')
+        : '公共大厅';
+    }
   }
 
   function renderCompose() {
@@ -151,9 +199,26 @@
   }
 
   function closeWindow() {
+    if (!state.open) {
+      state.minimized = false;
+      state.maximized = false;
+      setSelected(false);
+      updateWindow();
+      return;
+    }
+    if (state.maximized) {
+      state.maximized = false;
+      if (state.bounds) {
+        elements.window.style.left = state.bounds.left + 'px';
+        elements.window.style.top = state.bounds.top + 'px';
+        elements.window.style.width = state.bounds.width + 'px';
+        elements.window.style.height = state.bounds.height + 'px';
+      }
+      updateWindow();
+    }
+    saveWindowState();
     state.open = false;
     state.minimized = false;
-    state.maximized = false;
     setSelected(false);
     updateWindow();
   }
@@ -172,9 +237,20 @@
 
   function toggleMaximize() {
     if (!state.open) openWindow();
+    if (!state.maximized) {
+      const rect = elements.window.getBoundingClientRect();
+      state.bounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }
     state.maximized = !state.maximized;
     state.minimized = false;
+    if (!state.maximized && state.bounds) {
+      elements.window.style.left = state.bounds.left + 'px';
+      elements.window.style.top = state.bounds.top + 'px';
+      elements.window.style.width = state.bounds.width + 'px';
+      elements.window.style.height = state.bounds.height + 'px';
+    }
     updateWindow();
+    saveWindowState();
   }
 
   function clampWindow(left, top) {
@@ -210,6 +286,7 @@
     state.drag = null;
     elements.window.classList.remove('is-dragging');
     document.removeEventListener('pointermove', dragWindow);
+    saveWindowState();
   }
 
   function startResize(event, edge) {
@@ -270,6 +347,7 @@
     state.resize = null;
     elements.window.classList.remove('is-resizing');
     document.removeEventListener('pointermove', resizeWindow);
+    saveWindowState();
   }
 
   elements.desktopIcon.addEventListener('click', function (event) {
@@ -281,6 +359,7 @@
     if (event.key === 'Enter') openWindow();
   });
   elements.taskbarButton.addEventListener('click', toggleTaskbar);
+  if (elements.startButton) elements.startButton.addEventListener('click', openWindow);
   elements.minimize.addEventListener('click', minimizeWindow);
   elements.maximize.addEventListener('click', toggleMaximize);
   elements.close.addEventListener('click', closeWindow);
@@ -310,6 +389,7 @@
     elements.window.style.top = position.top + 'px';
   });
 
+  restoreWindowState();
   updateWindow();
   window.chatApp = {
     openWindow,

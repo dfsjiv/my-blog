@@ -348,40 +348,16 @@ body.is-desktop .desktop-shell.is-light-theme {
 }
 
 .chat-app-icon {
-  position: relative;
   display: block;
-  background: #0078d7;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: transparent;
+  border: 0;
 }
 
-.chat-app-icon::after {
-  content: "";
-  position: absolute;
-  left: 7px;
-  bottom: -5px;
-  border-width: 5px 5px 0 0;
-  border-style: solid;
-  border-color: #0078d7 transparent transparent transparent;
-}
-
-.chat-app-icon span::before,
-.chat-app-icon span::after {
-  content: "";
-  position: absolute;
-  top: 45%;
-  width: 4px;
-  height: 4px;
-  background: #ffffff;
-}
-
-.chat-app-icon span::before {
-  left: 28%;
-  box-shadow: 9px 0 #ffffff, 18px 0 #ffffff;
-}
-
-.window-app-icon.chat-app-icon,
-.taskbar-app-icon.chat-app-icon {
-  overflow: visible;
+.chat-app-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .blog-window {

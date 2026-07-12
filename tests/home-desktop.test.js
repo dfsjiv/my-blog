@@ -365,7 +365,8 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 5);
-  assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 5);
+  assert.strictEqual((indexHtml.match(/src="assets\/chat-icon\.png"/g) || []).length, 4);
+  assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 9);
   assert.match(indexHtml, /id="startBlogStatus"/);
   assert.match(indexHtml, /id="startThemeButton"/);
   assert.doesNotMatch(indexHtml, /document-app-icon[\s\S]*?<svg/);
