@@ -370,16 +370,23 @@
       startResize(event, handle.dataset.chatResizeEdge);
     });
   });
-  if (window.homeDesktop && typeof window.homeDesktop.getIconDragController === 'function') {
+  let iconDragRegistered = false;
+  function registerDesktopIconDrag() {
+    if (iconDragRegistered || !window.homeDesktop
+      || typeof window.homeDesktop.getIconDragController !== 'function') return;
     const iconDrag = window.homeDesktop.getIconDragController();
-    if (iconDrag) {
-      iconDrag.registerIcon(elements.desktopIcon, {
-        onDragStart: function () {
-          setSelected(true);
-          window.homeDesktop.closeStartMenu();
-        },
-      });
-    }
+    if (!iconDrag) return;
+    iconDrag.registerIcon(elements.desktopIcon, {
+      onDragStart: function () {
+        setSelected(true);
+        window.homeDesktop.closeStartMenu();
+      },
+    });
+    iconDragRegistered = true;
+  }
+  registerDesktopIconDrag();
+  if (!iconDragRegistered) {
+    document.addEventListener('DOMContentLoaded', registerDesktopIconDrag, { once: true });
   }
   window.addEventListener('resize', function () {
     if (!state.open || state.maximized) return;
