@@ -430,6 +430,11 @@ body.is-desktop .desktop-shell.is-light-theme {
   border-width: 0;
 }
 
+.chat-window.is-dragging,
+.chat-window.is-resizing {
+  user-select: none;
+}
+
 .chat-layout {
   display: grid;
   grid-template-columns: 210px minmax(0, 1fr);

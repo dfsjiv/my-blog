@@ -10,6 +10,7 @@
     close: document.getElementById('chatClose'),
     messages: document.getElementById('chatMessages'),
     compose: document.getElementById('chatCompose'),
+    resizeHandles: Array.from(document.querySelectorAll('[data-chat-resize-edge]')),
   };
 
   if (!elements.desktopIcon || !elements.window) return;
@@ -21,6 +22,7 @@
     loaded: false,
     loading: false,
     drag: null,
+    resize: null,
     bounds: null,
   };
 
@@ -189,6 +191,7 @@
     if (!state.open || state.minimized || state.maximized) return;
     const rect = elements.window.getBoundingClientRect();
     state.drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    elements.window.classList.add('is-dragging');
     document.addEventListener('pointermove', dragWindow);
     document.addEventListener('pointerup', stopDrag, { once: true });
   }
@@ -205,7 +208,68 @@
 
   function stopDrag() {
     state.drag = null;
+    elements.window.classList.remove('is-dragging');
     document.removeEventListener('pointermove', dragWindow);
+  }
+
+  function startResize(event, edge) {
+    if (event.button !== undefined && event.button !== 0) return;
+    if (!state.open || state.minimized || state.maximized) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = elements.window.getBoundingClientRect();
+    state.resize = {
+      edge,
+      x: event.clientX,
+      y: event.clientY,
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    };
+    elements.window.classList.add('is-resizing');
+    document.addEventListener('pointermove', resizeWindow);
+    document.addEventListener('pointerup', stopResize, { once: true });
+  }
+
+  function resizeWindow(event) {
+    if (!state.resize) return;
+    const original = state.resize;
+    const deltaX = event.clientX - original.x;
+    const deltaY = event.clientY - original.y;
+    const minimumWidth = Math.min(540, window.innerWidth);
+    const minimumHeight = Math.min(360, window.innerHeight - TASKBAR_HEIGHT);
+    let left = original.left;
+    let top = original.top;
+    let right = original.right;
+    let bottom = original.bottom;
+
+    if (original.edge.includes('e')) {
+      right = Math.min(window.innerWidth, Math.max(left + minimumWidth, original.right + deltaX));
+    }
+    if (original.edge.includes('s')) {
+      bottom = Math.min(
+        window.innerHeight - TASKBAR_HEIGHT,
+        Math.max(top + minimumHeight, original.bottom + deltaY)
+      );
+    }
+    if (original.edge.includes('w')) {
+      left = Math.max(0, Math.min(original.right - minimumWidth, original.left + deltaX));
+    }
+    if (original.edge.includes('n')) {
+      top = Math.max(0, Math.min(original.bottom - minimumHeight, original.top + deltaY));
+    }
+
+    elements.window.style.left = left + 'px';
+    elements.window.style.top = top + 'px';
+    elements.window.style.width = right - left + 'px';
+    elements.window.style.height = bottom - top + 'px';
+  }
+
+  function stopResize() {
+    state.resize = null;
+    elements.window.classList.remove('is-resizing');
+    document.removeEventListener('pointermove', resizeWindow);
   }
 
   elements.desktopIcon.addEventListener('click', function (event) {
@@ -222,6 +286,11 @@
   elements.close.addEventListener('click', closeWindow);
   elements.titlebar.addEventListener('pointerdown', startDrag);
   elements.titlebar.addEventListener('dblclick', toggleMaximize);
+  elements.resizeHandles.forEach(function (handle) {
+    handle.addEventListener('pointerdown', function (event) {
+      startResize(event, handle.dataset.chatResizeEdge);
+    });
+  });
   if (window.homeDesktop && typeof window.homeDesktop.getIconDragController === 'function') {
     const iconDrag = window.homeDesktop.getIconDragController();
     if (iconDrag) {
