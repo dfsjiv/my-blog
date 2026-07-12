@@ -1111,8 +1111,29 @@ async function handleSendChatMessage(request, env) {
         .bind(currentUser.id, content)
         .run();
 
-    const message = await getChatMessageById(result.meta?.last_row_id, env);
-    return jsonResponse({ success: true, message }, 201);
+    const newMessage = await getChatMessageById(result.meta?.last_row_id, env);
+
+    try {
+        const roomId = env.CHAT_ROOM.idFromName("public-lobby");
+        const room = env.CHAT_ROOM.get(roomId);
+        await room.fetch(
+            "https://internal/broadcast",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: newMessage
+                })
+            }
+        );
+    }
+    catch (error) {
+        console.error("Chat realtime broadcast failed:", error);
+    }
+
+    return jsonResponse({ success: true, message: newMessage }, 201);
 }
 
 async function getChatMessageById(messageId, env) {

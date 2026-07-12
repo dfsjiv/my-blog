@@ -29,6 +29,10 @@
     resize: null,
     bounds: null,
   };
+  const renderedChatMessageIds = new Set();
+  let chatWebSocket = null;
+  let reconnectTimer = null;
+  let reconnectAttempt = 0;
 
   function getUser() {
     return window.authManager && typeof window.authManager.getCurrentUser === 'function'
@@ -159,30 +163,52 @@
     elements.messages.appendChild(status);
   }
 
+  function createMessageElement(message) {
+    const item = document.createElement('article');
+    item.className = 'chat-message';
+    const header = document.createElement('header');
+    header.className = 'chat-message-header';
+    const author = document.createElement('strong');
+    author.className = 'chat-message-author' + (message.role === 'admin' ? ' is-admin' : '');
+    author.textContent = typeof message.username === 'string' ? message.username : '未知用户';
+    const time = document.createElement('time');
+    time.className = 'chat-message-time';
+    time.textContent = formatDate(message.created_at);
+    const content = document.createElement('p');
+    content.className = 'chat-message-content';
+    content.textContent = typeof message.content === 'string' ? message.content : '';
+    header.append(author, time);
+    item.append(header, content);
+    return item;
+  }
+
+  function appendMessage(message) {
+    if (!message || message.id === undefined || message.id === null) return false;
+    const messageId = String(message.id);
+    if (renderedChatMessageIds.has(messageId)) return false;
+    const nearBottom = elements.messages.scrollHeight
+      - elements.messages.scrollTop
+      - elements.messages.clientHeight <= 80;
+    if (!elements.messages.querySelector('.chat-message')) elements.messages.replaceChildren();
+    renderedChatMessageIds.add(messageId);
+    elements.messages.appendChild(createMessageElement(message));
+    if (nearBottom) elements.messages.scrollTop = elements.messages.scrollHeight;
+    return true;
+  }
+
   function renderMessages(messages) {
     elements.messages.replaceChildren();
+    renderedChatMessageIds.clear();
     if (!messages.length) {
       renderStatus('公共大厅暂无消息', false);
       return;
     }
 
     messages.slice(-50).forEach(function (message) {
-      const item = document.createElement('article');
-      item.className = 'chat-message';
-      const header = document.createElement('header');
-      header.className = 'chat-message-header';
-      const author = document.createElement('strong');
-      author.className = 'chat-message-author' + (message.role === 'admin' ? ' is-admin' : '');
-      author.textContent = typeof message.username === 'string' ? message.username : '未知用户';
-      const time = document.createElement('time');
-      time.className = 'chat-message-time';
-      time.textContent = formatDate(message.created_at);
-      const content = document.createElement('p');
-      content.className = 'chat-message-content';
-      content.textContent = typeof message.content === 'string' ? message.content : '';
-      header.append(author, time);
-      item.append(header, content);
-      elements.messages.appendChild(item);
+      if (message && message.id !== undefined && message.id !== null) {
+        renderedChatMessageIds.add(String(message.id));
+      }
+      elements.messages.appendChild(createMessageElement(message));
     });
     elements.messages.scrollTop = elements.messages.scrollHeight;
   }
@@ -203,6 +229,67 @@
     }
   }
 
+  function scheduleWebSocketReconnect() {
+    if (!state.open || reconnectTimer !== null) return;
+    const delays = [1000, 2000, 5000, 10000];
+    const delay = delays[Math.min(reconnectAttempt, delays.length - 1)];
+    reconnectAttempt += 1;
+    reconnectTimer = window.setTimeout(function () {
+      reconnectTimer = null;
+      connectWebSocket();
+    }, delay);
+  }
+
+  function connectWebSocket() {
+    if (!state.open || typeof window.WebSocket !== 'function') return;
+    if (chatWebSocket && (chatWebSocket.readyState === 0 || chatWebSocket.readyState === 1)) return;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = wsProtocol + '//' + window.location.host + '/ws';
+    const socket = new window.WebSocket(wsUrl);
+    chatWebSocket = socket;
+
+    socket.onopen = function () {
+      if (chatWebSocket !== socket) return;
+      reconnectAttempt = 0;
+      console.log('聊天室 WebSocket 已连接');
+    };
+    socket.onmessage = function (event) {
+      if (chatWebSocket !== socket || !state.open) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data && data.type === 'chat_message' && data.message) {
+          appendMessage(data.message);
+        }
+      } catch (error) {
+        // Ignore malformed or unrelated realtime payloads.
+      }
+    };
+    socket.onerror = function () {
+      if (chatWebSocket === socket) socket.close();
+    };
+    socket.onclose = function () {
+      if (chatWebSocket !== socket) return;
+      chatWebSocket = null;
+      scheduleWebSocketReconnect();
+    };
+  }
+
+  function disconnectWebSocket() {
+    if (reconnectTimer !== null) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectAttempt = 0;
+    if (!chatWebSocket) return;
+    const socket = chatWebSocket;
+    chatWebSocket = null;
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    if (socket.readyState === 0 || socket.readyState === 1) socket.close();
+  }
+
   async function sendMessage(event, input, button) {
     event.preventDefault();
     const content = input.value.trim();
@@ -214,9 +301,9 @@
 
     button.disabled = true;
     try {
-      await chatApiRequest({ method: 'POST', token, body: { content } });
+      const data = await chatApiRequest({ method: 'POST', token, body: { content } });
       input.value = '';
-      await loadMessages(true);
+      if (data && data.message) appendMessage(data.message);
     } catch (error) {
       renderStatus('消息发送失败，请稍后重试', true);
     } finally {
@@ -230,11 +317,12 @@
     setSelected(true);
     renderCompose();
     updateWindow();
-    loadMessages(false);
+    loadMessages(false).finally(connectWebSocket);
     if (window.homeDesktop) window.homeDesktop.closeStartMenu();
   }
 
   function closeWindow() {
+    disconnectWebSocket();
     if (!state.open) {
       state.minimized = false;
       state.maximized = false;
