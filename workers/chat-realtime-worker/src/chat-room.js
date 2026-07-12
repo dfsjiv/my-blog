@@ -101,6 +101,13 @@ export class ChatRoom extends DurableObject {
             );
         }
 
+        if (
+            url.pathname === "/create-ticket" &&
+            request.method === "POST"
+        ) {
+            return this.handleCreateTicket(request);
+        }
+
 
         return new Response(
             "Not Found",
@@ -118,6 +125,27 @@ export class ChatRoom extends DurableObject {
     async handleWebSocketConnection(
         request
     ) {
+        const url = new URL(request.url);
+        const ticket = url.searchParams.get("ticket");
+        if (!ticket) {
+            return new Response("Missing WebSocket ticket", { status: 401 });
+        }
+
+        const ticketData = await this.ctx.storage.transaction(async (transaction) => {
+            const key = `ticket:${ticket}`;
+            const stored = await transaction.get(key);
+            if (!stored || !Number.isFinite(stored.expiresAt) || stored.expiresAt <= Date.now()) {
+                if (stored) await transaction.delete(key);
+                return null;
+            }
+            await transaction.delete(key);
+            return stored;
+        });
+
+        if (!ticketData || !ticketData.user) {
+            return new Response("Invalid or expired WebSocket ticket", { status: 401 });
+        }
+
         const webSocketPair =
             new WebSocketPair();
 
@@ -138,9 +166,16 @@ export class ChatRoom extends DurableObject {
            client 返回给浏览器。
         */
 
-        this.ctx.acceptWebSocket(
-            server
-        );
+        server.serializeAttachment({
+            userId: ticketData.user.id,
+            username: ticketData.user.username,
+            role: ticketData.user.role,
+            isGuest: ticketData.user.isGuest === true,
+            guestId: ticketData.user.isGuest ? ticket : null
+        });
+
+        this.ctx.acceptWebSocket(server);
+        await this.broadcastPresence();
 
 
         return new Response(
@@ -168,6 +203,105 @@ export class ChatRoom extends DurableObject {
            }
        }
        ===================================================== */
+
+    async handleCreateTicket(request) {
+        let body;
+        try {
+            body = await request.json();
+        }
+        catch {
+            return jsonResponse({ success: false, message: "请求数据格式错误" }, 400);
+        }
+
+        if (
+            typeof body?.ticket !== "string" ||
+            !body.ticket ||
+            !Number.isFinite(body.expiresAt) ||
+            body.expiresAt <= Date.now() ||
+            !body.user ||
+            typeof body.user.username !== "string" ||
+            !body.user.username
+        ) {
+            return jsonResponse({ success: false, message: "Ticket 数据无效" }, 400);
+        }
+
+        await this.ctx.storage.put(
+            `ticket:${body.ticket}`,
+            {
+                expiresAt: body.expiresAt,
+                user: {
+                    id: body.user.isGuest ? null : body.user.id,
+                    username: body.user.username,
+                    role: body.user.isGuest ? "guest" : body.user.role,
+                    isGuest: body.user.isGuest === true
+                }
+            }
+        );
+        const currentAlarm = await this.ctx.storage.getAlarm();
+        if (currentAlarm === null || body.expiresAt < currentAlarm) {
+            await this.ctx.storage.setAlarm(body.expiresAt);
+        }
+        return jsonResponse({ success: true });
+    }
+
+    async alarm() {
+        const now = Date.now();
+        const tickets = await this.ctx.storage.list({ prefix: "ticket:" });
+        const expiredKeys = [];
+        let nextExpiry = null;
+
+        for (const [key, ticketData] of tickets) {
+            if (!ticketData || ticketData.expiresAt <= now) {
+                expiredKeys.push(key);
+            }
+            else if (nextExpiry === null || ticketData.expiresAt < nextExpiry) {
+                nextExpiry = ticketData.expiresAt;
+            }
+        }
+        if (expiredKeys.length) await this.ctx.storage.delete(expiredKeys);
+        if (nextExpiry !== null) await this.ctx.storage.setAlarm(nextExpiry);
+    }
+
+    buildPresence() {
+        const usersById = new Map();
+        let guestCount = 0;
+
+        for (const socket of this.ctx.getWebSockets()) {
+            const user = socket.deserializeAttachment();
+            if (!user || typeof user !== "object") continue;
+            if (user.isGuest) {
+                guestCount += 1;
+            }
+            else if (user.userId !== undefined && user.userId !== null) {
+                usersById.set(String(user.userId), {
+                    id: user.userId,
+                    username: user.username,
+                    role: user.role,
+                    isGuest: false
+                });
+            }
+        }
+
+        const users = Array.from(usersById.values());
+        return {
+            type: "presence_update",
+            onlineCount: users.length + guestCount,
+            users,
+            guestCount
+        };
+    }
+
+    async broadcastPresence() {
+        const payload = JSON.stringify(this.buildPresence());
+        for (const socket of this.ctx.getWebSockets()) {
+            try {
+                socket.send(payload);
+            }
+            catch (error) {
+                console.error("Presence broadcast failed:", error);
+            }
+        }
+    }
 
     async handleBroadcast(
         request
@@ -420,6 +554,7 @@ export class ChatRoom extends DurableObject {
         reason,
         wasClean
     ) {
+        await this.broadcastPresence();
         /*
            当前暂时不处理。
 
@@ -441,6 +576,13 @@ export class ChatRoom extends DurableObject {
             "WebSocket error:",
             error
         );
+        try {
+            socket.close(1011, "WebSocket error");
+        }
+        catch {
+            // The socket may already be closed.
+        }
+        await this.broadcastPresence();
     }
 }
 

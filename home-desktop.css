@@ -464,6 +464,37 @@ body.is-desktop .desktop-shell.is-light-theme {
   font-size: 12px;
 }
 
+.chat-online-users {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-online-user {
+  position: relative;
+  margin: 0;
+  padding: 6px 4px 6px 18px;
+  color: #d8d8d8;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.chat-online-user::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6fcf75;
+}
+
+.chat-online-user.is-admin {
+  color: #f0c674;
+}
+
 .chat-main {
   display: flex;
   min-width: 0;

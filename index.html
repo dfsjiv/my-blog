@@ -116,9 +116,11 @@
         <div class="chat-layout">
           <aside class="chat-sidebar">
             <h2>公共大厅</h2>
-            <div class="chat-online-summary"><span>在线人数</span><strong>--</strong></div>
+            <div class="chat-online-summary"><span>在线人数</span><strong id="chatOnlineCount">--</strong></div>
             <h3>在线用户</h3>
-            <p class="chat-online-placeholder">在线状态暂不可用</p>
+            <div class="chat-online-users" id="chatOnlineUsers">
+              <p class="chat-online-placeholder">正在连接...</p>
+            </div>
           </aside>
           <main class="chat-main">
             <div class="chat-messages" id="chatMessages" aria-live="polite"></div>

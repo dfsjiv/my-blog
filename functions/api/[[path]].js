@@ -13,6 +13,7 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_SUMMARY_LENGTH = 500;
 const MAX_COMMENT_LENGTH = 2000;
 const MAX_CHAT_MESSAGE_LENGTH = 1000;
+const CHAT_WS_TICKET_LIFETIME_MS = 60 * 1000;
 
 
 /* =========================================================
@@ -100,6 +101,13 @@ export async function onRequest(context) {
             request.method === "POST"
         ) {
             response = await handleSendChatMessage(request, env);
+        }
+
+        else if (
+            url.pathname === "/api/chat/ws-ticket" &&
+            request.method === "POST"
+        ) {
+            response = await handleCreateChatWebSocketTicket(request, env);
         }
 
         /* ==============================================
@@ -208,6 +216,7 @@ export async function onRequest(context) {
             url.pathname === "/api/me" ||
             url.pathname === "/api/logout" ||
             url.pathname === "/api/chat/messages" ||
+            url.pathname === "/api/chat/ws-ticket" ||
             url.pathname === "/api/articles" ||
             articleMatch ||
             articleCommentsMatch ||
@@ -1045,6 +1054,54 @@ async function getArticleById(
    2. Session 是否有效
    3. 当前用户 role 是否为 admin
    ========================================================= */
+
+async function handleCreateChatWebSocketTicket(request, env) {
+    const authorization = request.headers.get("Authorization") || "";
+    let user;
+
+    if (authorization) {
+        const sessionToken = getBearerToken(request);
+        if (!sessionToken) {
+            return jsonResponse({ success: false, message: "登录状态无效" }, 401);
+        }
+        const currentUser = await getAuthenticatedUser(sessionToken, env);
+        if (!currentUser) {
+            return jsonResponse({ success: false, message: "登录已失效" }, 401);
+        }
+        user = {
+            id: currentUser.id,
+            username: currentUser.username,
+            role: currentUser.role,
+            isGuest: false
+        };
+    }
+    else {
+        user = {
+            id: null,
+            username: "游客",
+            role: "guest",
+            isGuest: true
+        };
+    }
+
+    const ticket = crypto.randomUUID();
+    const expiresAt = Date.now() + CHAT_WS_TICKET_LIFETIME_MS;
+    const roomId = env.CHAT_ROOM.idFromName("public-lobby");
+    const room = env.CHAT_ROOM.get(roomId);
+    const ticketResponse = await room.fetch(
+        "https://internal/create-ticket",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticket, expiresAt, user })
+        }
+    );
+
+    if (!ticketResponse.ok) {
+        return jsonResponse({ success: false, message: "无法建立聊天室连接" }, 503);
+    }
+    return jsonResponse({ success: true, ticket });
+}
 
 async function handleGetChatMessages(env) {
     const result = await env.DB

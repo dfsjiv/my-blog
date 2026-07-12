@@ -24,6 +24,7 @@
 export async function onRequest(context) {
     const request = context.request;
     const env = context.env;
+    const url = new URL(request.url);
 
 
     /* =====================================================
@@ -58,6 +59,11 @@ export async function onRequest(context) {
                 status: 500
             }
         );
+    }
+
+    const ticket = url.searchParams.get("ticket");
+    if (!ticket) {
+        return new Response("Missing WebSocket ticket", { status: 401 });
     }
 
 

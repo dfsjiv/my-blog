@@ -14,6 +14,8 @@
     close: document.getElementById('chatClose'),
     messages: document.getElementById('chatMessages'),
     compose: document.getElementById('chatCompose'),
+    onlineCount: document.getElementById('chatOnlineCount'),
+    onlineUsers: document.getElementById('chatOnlineUsers'),
     resizeHandles: Array.from(document.querySelectorAll('[data-chat-resize-edge]')),
   };
 
@@ -33,6 +35,7 @@
   let chatWebSocket = null;
   let reconnectTimer = null;
   let reconnectAttempt = 0;
+  let ticketRequestPending = false;
 
   function getUser() {
     return window.authManager && typeof window.authManager.getCurrentUser === 'function'
@@ -229,6 +232,55 @@
     }
   }
 
+  async function requestWebSocketTicket() {
+    const token = window.authManager && window.authManager.state
+      ? window.authManager.state.token
+      : null;
+    const options = { method: 'POST' };
+    if (token) options.token = token;
+    if (window.authManager && typeof window.authManager.apiRequest === 'function') {
+      return window.authManager.apiRequest('/api/chat/ws-ticket', options);
+    }
+    const headers = {};
+    if (token) headers.Authorization = 'Bearer ' + token;
+    const response = await fetch('/api/chat/ws-ticket', { method: 'POST', headers });
+    const data = await response.json();
+    if (!response.ok || !data || data.success === false) throw new Error('ticket-failed');
+    return data;
+  }
+
+  function renderPresence(data) {
+    if (!elements.onlineCount || !elements.onlineUsers) return;
+    const users = Array.isArray(data.users) ? data.users : [];
+    const guestCount = Number.isInteger(data.guestCount) && data.guestCount > 0
+      ? data.guestCount
+      : 0;
+    const onlineCount = Number.isInteger(data.onlineCount) && data.onlineCount >= 0
+      ? data.onlineCount
+      : users.length + guestCount;
+    elements.onlineCount.textContent = String(onlineCount);
+    elements.onlineUsers.replaceChildren();
+
+    users.forEach(function (user) {
+      const item = document.createElement('p');
+      item.className = 'chat-online-user' + (user.role === 'admin' ? ' is-admin' : '');
+      item.textContent = typeof user.username === 'string' ? user.username : '未知用户';
+      elements.onlineUsers.appendChild(item);
+    });
+    if (guestCount > 0) {
+      const guest = document.createElement('p');
+      guest.className = 'chat-online-user';
+      guest.textContent = '游客 × ' + guestCount;
+      elements.onlineUsers.appendChild(guest);
+    }
+    if (!users.length && guestCount === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'chat-online-placeholder';
+      empty.textContent = '暂无在线用户';
+      elements.onlineUsers.appendChild(empty);
+    }
+  }
+
   function scheduleWebSocketReconnect() {
     if (!state.open || reconnectTimer !== null) return;
     const delays = [1000, 2000, 5000, 10000];
@@ -240,11 +292,24 @@
     }, delay);
   }
 
-  function connectWebSocket() {
+  async function connectWebSocket() {
     if (!state.open || typeof window.WebSocket !== 'function') return;
+    if (ticketRequestPending) return;
     if (chatWebSocket && (chatWebSocket.readyState === 0 || chatWebSocket.readyState === 1)) return;
+    ticketRequestPending = true;
+    let ticketData;
+    try {
+      ticketData = await requestWebSocketTicket();
+    } catch (error) {
+      ticketRequestPending = false;
+      scheduleWebSocketReconnect();
+      return;
+    }
+    ticketRequestPending = false;
+    if (!state.open || !ticketData || typeof ticketData.ticket !== 'string') return;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = wsProtocol + '//' + window.location.host + '/ws';
+    const wsUrl = wsProtocol + '//' + window.location.host
+      + '/ws?ticket=' + encodeURIComponent(ticketData.ticket);
     const socket = new window.WebSocket(wsUrl);
     chatWebSocket = socket;
 
@@ -259,6 +324,8 @@
         const data = JSON.parse(event.data);
         if (data && data.type === 'chat_message' && data.message) {
           appendMessage(data.message);
+        } else if (data && data.type === 'presence_update') {
+          renderPresence(data);
         }
       } catch (error) {
         // Ignore malformed or unrelated realtime payloads.
