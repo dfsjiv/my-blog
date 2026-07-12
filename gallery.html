@@ -124,6 +124,7 @@
     <div class="gallery-header">
       <h1 class="gallery-title">神秘图库</h1>
       <div class="gallery-header-right">
+        <button id="galleryBack" class="gallery-back" type="button">← 返回博客</button>
         <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换主题">
           <span class="theme-circle"></span>
         </button>
@@ -147,6 +148,14 @@
   </div>
 
   <script>
+    document.getElementById('galleryBack').addEventListener('click', function() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = 'blog.html';
+      }
+    });
+
     document.getElementById('themeToggle').addEventListener('click', function() {
       document.body.classList.toggle('dark');
     });
