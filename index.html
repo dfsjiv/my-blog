@@ -75,6 +75,11 @@
         <span class="desktop-icon-label">博客</span>
       </button>
 
+      <button class="desktop-icon chat-desktop-icon" id="chatDesktopIcon" type="button" aria-label="聊天室" aria-selected="false">
+        <span class="desktop-icon-image chat-app-icon" aria-hidden="true"><span></span></span>
+        <span class="desktop-icon-label">聊天室</span>
+      </button>
+
       <section class="blog-window is-hidden" id="blogWindow" aria-label="博客窗口">
         <header class="window-titlebar" id="blogTitlebar">
           <span class="window-app-icon document-app-icon" aria-hidden="true">
@@ -96,6 +101,30 @@
         <span class="window-resize-handle resize-se" id="resizeSE" data-resize-edge="se" aria-hidden="true"></span>
         <span class="window-resize-handle resize-sw" id="resizeSW" data-resize-edge="sw" aria-hidden="true"></span>
         <span class="window-resize-handle resize-nw" id="resizeNW" data-resize-edge="nw" aria-hidden="true"></span>
+      </section>
+
+      <section class="chat-window is-hidden" id="chatWindow" aria-label="聊天室窗口">
+        <header class="window-titlebar" id="chatTitlebar">
+          <span class="window-app-icon chat-app-icon" aria-hidden="true"><span></span></span>
+          <span class="window-title">聊天室</span>
+          <div class="window-controls" aria-label="聊天室窗口控制">
+            <button class="window-control" id="chatMinimize" type="button" aria-label="最小化">—</button>
+            <button class="window-control" id="chatMaximize" type="button" aria-label="最大化">□</button>
+            <button class="window-control close" id="chatClose" type="button" aria-label="关闭">×</button>
+          </div>
+        </header>
+        <div class="chat-layout">
+          <aside class="chat-sidebar">
+            <h2>公共大厅</h2>
+            <div class="chat-online-summary"><span>在线人数</span><strong>--</strong></div>
+            <h3>在线用户</h3>
+            <p class="chat-online-placeholder">在线状态暂不可用</p>
+          </aside>
+          <main class="chat-main">
+            <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+            <div class="chat-compose" id="chatCompose"></div>
+          </main>
+        </div>
       </section>
     </div>
 
@@ -136,6 +165,9 @@
           <img src="assets/blog-icon.png" alt="" draggable="false" />
         </span>
       </button>
+      <button class="taskbar-app" id="chatTaskbarButton" type="button" aria-label="聊天室" aria-pressed="false">
+        <span class="taskbar-app-icon chat-app-icon" aria-hidden="true"><span></span></span>
+      </button>
       <div class="taskbar-spacer"></div>
       <time class="taskbar-clock" aria-label="当前时间">
         <span id="clockTime"></span>
@@ -147,5 +179,6 @@
   <script src="home-device.js"></script>
   <script src="home-desktop.js"></script>
   <script src="auth.js"></script>
+  <script src="chat.js"></script>
 </body>
 </html>

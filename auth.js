@@ -298,6 +298,7 @@
       window.homeDesktop.closeBlogWindow();
       window.homeDesktop.closeStartMenu();
       window.homeDesktop.selectDesktopIcon(false);
+      if (window.chatApp) window.chatApp.closeWindow();
     }
 
     function notifyBlogAuthChanged() {
