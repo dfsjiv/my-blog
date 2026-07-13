@@ -473,7 +473,74 @@ body.is-desktop .desktop-shell.is-light-theme {
   font-size: 14px;
   line-height: 1.75;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+  white-space: normal;
+}
+
+.ai-reply-message > :first-child {
+  margin-top: 0;
+}
+
+.ai-reply-message > :last-child {
+  margin-bottom: 0;
+}
+
+.ai-reply-message p,
+.ai-reply-message ul,
+.ai-reply-message ol,
+.ai-reply-message blockquote {
+  margin: 0 0 14px;
+}
+
+.ai-reply-message h1,
+.ai-reply-message h2,
+.ai-reply-message h3,
+.ai-reply-message h4 {
+  margin: 20px 0 10px;
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.ai-reply-message h1 { font-size: 22px; }
+.ai-reply-message h2 { font-size: 19px; }
+.ai-reply-message h3 { font-size: 16px; }
+.ai-reply-message h4 { font-size: 14px; }
+
+.ai-reply-message ul,
+.ai-reply-message ol {
+  padding-left: 25px;
+}
+
+.ai-reply-message li {
+  margin: 4px 0;
+}
+
+.ai-reply-message code {
+  padding: 1px 4px;
+  background: #292c31;
+  color: #d7eaff;
+  font: 13px/1.5 Consolas, "Courier New", monospace;
+}
+
+.ai-reply-message pre {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid #343a42;
+  background: #0f1114;
+}
+
+.ai-reply-message pre code {
+  padding: 0;
+  background: transparent;
+  color: #e6edf3;
+  white-space: pre;
+}
+
+.ai-reply-message blockquote {
+  padding-left: 12px;
+  border-left: 3px solid #0078d7;
+  color: #b9c0c9;
 }
 
 .ai-input-area {

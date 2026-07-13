@@ -191,6 +191,124 @@
     document.removeEventListener('pointermove', resizeWindow);
   }
 
+  function appendInlineMarkdown(container, text) {
+    const pattern = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+      const token = match[0];
+      let element;
+      if (token.startsWith('`')) {
+        element = document.createElement('code');
+        element.textContent = token.slice(1, -1);
+      } else if (token.startsWith('**')) {
+        element = document.createElement('strong');
+        element.textContent = token.slice(2, -2);
+      } else {
+        element = document.createElement('em');
+        element.textContent = token.slice(1, -1);
+      }
+      container.appendChild(element);
+      lastIndex = pattern.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+  }
+
+  function renderAiMarkdown(markdown) {
+    elements.reply.replaceChildren();
+    const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+    let paragraphLines = [];
+    let codeLines = [];
+    let inCodeBlock = false;
+    let currentList = null;
+
+    function flushParagraph() {
+      if (!paragraphLines.length) return;
+      const paragraph = document.createElement('p');
+      appendInlineMarkdown(paragraph, paragraphLines.join(' '));
+      elements.reply.appendChild(paragraph);
+      paragraphLines = [];
+    }
+
+    function flushList() {
+      currentList = null;
+    }
+
+    function flushCodeBlock() {
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = codeLines.join('\n');
+      pre.appendChild(code);
+      elements.reply.appendChild(pre);
+      codeLines = [];
+    }
+
+    lines.forEach(function (line) {
+      if (/^```/.test(line)) {
+        flushParagraph();
+        flushList();
+        if (inCodeBlock) flushCodeBlock();
+        inCodeBlock = !inCodeBlock;
+        return;
+      }
+      if (inCodeBlock) {
+        codeLines.push(line);
+        return;
+      }
+      if (!line.trim()) {
+        flushParagraph();
+        flushList();
+        return;
+      }
+
+      const heading = line.match(/^(#{1,4})\s+(.+)$/);
+      if (heading) {
+        flushParagraph();
+        flushList();
+        const element = document.createElement('h' + heading[1].length);
+        appendInlineMarkdown(element, heading[2]);
+        elements.reply.appendChild(element);
+        return;
+      }
+
+      const unordered = line.match(/^\s*[-+*]\s+(.+)$/);
+      const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+      if (unordered || ordered) {
+        flushParagraph();
+        const tagName = ordered ? 'ol' : 'ul';
+        if (!currentList || currentList.tagName.toLowerCase() !== tagName) {
+          currentList = document.createElement(tagName);
+          elements.reply.appendChild(currentList);
+        }
+        const item = document.createElement('li');
+        appendInlineMarkdown(item, (ordered || unordered)[1]);
+        currentList.appendChild(item);
+        return;
+      }
+
+      const quote = line.match(/^>\s?(.*)$/);
+      if (quote) {
+        flushParagraph();
+        flushList();
+        const blockquote = document.createElement('blockquote');
+        appendInlineMarkdown(blockquote, quote[1]);
+        elements.reply.appendChild(blockquote);
+        return;
+      }
+
+      flushList();
+      paragraphLines.push(line.trim());
+    });
+
+    flushParagraph();
+    if (inCodeBlock || codeLines.length) flushCodeBlock();
+  }
+
   async function submitAiMessage() {
     const content = elements.input.value.trim();
     if (!content || state.sending) return;
@@ -217,7 +335,7 @@
         || typeof data.reply !== 'string' || !data.reply.trim()) {
         throw new Error('request-failed');
       }
-      elements.reply.textContent = data.reply;
+      renderAiMarkdown(data.reply);
     } catch (error) {
       elements.reply.textContent = '请求失败，请稍后重试。';
     } finally {
