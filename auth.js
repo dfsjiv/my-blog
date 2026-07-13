@@ -299,6 +299,7 @@
       window.homeDesktop.closeStartMenu();
       window.homeDesktop.selectDesktopIcon(false);
       if (window.chatApp) window.chatApp.closeWindow();
+      if (window.aiChat) window.aiChat.closeWindow();
     }
 
     function notifyBlogAuthChanged() {
@@ -326,6 +327,7 @@
       setMessage(message || '', false);
       elements.username.focus();
       notifyBlogAuthChanged();
+      if (window.aiChat) window.aiChat.refreshAccess();
     }
 
     function showDesktop(user) {
@@ -337,6 +339,7 @@
       elements.password.value = '';
       setLoginPending(false, '');
       notifyBlogAuthChanged();
+      if (window.aiChat) window.aiChat.refreshAccess();
     }
 
     async function logoutToLogin(message) {

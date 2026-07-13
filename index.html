@@ -80,6 +80,11 @@
         <span class="desktop-icon-label">聊天室</span>
       </button>
 
+      <button class="desktop-icon ai-desktop-icon" id="aiDesktopIcon" type="button" aria-label="AI" aria-selected="false">
+        <span class="desktop-icon-image ai-app-icon" aria-hidden="true">AI</span>
+        <span class="desktop-icon-label">AI</span>
+      </button>
+
       <section class="blog-window is-hidden" id="blogWindow" aria-label="博客窗口">
         <header class="window-titlebar" id="blogTitlebar">
           <span class="window-app-icon document-app-icon" aria-hidden="true">
@@ -136,6 +141,35 @@
         <span class="window-resize-handle resize-sw" data-chat-resize-edge="sw" aria-hidden="true"></span>
         <span class="window-resize-handle resize-nw" data-chat-resize-edge="nw" aria-hidden="true"></span>
       </section>
+
+      <section class="ai-window is-hidden" id="aiWindow" aria-label="AI 窗口">
+        <header class="window-titlebar" id="aiTitlebar">
+          <span class="window-app-icon ai-app-icon" aria-hidden="true">AI</span>
+          <span class="window-title">AI</span>
+          <div class="window-controls" aria-label="AI 窗口控制">
+            <button class="window-control" id="aiMinimize" type="button" aria-label="最小化">—</button>
+            <button class="window-control" id="aiMaximize" type="button" aria-label="最大化">□</button>
+            <button class="window-control close" id="aiClose" type="button" aria-label="关闭">×</button>
+          </div>
+        </header>
+        <main class="ai-chat-main">
+          <div class="ai-reply-area" id="aiReplyArea" aria-live="polite">
+            <div class="ai-reply-message" id="aiReplyMessage">你好。</div>
+          </div>
+          <form class="ai-input-area" id="aiInputForm">
+            <textarea class="ai-input" id="aiInput" rows="2" placeholder="输入消息..." aria-label="输入消息"></textarea>
+            <button class="ai-send-button" type="submit">发送</button>
+          </form>
+        </main>
+        <span class="window-resize-handle resize-n" data-ai-resize-edge="n" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-e" data-ai-resize-edge="e" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-s" data-ai-resize-edge="s" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-w" data-ai-resize-edge="w" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-ne" data-ai-resize-edge="ne" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-se" data-ai-resize-edge="se" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-sw" data-ai-resize-edge="sw" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-nw" data-ai-resize-edge="nw" aria-hidden="true"></span>
+      </section>
     </div>
 
     <nav class="start-menu" id="startMenu" aria-label="开始菜单">
@@ -164,6 +198,13 @@
             <small id="startChatStatus">公共大厅</small>
           </span>
         </button>
+        <button class="start-menu-app" id="startAiButton" type="button">
+          <span class="start-menu-icon ai-app-icon" aria-hidden="true">AI</span>
+          <span class="start-menu-app-copy">
+            <strong>AI</strong>
+            <small id="startAiStatus">本地测试</small>
+          </span>
+        </button>
       </section>
 
       <div class="start-menu-actions">
@@ -187,6 +228,9 @@
       <button class="taskbar-app" id="chatTaskbarButton" type="button" aria-label="聊天室" aria-pressed="false">
         <span class="taskbar-app-icon chat-app-icon" aria-hidden="true"><img src="assets/chat-icon.png" alt="" draggable="false" /></span>
       </button>
+      <button class="taskbar-app" id="aiTaskbarButton" type="button" aria-label="AI" aria-pressed="false">
+        <span class="taskbar-app-icon ai-app-icon" aria-hidden="true">AI</span>
+      </button>
       <div class="taskbar-spacer"></div>
       <time class="taskbar-clock" aria-label="当前时间">
         <span id="clockTime"></span>
@@ -199,5 +243,6 @@
   <script src="home-desktop.js"></script>
   <script src="auth.js"></script>
   <script src="chat.js"></script>
+  <script src="ai-chat.js"></script>
 </body>
 </html>
