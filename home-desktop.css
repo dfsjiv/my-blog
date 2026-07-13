@@ -1096,7 +1096,7 @@ body.is-desktop .desktop-shell.is-light-theme {
 
 .start-menu-actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   min-height: 50px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1105,7 +1105,7 @@ body.is-desktop .desktop-shell.is-light-theme {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  padding: 0 8px;
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0;

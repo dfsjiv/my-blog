@@ -37,6 +37,7 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
+  <link rel="stylesheet" href="particle-wallpaper.css" />
 </head>
 <body class="auth-pending">
   <main class="login-screen" id="loginScreen" aria-label="登录">
@@ -68,6 +69,7 @@
 
   <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面" aria-hidden="true">
     <div class="desktop-surface" id="desktopSurface">
+      <canvas class="desktop-particle-canvas" id="desktopParticleCanvas" aria-hidden="true"></canvas>
       <button class="desktop-icon" id="blogDesktopIcon" type="button" aria-label="博客" aria-selected="false">
         <span class="desktop-icon-image document-app-icon" aria-hidden="true">
           <img src="assets/blog-icon.png" alt="" draggable="false" />
@@ -210,6 +212,7 @@
       <div class="start-menu-actions">
         <a class="start-menu-action" href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">GitHub</a>
         <button class="start-menu-action" id="startThemeButton" type="button" aria-pressed="false">切换主题</button>
+        <button class="start-menu-action" id="particleWallpaperToggle" type="button" aria-pressed="true">粒子：开</button>
         <button class="start-menu-action" id="logoutButton" type="button">退出登录</button>
       </div>
     </nav>
@@ -240,6 +243,7 @@
   </div>
 
   <script src="home-device.js"></script>
+  <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
   <script src="auth.js"></script>
   <script src="chat.js"></script>
