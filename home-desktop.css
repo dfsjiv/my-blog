@@ -520,6 +520,10 @@ body.is-desktop .desktop-shell.is-light-theme {
   outline: none;
 }
 
+.ai-send-button:disabled {
+  opacity: 0.58;
+}
+
 .chat-window.is-hidden,
 .chat-window.is-minimized {
   display: none;

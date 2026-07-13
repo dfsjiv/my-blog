@@ -14,6 +14,7 @@
     close: document.getElementById('aiClose'),
     form: document.getElementById('aiInputForm'),
     input: document.getElementById('aiInput'),
+    sendButton: document.getElementById('aiSendButton'),
     replyArea: document.getElementById('aiReplyArea'),
     reply: document.getElementById('aiReplyMessage'),
     resizeHandles: Array.from(document.querySelectorAll('[data-ai-resize-edge]')),
@@ -28,6 +29,7 @@
     drag: null,
     resize: null,
     restoreBounds: null,
+    sending: false,
   };
 
   function isAdmin() {
@@ -189,12 +191,41 @@
     document.removeEventListener('pointermove', resizeWindow);
   }
 
-  function submitLocalMessage() {
+  async function submitAiMessage() {
     const content = elements.input.value.trim();
-    if (!content) return;
-    elements.reply.textContent = '收到：' + content;
+    if (!content || state.sending) return;
+    state.sending = true;
+    elements.sendButton.disabled = true;
     elements.input.value = '';
-    elements.replyArea.scrollTop = elements.replyArea.scrollHeight;
+    elements.reply.textContent = '正在思考……';
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: content }),
+      });
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new Error('invalid-response');
+      }
+      if (!response.ok || !data || data.success !== true
+        || typeof data.reply !== 'string' || !data.reply.trim()) {
+        throw new Error('request-failed');
+      }
+      elements.reply.textContent = data.reply;
+    } catch (error) {
+      elements.reply.textContent = '请求失败，请稍后重试。';
+    } finally {
+      state.sending = false;
+      elements.sendButton.disabled = false;
+      elements.replyArea.scrollTop = elements.replyArea.scrollHeight;
+      elements.input.focus();
+    }
   }
 
   function refreshAccess() {
@@ -207,12 +238,12 @@
 
   elements.form.addEventListener('submit', function (event) {
     event.preventDefault();
-    submitLocalMessage();
+    submitAiMessage();
   });
   elements.input.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      submitLocalMessage();
+      submitAiMessage();
     }
   });
   elements.desktopIcon.addEventListener('click', function (event) {
