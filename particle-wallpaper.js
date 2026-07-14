@@ -107,6 +107,7 @@
       this.nextRainIntensityTime = 0;
       this.lightningIntensity = 0;
       this.nextLightningTime = 0;
+      this.nightRainScene = null;
       this.animationFrameId = null;
       this.lastTime = 0;
       this.initialized = false;
@@ -352,6 +353,24 @@
     }
 
     createNightRainResources() {
+      if (this.nightRainScene) return this.nightRainScene;
+      if (!window.NightRainCity3D) {
+        throw new Error('NightRainCity3D renderer is unavailable');
+      }
+      const layerCounts = NIGHT_RAIN_QUALITY[this.nightRainQuality];
+      const rainCount = layerCounts[0] + layerCounts[1] + layerCounts[2];
+      const scene = new window.NightRainCity3D(this.gl, { rainCount });
+      scene.init();
+      const surfaceRect = this.surface.getBoundingClientRect();
+      if (surfaceRect.width > 0 && surfaceRect.height > 0) {
+        scene.resize(surfaceRect.width, surfaceRect.height);
+      }
+      this.nightRainScene = scene;
+      this.rainParticles = scene.rainData;
+      this.count = scene.rainCount;
+      return scene;
+
+      // Legacy 2D scene code below is intentionally bypassed by the 3D renderer.
       if (this.nightSceneProgram && this.rainProgram) return;
       const gl = this.gl;
       try {
@@ -652,6 +671,12 @@
     }
 
     createNightRainParticles() {
+      const scene = this.createNightRainResources();
+      scene.resetRain();
+      this.rainParticles = scene.rainData;
+      this.count = scene.rainCount;
+      return;
+
       this.createNightRainResources();
       const layerCounts = NIGHT_RAIN_QUALITY[this.nightRainQuality];
       this.count = layerCounts[0] + layerCounts[1] + layerCounts[2];
@@ -745,6 +770,7 @@
         this.gl.viewport(0, 0, width, height);
       }
       this.dpr = dpr;
+      if (this.nightRainScene) this.nightRainScene.resize(rect.width, rect.height);
       if (this.enabled && !document.hidden) this.start();
     }
 
@@ -771,6 +797,7 @@
       this.mouse.windX = 0;
       this.starParallax.targetX = 0;
       this.starParallax.targetY = 0;
+      if (this.nightRainScene) this.nightRainScene.setMouse(0, 0);
     }
 
     onVisibilityChange() {
@@ -888,6 +915,18 @@
     }
 
     updateNightRainCity(time, deltaSeconds) {
+      if (this.nightRainScene) {
+        this.nightRainScene.setMouse(this.mouse.active ? this.mouse.x : 0, this.mouse.active ? this.mouse.y : 0);
+        this.nightRainScene.update(time, deltaSeconds);
+        this.rainParticles = this.nightRainScene.rainData;
+        this.rainIntensity = this.nightRainScene.rainIntensity;
+        this.targetRainIntensity = this.nightRainScene.targetRainIntensity;
+        this.lightningIntensity = this.nightRainScene.lightningIntensity;
+        this.nextLightningTime = this.nightRainScene.nextLightningTime;
+        this.nextRainIntensityTime = this.nightRainScene.nextRainIntensityTime;
+        return;
+      }
+
       const parallaxSmoothing = 1 - Math.pow(0.96, deltaSeconds * 60);
       this.starParallax.currentX += (
         this.starParallax.targetX - this.starParallax.currentX
@@ -936,6 +975,12 @@
       const deltaSeconds = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.033) : 0;
       this.lastTime = time;
       this.update(time, deltaSeconds);
+
+      if (this.currentEffect === 'night-rain-city' && this.nightRainScene) {
+        this.nightRainScene.render(time);
+        this.animationFrameId = window.requestAnimationFrame(this.renderFrame);
+        return;
+      }
 
       const gl = this.gl;
       gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1076,6 +1121,10 @@
 
     destroyNightRainResources() {
       if (!this.gl) return;
+      if (this.nightRainScene) {
+        this.nightRainScene.destroy();
+        this.nightRainScene = null;
+      }
       if (this.rainBuffer) this.gl.deleteBuffer(this.rainBuffer);
       if (this.rainVertexArray) this.gl.deleteVertexArray(this.rainVertexArray);
       if (this.rainProgram) this.gl.deleteProgram(this.rainProgram);
