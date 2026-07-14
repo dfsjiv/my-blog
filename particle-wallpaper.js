@@ -359,7 +359,10 @@
       }
       const layerCounts = NIGHT_RAIN_QUALITY[this.nightRainQuality];
       const rainCount = layerCounts[0] + layerCounts[1] + layerCounts[2];
-      const scene = new window.NightRainCity3D(this.gl, { rainCount });
+      const scene = new window.NightRainCity3D(this.gl, {
+        rainCount,
+        quality: this.nightRainQuality,
+      });
       scene.init();
       const surfaceRect = this.surface.getBoundingClientRect();
       if (surfaceRect.width > 0 && surfaceRect.height > 0) {

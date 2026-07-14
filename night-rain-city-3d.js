@@ -1,6 +1,7 @@
 (function () {
   const BUILDING_INSTANCE_STRIDE = 20;
   const RAIN_STRIDE = 7;
+  const REFLECTION_INSTANCE_STRIDE = 9;
   const DEG_TO_RAD = Math.PI / 180;
   const ROAD_HALF_WIDTH = 6.0;
   const CURB_WIDTH = 0.28;
@@ -20,6 +21,12 @@
     Object.freeze({ inner: 21.4, outer: 32.2, occupancy: 0.84 }),
     Object.freeze({ inner: 33.1, outer: 44.0, occupancy: 0.76 }),
   ]);
+  const REFLECTION_SOURCE_LIMITS = Object.freeze({
+    low: 24,
+    medium: 40,
+    high: 80,
+    ultra: 120,
+  });
 
   function randomBetween(random, min, max) {
     return min + random() * (max - min);
@@ -34,6 +41,17 @@
       value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
       return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
     };
+  }
+
+  function stableHash(value) {
+    const sine = Math.sin(value * 12.9898) * 43758.5453;
+    return sine - Math.floor(sine);
+  }
+
+  function windowLightColor(value) {
+    if (value < 0.56) return [1.0, 0.72, 0.30];
+    if (value < 0.90) return [0.78, 0.86, 1.0];
+    return [0.58, 0.76, 1.0];
   }
 
   function createPerspectiveMatrix(out, fieldOfView, aspect, near, far) {
@@ -123,6 +141,7 @@
       const settings = options || {};
       this.gl = gl;
       this.rainCount = Math.max(1, settings.rainCount || 1420);
+      this.quality = REFLECTION_SOURCE_LIMITS[settings.quality] ? settings.quality : 'medium';
       this.initialized = false;
       this.destroyed = false;
       this.projectionMatrix = new Float32Array(16);
@@ -149,8 +168,10 @@
       this.rainData = null;
       this.buildingCount = 0;
       this.buildingLots = [];
+      this.reflectionSourceCount = 0;
+      this.reflectionSources = [];
       this.resources = [];
-      this.drawCallCount = 5;
+      this.drawCallCount = 6;
     }
 
     init() {
@@ -160,6 +181,7 @@
         this.createBuildingResources();
         this.createGroundResources();
         this.createStreetscapeResources();
+        this.createRoadReflectionResources();
         this.createRainResources();
         this.createBuildings();
         this.resetRain();
@@ -394,6 +416,7 @@
         uniform vec3 u_cameraPosition;
         uniform float u_time;
         uniform float u_lightning;
+        uniform float u_rainIntensity;
         out vec4 outColor;
 
         float hash21(vec2 value) {
@@ -403,30 +426,22 @@
         void main() {
           vec3 normal = vec3(0.0, 1.0, 0.0);
           vec3 viewDirection = normalize(u_cameraPosition - v_worldPosition);
-          float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.0);
+          float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 3.4);
           float road = 1.0 - smoothstep(5.8, 7.4, abs(v_worldPosition.x));
-          vec3 color = mix(vec3(0.012, 0.020, 0.026), vec3(0.018, 0.027, 0.034), road);
+          float wetness = clamp(0.46 + u_rainIntensity * 0.34, 0.0, 1.0);
+          float coarseNoise = hash21(floor(v_worldPosition.xz * vec2(0.42, 0.30)));
+          float fineNoise = hash21(floor(v_worldPosition.xz * vec2(2.4, 1.7)) + 17.0);
+          vec3 shoulderColor = vec3(0.022, 0.031, 0.041);
+          vec3 asphaltColor = vec3(0.040, 0.057, 0.074);
+          vec3 color = mix(shoulderColor, asphaltColor, road);
+          color += (coarseNoise - 0.5) * vec3(0.008, 0.010, 0.012);
+          color += (fineNoise - 0.5) * vec3(0.003, 0.004, 0.005);
 
-          float ripple = sin(length(v_worldPosition.xz * vec2(0.75, 0.22)) * 15.0 - u_time * 1.6);
-          ripple *= sin(v_worldPosition.z * 0.52 + u_time * 0.28);
-          float wetNoise = hash21(floor(v_worldPosition.xz * 2.0));
-          float roughness = 0.58 + wetNoise * 0.20 + ripple * 0.035;
-          color += vec3(0.055, 0.085, 0.115) * fresnel * (1.0 - roughness);
-
-          float sideDistance = abs(abs(v_worldPosition.x) - 7.2);
-          float sideLight = exp(-sideDistance * sideDistance * 0.75);
-          float lightCell = hash21(vec2(floor(v_worldPosition.z * 0.32), floor(abs(v_worldPosition.x))));
-          float lightOn = step(0.70, lightCell);
-          float brokenReflection = smoothstep(
-            0.15,
-            0.90,
-            sin(v_worldPosition.z * mix(2.5, 5.5, lightCell) + u_time * 0.25) * 0.5 + 0.5
-          );
-          float reflection = sideLight * lightOn * brokenReflection * fresnel * 0.42;
-          vec3 reflectionColor = lightCell < 0.84
-            ? vec3(1.0, 0.64, 0.25)
-            : vec3(0.55, 0.76, 1.0);
-          color += reflectionColor * reflection;
+          float ripple = sin(length(v_worldPosition.xz * vec2(0.62, 0.18)) * 5.5 - u_time * 0.52);
+          ripple *= sin(v_worldPosition.z * 0.23 + u_time * 0.11);
+          float roughness = 0.62 + coarseNoise * 0.17 + ripple * 0.008 * wetness;
+          color += vec3(0.088, 0.112, 0.142) * fresnel * (1.0 - roughness) * wetness * road;
+          color += vec3(0.002, 0.003, 0.004) * ripple * wetness * road;
           color += vec3(0.11, 0.14, 0.18) * u_lightning * (0.18 + fresnel * 0.55);
 
           float distanceToCamera = distance(u_cameraPosition, v_worldPosition);
@@ -441,6 +456,7 @@
       this.groundCameraLocation = gl.getUniformLocation(this.groundProgram, 'u_cameraPosition');
       this.groundTimeLocation = gl.getUniformLocation(this.groundProgram, 'u_time');
       this.groundLightningLocation = gl.getUniformLocation(this.groundProgram, 'u_lightning');
+      this.groundRainIntensityLocation = gl.getUniformLocation(this.groundProgram, 'u_rainIntensity');
       this.groundVertexArray = this.trackResource('vertexArray', gl.createVertexArray());
       gl.bindVertexArray(this.groundVertexArray);
       this.groundBuffer = this.trackResource('buffer', gl.createBuffer());
@@ -516,6 +532,197 @@
       gl.enableVertexAttribArray(1);
       gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
       gl.bindVertexArray(null);
+    }
+
+    createRoadReflectionResources() {
+      const gl = this.gl;
+      const vertexSource = `#version 300 es
+        precision highp float;
+        layout(location = 0) in vec2 a_position;
+        layout(location = 1) in vec4 a_source;
+        layout(location = 2) in vec4 a_colorBrightness;
+        layout(location = 3) in float a_seed;
+        uniform mat4 u_projection;
+        uniform mat4 u_view;
+        uniform float u_time;
+        uniform float u_rainIntensity;
+        out vec2 v_uv;
+        out vec3 v_worldPosition;
+        out vec3 v_color;
+        out float v_brightness;
+        out float v_seed;
+        void main() {
+          float longitudinal = a_position.y * a_source.z;
+          float distortionStrength = 0.030 + u_rainIntensity * 0.045;
+          float distortion = sin(
+            (a_source.y + longitudinal) * 0.92 + u_time * 0.11 + a_seed
+          ) * distortionStrength;
+          distortion += sin(
+            (a_source.y + longitudinal) * 2.17 - u_time * 0.07 + a_seed * 0.37
+          ) * 0.018;
+          float taperedWidth = a_source.w * mix(0.72, 1.12, a_position.y);
+          vec3 worldPosition = vec3(
+            a_source.x + a_position.x * taperedWidth + distortion,
+            0.016,
+            a_source.y + longitudinal
+          );
+          v_uv = vec2(a_position.x + 0.5, a_position.y);
+          v_worldPosition = worldPosition;
+          v_color = a_colorBrightness.rgb;
+          v_brightness = a_colorBrightness.a;
+          v_seed = a_seed;
+          gl_Position = u_projection * u_view * vec4(worldPosition, 1.0);
+        }
+      `;
+      const fragmentSource = `#version 300 es
+        precision highp float;
+        in vec2 v_uv;
+        in vec3 v_worldPosition;
+        in vec3 v_color;
+        in float v_brightness;
+        in float v_seed;
+        uniform vec3 u_cameraPosition;
+        uniform float u_time;
+        uniform float u_rainIntensity;
+        out vec4 outColor;
+
+        float hash11(float value) {
+          return fract(sin(value * 127.1) * 43758.5453);
+        }
+
+        void main() {
+          float edgeFade = pow(1.0 - smoothstep(0.04, 0.50, abs(v_uv.x - 0.5)), 1.35);
+          float verticalFade = pow(max(0.0, 1.0 - v_uv.y), 0.72);
+          float slowPhase = sin(u_time * 0.045 + v_seed) * 0.09;
+          float primaryBreak = sin(v_worldPosition.z * 1.12 + v_seed * 2.31 + slowPhase) * 0.5 + 0.5;
+          float secondaryBreak = sin(v_worldPosition.z * 2.45 + v_seed * 0.83) * 0.5 + 0.5;
+          float stableNoise = hash11(floor((v_worldPosition.z + v_seed) * 0.48));
+          float brokenPattern = mix(
+            0.22,
+            1.0,
+            smoothstep(
+              0.30,
+              0.74,
+              primaryBreak * 0.54 + secondaryBreak * 0.18 + stableNoise * 0.34
+            )
+          );
+          float wetness = clamp(0.50 + u_rainIntensity * 0.38, 0.0, 1.0);
+          float cameraDistance = distance(u_cameraPosition, v_worldPosition);
+          float distanceFade = 1.0 - smoothstep(32.0, 118.0, cameraDistance);
+          float alpha = v_brightness
+            * edgeFade
+            * verticalFade
+            * brokenPattern
+            * wetness
+            * distanceFade;
+          if (alpha < 0.008) discard;
+          outColor = vec4(v_color * 0.72, alpha);
+        }
+      `;
+      this.reflectionProgram = this.createProgram(vertexSource, fragmentSource);
+      this.reflectionProjectionLocation = gl.getUniformLocation(this.reflectionProgram, 'u_projection');
+      this.reflectionViewLocation = gl.getUniformLocation(this.reflectionProgram, 'u_view');
+      this.reflectionCameraLocation = gl.getUniformLocation(this.reflectionProgram, 'u_cameraPosition');
+      this.reflectionTimeLocation = gl.getUniformLocation(this.reflectionProgram, 'u_time');
+      this.reflectionRainIntensityLocation = gl.getUniformLocation(this.reflectionProgram, 'u_rainIntensity');
+
+      this.reflectionVertexArray = this.trackResource('vertexArray', gl.createVertexArray());
+      gl.bindVertexArray(this.reflectionVertexArray);
+      this.reflectionGeometryBuffer = this.trackResource('buffer', gl.createBuffer());
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.reflectionGeometryBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -0.5, 0, 0.5, 0, -0.5, 1,
+        -0.5, 1, 0.5, 0, 0.5, 1,
+      ]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
+
+      this.reflectionInstanceBuffer = this.trackResource('buffer', gl.createBuffer());
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.reflectionInstanceBuffer);
+      const stride = REFLECTION_INSTANCE_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stride, 0);
+      gl.vertexAttribDivisor(1, 1);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 4, gl.FLOAT, false, stride, 16);
+      gl.vertexAttribDivisor(2, 1);
+      gl.enableVertexAttribArray(3);
+      gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 32);
+      gl.vertexAttribDivisor(3, 1);
+      gl.bindVertexArray(null);
+    }
+
+    createRoadReflectionSources(buildings) {
+      const candidates = [];
+      buildings.forEach((building, buildingIndex) => {
+        if (building.bandIndex !== 0) return;
+        const sampleCount = Math.max(3, Math.min(7, Math.floor(building.height / 2.4)));
+        for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex += 1) {
+          const sampleSeed = building.seed + sampleIndex * 17.71;
+          const litValue = stableHash(sampleSeed);
+          if (litValue < 0.23) continue;
+          const colorValue = stableHash(sampleSeed * 0.73 + 4.17);
+          const color = windowLightColor(colorValue);
+          const windowY = 1.4 + ((sampleIndex + 0.65) / sampleCount) * (building.height - 2.0);
+          const facadeOffset = (stableHash(sampleSeed * 1.31) - 0.5) * building.depth * 0.72;
+          const sourceZ = building.z + facadeOffset;
+          const roadX = building.side * randomBetween(
+            createSeededRandom(Math.floor(sampleSeed * 1000)),
+            3.35,
+            5.35
+          );
+          const depthNearness = 1.0 - Math.min(1.0, Math.max(0.0, (-sourceZ - 14.0) / 105.0));
+          const length = 4.8 + windowY * 0.36 + stableHash(sampleSeed * 2.07) * 5.4;
+          const width = 0.42 + stableHash(sampleSeed * 3.11) * 0.54 + depthNearness * 0.12;
+          const brightness = 0.18 + stableHash(sampleSeed * 5.03) * 0.12;
+          candidates.push({
+            buildingIndex,
+            windowY,
+            x: roadX,
+            z: sourceZ,
+            length,
+            width,
+            color,
+            brightness,
+            seed: sampleSeed,
+            score: brightness * (0.72 + depthNearness * 0.28),
+          });
+        }
+      });
+
+      candidates.sort((left, right) => right.score - left.score);
+      const sourceLimit = REFLECTION_SOURCE_LIMITS[this.quality];
+      const selectedSources = [];
+      const selectedCandidates = new Set();
+      const buildingSourceCounts = new Map();
+      for (let allowance = 1; allowance <= 6 && selectedSources.length < sourceLimit; allowance += 1) {
+        candidates.forEach((candidate) => {
+          if (selectedSources.length >= sourceLimit || selectedCandidates.has(candidate)) return;
+          const buildingCount = buildingSourceCounts.get(candidate.buildingIndex) || 0;
+          if (buildingCount >= allowance) return;
+          selectedSources.push(candidate);
+          selectedCandidates.add(candidate);
+          buildingSourceCounts.set(candidate.buildingIndex, buildingCount + 1);
+        });
+      }
+      this.reflectionSources = selectedSources;
+      this.reflectionSourceCount = this.reflectionSources.length;
+      const data = new Float32Array(this.reflectionSourceCount * REFLECTION_INSTANCE_STRIDE);
+      this.reflectionSources.forEach((source, index) => {
+        const offset = index * REFLECTION_INSTANCE_STRIDE;
+        data[offset] = source.x;
+        data[offset + 1] = source.z;
+        data[offset + 2] = source.length;
+        data[offset + 3] = source.width;
+        data[offset + 4] = source.color[0];
+        data[offset + 5] = source.color[1];
+        data[offset + 6] = source.color[2];
+        data[offset + 7] = source.brightness;
+        data[offset + 8] = source.seed;
+      });
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.reflectionInstanceBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     }
 
     createRainResources() {
@@ -634,7 +841,18 @@
                 : bandIndex === 1
                   ? [0.16, 0.22, 0.30]
                   : [0.17, 0.23, 0.31];
-              buildings.push({ x, z, width, height, depth, yaw, colorBase, seed: random() * 1000 });
+              buildings.push({
+                x,
+                z,
+                width,
+                height,
+                depth,
+                yaw,
+                colorBase,
+                seed: random() * 1000,
+                side,
+                bandIndex,
+              });
 
               lot.setback = frontSetback;
               lot.width = width;
@@ -677,6 +895,7 @@
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buildingInstanceBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, this.buildingData, gl.STATIC_DRAW);
+      this.createRoadReflectionSources(buildings);
     }
 
     resetRain() {
@@ -800,8 +1019,25 @@
       gl.uniform3fv(this.groundCameraLocation, this.cameraPosition);
       gl.uniform1f(this.groundTimeLocation, time * 0.001);
       gl.uniform1f(this.groundLightningLocation, this.lightningIntensity);
+      gl.uniform1f(this.groundRainIntensityLocation, this.rainIntensity);
       gl.bindVertexArray(this.groundVertexArray);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.useProgram(this.reflectionProgram);
+      this.setCommonMatrices({
+        projection: this.reflectionProjectionLocation,
+        view: this.reflectionViewLocation,
+      });
+      gl.uniform3fv(this.reflectionCameraLocation, this.cameraPosition);
+      gl.uniform1f(this.reflectionTimeLocation, time * 0.001);
+      gl.uniform1f(this.reflectionRainIntensityLocation, this.rainIntensity);
+      gl.bindVertexArray(this.reflectionVertexArray);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.reflectionSourceCount);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
 
       gl.useProgram(this.streetscapeProgram);
       this.setCommonMatrices({
@@ -858,6 +1094,8 @@
       this.buildingData = null;
       this.buildingLots = [];
       this.buildingCount = 0;
+      this.reflectionSources = [];
+      this.reflectionSourceCount = 0;
       this.initialized = false;
       this.destroyed = true;
     }
