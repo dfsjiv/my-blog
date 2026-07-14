@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 城市模型测试</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="model-test.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main class="model-test" aria-label="3D 城市模型测试场景">
+    <canvas id="modelCanvas"></canvas>
+
+    <section class="model-test-panel" aria-live="polite">
+      <h1>New York City GLB</h1>
+      <p id="loadStatus">模型加载中：0%</p>
+      <dl class="performance-list">
+        <div><dt>FPS</dt><dd id="fpsValue">--</dd></div>
+        <div><dt>Meshes</dt><dd id="meshValue">--</dd></div>
+        <div><dt>Triangles</dt><dd id="triangleValue">--</dd></div>
+        <div><dt>Draw Calls</dt><dd id="drawCallValue">--</dd></div>
+        <div><dt>Textures</dt><dd id="textureValue">--</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <script type="module" src="model-test.js"></script>
+</body>
+</html>
