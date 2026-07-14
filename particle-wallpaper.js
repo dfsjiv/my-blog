@@ -17,7 +17,19 @@
     high: 5000,
     ultra: 10000,
   });
-  const BACKGROUND_MODES = Object.freeze(['static', 'floating-light', 'snow', 'stars']);
+  const NIGHT_RAIN_QUALITY = Object.freeze({
+    low: Object.freeze([300, 150, 50]),
+    medium: Object.freeze([900, 400, 120]),
+    high: Object.freeze([1800, 800, 250]),
+    ultra: Object.freeze([3500, 1600, 500]),
+  });
+  const BACKGROUND_MODES = Object.freeze([
+    'static',
+    'floating-light',
+    'snow',
+    'stars',
+    'night-rain-city',
+  ]);
   const STORAGE_KEY = 'webos_background_mode';
   const LEGACY_STORAGE_KEY = 'gpuParticleWallpaperEnabled';
 
@@ -26,10 +38,17 @@
     'floating-light': '\u58c1\u7eb8\uff1a\u7c92\u5b50',
     snow: '\u58c1\u7eb8\uff1a\u96ea\u82b1',
     stars: '\u58c1\u7eb8\uff1a\u661f\u7a7a',
+    'night-rain-city': '\u58c1\u7eb8\uff1a\u591c\u96e8',
   });
   const STAR_MIN_DEPTH = 0.12;
   const STAR_MAX_DEPTH = 1.35;
   const STAR_STRIDE = 8;
+  const RAIN_STRIDE = 7;
+  const RAIN_LAYER_SETTINGS = Object.freeze([
+    Object.freeze({ speedMin: 0.34, speedMax: 0.52, lengthMin: 0.018, lengthMax: 0.035, alphaMin: 0.07, alphaMax: 0.16, windMin: 0.010, windMax: 0.025 }),
+    Object.freeze({ speedMin: 0.62, speedMax: 0.92, lengthMin: 0.050, lengthMax: 0.090, alphaMin: 0.18, alphaMax: 0.34, windMin: 0.018, windMax: 0.038 }),
+    Object.freeze({ speedMin: 1.15, speedMax: 1.72, lengthMin: 0.115, lengthMax: 0.185, alphaMin: 0.34, alphaMax: 0.58, windMin: 0.030, windMax: 0.060 }),
+  ]);
   const SNOW_LAYERS = Object.freeze([
     Object.freeze({ sizeMin: 1.2, sizeMax: 2.1, alphaMin: 0.18, alphaMax: 0.34, speedMin: 0.06, speedMax: 0.11, driftMin: 0.004, driftMax: 0.012 }),
     Object.freeze({ sizeMin: 2.2, sizeMax: 3.7, alphaMin: 0.34, alphaMax: 0.58, speedMin: 0.12, speedMax: 0.20, driftMin: 0.008, driftMax: 0.020 }),
@@ -49,6 +68,9 @@
       this.quality = PARTICLE_QUALITY[settings.quality] ? settings.quality : 'medium';
       this.snowQuality = SNOW_QUALITY[settings.snowQuality] ? settings.snowQuality : 'medium';
       this.starQuality = STAR_QUALITY[settings.starQuality] ? settings.starQuality : 'medium';
+      this.nightRainQuality = NIGHT_RAIN_QUALITY[settings.nightRainQuality]
+        ? settings.nightRainQuality
+        : 'medium';
       this.currentEffect = this.readBackgroundMode();
       this.effectType = this.currentEffect;
       this.lastDynamicEffect = this.currentEffect === 'static' ? 'floating-light' : this.currentEffect;
@@ -70,6 +92,21 @@
       this.starVertexArray = null;
       this.starParticles = null;
       this.starParallax = { targetX: 0, targetY: 0, currentX: 0, currentY: 0 };
+      this.nightSceneProgram = null;
+      this.nightSceneVertexShader = null;
+      this.nightSceneFragmentShader = null;
+      this.nightSceneVertexArray = null;
+      this.rainProgram = null;
+      this.rainVertexShader = null;
+      this.rainFragmentShader = null;
+      this.rainBuffer = null;
+      this.rainVertexArray = null;
+      this.rainParticles = null;
+      this.rainIntensity = 0.82;
+      this.targetRainIntensity = 0.82;
+      this.nextRainIntensityTime = 0;
+      this.lightningIntensity = 0;
+      this.nextLightningTime = 0;
       this.animationFrameId = null;
       this.lastTime = 0;
       this.initialized = false;
@@ -314,7 +351,253 @@
       }
     }
 
+    createNightRainResources() {
+      if (this.nightSceneProgram && this.rainProgram) return;
+      const gl = this.gl;
+      try {
+        const sceneVertexSource = `#version 300 es
+          precision highp float;
+          out vec2 v_uv;
+          void main() {
+            vec2 position = vec2(
+              gl_VertexID == 1 ? 2.0 : 0.0,
+              gl_VertexID == 2 ? 2.0 : 0.0
+            );
+            v_uv = position;
+            gl_Position = vec4(position * 2.0 - 1.0, 0.0, 1.0);
+          }
+        `;
+        const sceneFragmentSource = `#version 300 es
+          precision highp float;
+          in vec2 v_uv;
+          uniform float u_time;
+          uniform float u_lightning;
+          uniform vec2 u_parallax;
+          out vec4 outColor;
+
+          float hash11(float value) {
+            return fract(sin(value * 127.1) * 43758.5453);
+          }
+
+          float hash21(vec2 value) {
+            return fract(sin(dot(value, vec2(127.1, 311.7))) * 43758.5453);
+          }
+
+          vec3 chooseWindowColor(float value) {
+            if (value < 0.58) return vec3(1.0, 0.72, 0.32);
+            if (value < 0.90) return vec3(0.78, 0.88, 1.0);
+            return vec3(0.62, 0.78, 1.0);
+          }
+
+          vec4 cityLayer(
+            vec2 uv,
+            float columns,
+            float baseY,
+            float maxHeight,
+            float seed,
+            float parallaxAmount,
+            float lightThreshold,
+            vec3 buildingColor
+          ) {
+            float shiftedX = uv.x + u_parallax.x * parallaxAmount;
+            float scaledX = shiftedX * columns;
+            float buildingId = floor(scaledX);
+            float localX = fract(scaledX);
+            float width = mix(0.58, 0.92, hash11(buildingId + seed));
+            float left = (1.0 - width) * 0.5;
+            float right = left + width;
+            float height = mix(maxHeight * 0.35, maxHeight, hash11(buildingId * 1.93 + seed));
+            float topY = baseY + height;
+            float building = step(left, localX)
+              * step(localX, right)
+              * step(baseY, uv.y)
+              * step(uv.y, topY);
+            if (building < 0.5) return vec4(0.0);
+
+            float normalizedX = clamp((localX - left) / max(width, 0.001), 0.0, 1.0);
+            float normalizedY = clamp((uv.y - baseY) / max(height, 0.001), 0.0, 1.0);
+            float windowColumns = floor(mix(2.0, 6.0, hash11(buildingId + seed * 3.1)));
+            float windowRows = floor(mix(4.0, 12.0, hash11(buildingId * 2.7 + seed)));
+            vec2 windowGrid = vec2(normalizedX, normalizedY) * vec2(windowColumns, windowRows);
+            vec2 windowCell = floor(windowGrid);
+            vec2 windowLocal = fract(windowGrid);
+            float pane = step(0.20, windowLocal.x)
+              * step(windowLocal.x, 0.78)
+              * step(0.22, windowLocal.y)
+              * step(windowLocal.y, 0.72);
+            float stableWindow = hash21(windowCell + vec2(buildingId * 9.7, seed * 13.0));
+            float lit = step(lightThreshold, stableWindow) * pane;
+            float slowWindow = step(
+              0.992,
+              hash21(windowCell * 2.3 + vec2(buildingId, seed))
+            );
+            float slowPulse = 0.82 + sin(u_time * 0.08 + stableWindow * 6.2831) * 0.18;
+            float windowLevel = lit * mix(1.0, slowPulse, slowWindow);
+            vec3 windowColor = chooseWindowColor(hash11(stableWindow * 17.0 + seed));
+            vec3 facade = buildingColor + vec3(u_lightning * 0.08);
+            vec3 color = mix(facade, windowColor, windowLevel * 0.82);
+            return vec4(color, building);
+          }
+
+          void main() {
+            const float groundY = 0.28;
+            vec3 skyTop = vec3(0.012, 0.025, 0.060);
+            vec3 skyMiddle = vec3(0.035, 0.070, 0.120);
+            vec3 skyHorizon = vec3(0.105, 0.115, 0.180);
+            float skyHeight = smoothstep(groundY, 1.0, v_uv.y);
+            vec3 color = mix(skyHorizon, skyMiddle, smoothstep(groundY, 0.68, v_uv.y));
+            color = mix(color, skyTop, smoothstep(0.64, 1.0, skyHeight));
+            color += vec3(0.11, 0.13, 0.18) * u_lightning;
+
+            vec4 farCity = cityLayer(
+              v_uv,
+              23.0,
+              0.30,
+              0.24,
+              4.7,
+              0.003,
+              0.78,
+              vec3(0.035, 0.055, 0.085)
+            );
+            color = mix(color, farCity.rgb, farCity.a * 0.78);
+
+            float fogWave = sin(v_uv.x * 8.0 + u_time * 0.025) * 0.5 + 0.5;
+            float fogBand = smoothstep(0.24, 0.34, v_uv.y)
+              * (1.0 - smoothstep(0.34, 0.52, v_uv.y));
+            float fog = fogBand * mix(0.06, 0.13, fogWave);
+            fog += fogBand * u_lightning * 0.10;
+            color = mix(color, vec3(0.16, 0.19, 0.25), fog);
+
+            vec4 midCity = cityLayer(
+              v_uv,
+              15.0,
+              0.27,
+              0.39,
+              19.3,
+              0.009,
+              0.68,
+              vec3(0.020, 0.032, 0.052)
+            );
+            color = mix(color, midCity.rgb, midCity.a);
+
+            if (v_uv.y < groundY) {
+              float ripple = sin(v_uv.y * 170.0 + u_time * 0.7)
+                * sin(v_uv.x * 34.0 - u_time * 0.16);
+              vec3 ground = vec3(0.012, 0.025, 0.038) + ripple * 0.004;
+              float distortion = sin(v_uv.y * 95.0 + u_time * 0.34) * 0.0035
+                + sin(v_uv.y * 37.0 - u_time * 0.18) * 0.002;
+              float reflectionX = v_uv.x + distortion + u_parallax.x * 0.005;
+              float reflectionCell = floor(reflectionX * 72.0);
+              float reflectionLocal = fract(reflectionX * 72.0);
+              float reflectionSeed = hash11(reflectionCell * 2.17 + 8.0);
+              float reflectionLit = step(0.69, reflectionSeed);
+              float narrowStreak = pow(max(0.0, 1.0 - abs(reflectionLocal * 2.0 - 1.0)), 8.0);
+              float verticalFade = smoothstep(0.0, groundY, v_uv.y);
+              float broken = 0.45 + 0.55 * sin(
+                v_uv.y * mix(90.0, 180.0, reflectionSeed) + reflectionSeed * 20.0
+              );
+              broken = smoothstep(0.05, 0.95, broken);
+              vec3 reflectionColor = chooseWindowColor(reflectionSeed);
+              float reflectionAmount = reflectionLit
+                * narrowStreak
+                * verticalFade
+                * broken
+                * 0.32;
+              ground += reflectionColor * reflectionAmount;
+              float wetSheen = smoothstep(0.0, groundY, v_uv.y) * 0.035;
+              ground += vec3(0.05, 0.09, 0.13) * wetSheen;
+              color = ground;
+            }
+
+            outColor = vec4(color, 1.0);
+          }
+        `;
+        const rainVertexSource = `#version 300 es
+          precision highp float;
+          layout(location = 0) in vec4 a_drop;
+          layout(location = 1) in vec3 a_motion;
+          uniform float u_intensity;
+          uniform vec2 u_parallax;
+          out float v_alpha;
+          out float v_layer;
+          void main() {
+            float endpoint = float(gl_VertexID);
+            float layerDepth = a_motion.y / 2.0;
+            vec2 top = vec2(
+              a_drop.x - a_drop.z * mix(0.12, 0.24, layerDepth),
+              a_drop.y + a_drop.z
+            );
+            vec2 bottom = a_drop.xy;
+            vec2 position = mix(top, bottom, endpoint);
+            position.x += u_parallax.x * mix(0.002, 0.018, layerDepth);
+            gl_Position = vec4(position, 0.0, 1.0);
+            v_alpha = a_drop.w * u_intensity;
+            v_layer = layerDepth;
+          }
+        `;
+        const rainFragmentSource = `#version 300 es
+          precision highp float;
+          in float v_alpha;
+          in float v_layer;
+          out vec4 outColor;
+          void main() {
+            vec3 rainColor = mix(
+              vec3(0.45, 0.58, 0.70),
+              vec3(0.76, 0.86, 0.94),
+              v_layer
+            );
+            outColor = vec4(rainColor, v_alpha);
+          }
+        `;
+
+        this.nightSceneVertexShader = this.createShader(gl.VERTEX_SHADER, sceneVertexSource);
+        this.nightSceneFragmentShader = this.createShader(gl.FRAGMENT_SHADER, sceneFragmentSource);
+        this.nightSceneProgram = gl.createProgram();
+        gl.attachShader(this.nightSceneProgram, this.nightSceneVertexShader);
+        gl.attachShader(this.nightSceneProgram, this.nightSceneFragmentShader);
+        gl.linkProgram(this.nightSceneProgram);
+        if (!gl.getProgramParameter(this.nightSceneProgram, gl.LINK_STATUS)) {
+          throw new Error(gl.getProgramInfoLog(this.nightSceneProgram) || 'Night scene program linking failed');
+        }
+        this.nightSceneTimeLocation = gl.getUniformLocation(this.nightSceneProgram, 'u_time');
+        this.nightSceneLightningLocation = gl.getUniformLocation(this.nightSceneProgram, 'u_lightning');
+        this.nightSceneParallaxLocation = gl.getUniformLocation(this.nightSceneProgram, 'u_parallax');
+        this.nightSceneVertexArray = gl.createVertexArray();
+
+        this.rainVertexShader = this.createShader(gl.VERTEX_SHADER, rainVertexSource);
+        this.rainFragmentShader = this.createShader(gl.FRAGMENT_SHADER, rainFragmentSource);
+        this.rainProgram = gl.createProgram();
+        gl.attachShader(this.rainProgram, this.rainVertexShader);
+        gl.attachShader(this.rainProgram, this.rainFragmentShader);
+        gl.linkProgram(this.rainProgram);
+        if (!gl.getProgramParameter(this.rainProgram, gl.LINK_STATUS)) {
+          throw new Error(gl.getProgramInfoLog(this.rainProgram) || 'Rain program linking failed');
+        }
+        this.rainIntensityLocation = gl.getUniformLocation(this.rainProgram, 'u_intensity');
+        this.rainParallaxLocation = gl.getUniformLocation(this.rainProgram, 'u_parallax');
+        this.rainVertexArray = gl.createVertexArray();
+        gl.bindVertexArray(this.rainVertexArray);
+        this.rainBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rainBuffer);
+        const stride = RAIN_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, stride, 0);
+        gl.vertexAttribDivisor(0, 1);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 16);
+        gl.vertexAttribDivisor(1, 1);
+        gl.bindVertexArray(null);
+      } catch (error) {
+        this.destroyNightRainResources();
+        throw error;
+      }
+    }
+
     createParticles(effectType) {
+      if (effectType === 'night-rain-city') {
+        this.createNightRainParticles();
+        return;
+      }
       if (effectType === 'stars') {
         this.createStarParticles();
         return;
@@ -366,6 +649,43 @@
       this.starParticles[offset + 5] = randomBetween(0.018, 0.045);
       this.starParticles[offset + 6] = Math.random() * Math.PI * 2;
       this.starParticles[offset + 7] = randomBetween(0.7, 1.6);
+    }
+
+    createNightRainParticles() {
+      this.createNightRainResources();
+      const layerCounts = NIGHT_RAIN_QUALITY[this.nightRainQuality];
+      this.count = layerCounts[0] + layerCounts[1] + layerCounts[2];
+      const requiredLength = this.count * RAIN_STRIDE;
+      if (!this.rainParticles || this.rainParticles.length !== requiredLength) {
+        this.rainParticles = new Float32Array(requiredLength);
+      }
+
+      let particleIndex = 0;
+      for (let layer = 0; layer < 3; layer += 1) {
+        const layerEnd = particleIndex + layerCounts[layer];
+        for (; particleIndex < layerEnd; particleIndex += 1) {
+          this.resetRainParticle(particleIndex, true, layer);
+        }
+      }
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.rainBuffer);
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.rainParticles, this.gl.DYNAMIC_DRAW);
+    }
+
+    resetRainParticle(index, initialPlacement, requestedLayer) {
+      const offset = index * RAIN_STRIDE;
+      const layer = requestedLayer === undefined
+        ? this.rainParticles[offset + 5]
+        : requestedLayer;
+      const settings = RAIN_LAYER_SETTINGS[layer];
+      this.rainParticles[offset] = randomBetween(-1.15, 1.15);
+      this.rainParticles[offset + 1] = initialPlacement
+        ? randomBetween(-1.15, 1.15)
+        : randomBetween(1.02, 1.35);
+      this.rainParticles[offset + 2] = randomBetween(settings.speedMin, settings.speedMax);
+      this.rainParticles[offset + 3] = randomBetween(settings.lengthMin, settings.lengthMax);
+      this.rainParticles[offset + 4] = randomBetween(settings.alphaMin, settings.alphaMax);
+      this.rainParticles[offset + 5] = layer;
+      this.rainParticles[offset + 6] = randomBetween(settings.windMin, settings.windMax);
     }
 
     resetFloatingParticle(index) {
@@ -459,7 +779,8 @@
     }
 
     update(time, deltaSeconds) {
-      if (this.currentEffect === 'stars') this.updateStars(deltaSeconds);
+      if (this.currentEffect === 'night-rain-city') this.updateNightRainCity(time, deltaSeconds);
+      else if (this.currentEffect === 'stars') this.updateStars(deltaSeconds);
       else if (this.currentEffect === 'snow') this.updateSnow(time, deltaSeconds);
       else this.updateFloatingLight(time, deltaSeconds);
     }
@@ -566,6 +887,50 @@
       }
     }
 
+    updateNightRainCity(time, deltaSeconds) {
+      const parallaxSmoothing = 1 - Math.pow(0.96, deltaSeconds * 60);
+      this.starParallax.currentX += (
+        this.starParallax.targetX - this.starParallax.currentX
+      ) * parallaxSmoothing;
+      this.starParallax.currentY += (
+        this.starParallax.targetY - this.starParallax.currentY
+      ) * parallaxSmoothing;
+
+      if (this.nextRainIntensityTime === 0) {
+        this.nextRainIntensityTime = time + randomBetween(20000, 45000);
+      } else if (time >= this.nextRainIntensityTime) {
+        this.targetRainIntensity = randomBetween(0.68, 1.0);
+        this.nextRainIntensityTime = time + randomBetween(20000, 45000);
+      }
+      const rainSmoothing = 1 - Math.exp(-deltaSeconds * 0.12);
+      this.rainIntensity += (
+        this.targetRainIntensity - this.rainIntensity
+      ) * rainSmoothing;
+
+      if (this.nextLightningTime === 0) {
+        this.nextLightningTime = time + randomBetween(20000, 60000);
+      } else if (time >= this.nextLightningTime) {
+        this.lightningIntensity = randomBetween(0.28, 0.48);
+        this.nextLightningTime = time + randomBetween(20000, 60000);
+      }
+      this.lightningIntensity *= Math.exp(-deltaSeconds * 4.8);
+
+      const wind = 0.045
+        + Math.sin(time * 0.00008) * 0.022
+        + this.starParallax.currentX * 0.005;
+      const speedScale = 0.84 + this.rainIntensity * 0.24;
+      for (let index = 0; index < this.count; index += 1) {
+        const offset = index * RAIN_STRIDE;
+        let x = this.rainParticles[offset];
+        let y = this.rainParticles[offset + 1];
+        x += (wind + this.rainParticles[offset + 6]) * deltaSeconds;
+        y -= this.rainParticles[offset + 2] * speedScale * deltaSeconds;
+        this.rainParticles[offset] = x;
+        this.rainParticles[offset + 1] = y;
+        if (y < -1.30 || x > 1.32) this.resetRainParticle(index, false);
+      }
+    }
+
     renderFrame(time) {
       if (this.animationFrameId === null || !this.enabled || document.hidden) return;
       const deltaSeconds = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.033) : 0;
@@ -574,7 +939,33 @@
 
       const gl = this.gl;
       gl.clear(gl.COLOR_BUFFER_BIT);
-      if (this.currentEffect === 'stars') {
+      if (this.currentEffect === 'night-rain-city') {
+        gl.disable(gl.BLEND);
+        gl.useProgram(this.nightSceneProgram);
+        gl.uniform1f(this.nightSceneTimeLocation, time * 0.001);
+        gl.uniform1f(this.nightSceneLightningLocation, this.lightningIntensity);
+        gl.uniform2f(
+          this.nightSceneParallaxLocation,
+          this.starParallax.currentX,
+          this.starParallax.currentY
+        );
+        gl.bindVertexArray(this.nightSceneVertexArray);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(this.rainProgram);
+        gl.uniform1f(this.rainIntensityLocation, this.rainIntensity);
+        gl.uniform2f(
+          this.rainParallaxLocation,
+          this.starParallax.currentX,
+          this.starParallax.currentY
+        );
+        gl.bindVertexArray(this.rainVertexArray);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.rainBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.rainParticles);
+        gl.drawArraysInstanced(gl.LINES, 0, 2, this.count);
+      } else if (this.currentEffect === 'stars') {
         gl.useProgram(this.starProgram);
         gl.uniform1f(this.starDprLocation, this.dpr || 1);
         gl.uniform1f(this.starTimeLocation, time * 0.001);
@@ -593,8 +984,9 @@
         gl.bindVertexArray(this.particleVertexArray);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.particleBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.particles);
+        gl.drawArrays(gl.POINTS, 0, this.count);
       }
-      gl.drawArrays(gl.POINTS, 0, this.count);
+      if (this.currentEffect === 'stars') gl.drawArrays(gl.POINTS, 0, this.count);
       gl.bindVertexArray(null);
       this.animationFrameId = window.requestAnimationFrame(this.renderFrame);
     }
@@ -682,6 +1074,29 @@
       this.starParticles = null;
     }
 
+    destroyNightRainResources() {
+      if (!this.gl) return;
+      if (this.rainBuffer) this.gl.deleteBuffer(this.rainBuffer);
+      if (this.rainVertexArray) this.gl.deleteVertexArray(this.rainVertexArray);
+      if (this.rainProgram) this.gl.deleteProgram(this.rainProgram);
+      if (this.rainVertexShader) this.gl.deleteShader(this.rainVertexShader);
+      if (this.rainFragmentShader) this.gl.deleteShader(this.rainFragmentShader);
+      if (this.nightSceneVertexArray) this.gl.deleteVertexArray(this.nightSceneVertexArray);
+      if (this.nightSceneProgram) this.gl.deleteProgram(this.nightSceneProgram);
+      if (this.nightSceneVertexShader) this.gl.deleteShader(this.nightSceneVertexShader);
+      if (this.nightSceneFragmentShader) this.gl.deleteShader(this.nightSceneFragmentShader);
+      this.rainBuffer = null;
+      this.rainVertexArray = null;
+      this.rainProgram = null;
+      this.rainVertexShader = null;
+      this.rainFragmentShader = null;
+      this.nightSceneVertexArray = null;
+      this.nightSceneProgram = null;
+      this.nightSceneVertexShader = null;
+      this.nightSceneFragmentShader = null;
+      this.rainParticles = null;
+    }
+
     destroyWebGlResources() {
       if (!this.gl) return;
       if (this.particleBuffer) this.gl.deleteBuffer(this.particleBuffer);
@@ -690,6 +1105,7 @@
       if (this.vertexShader) this.gl.deleteShader(this.vertexShader);
       if (this.fragmentShader) this.gl.deleteShader(this.fragmentShader);
       this.destroyStarResources();
+      this.destroyNightRainResources();
       this.particleBuffer = null;
       this.particleVertexArray = null;
       this.program = null;
@@ -724,6 +1140,7 @@
       quality: 'medium',
       snowQuality: 'medium',
       starQuality: 'medium',
+      nightRainQuality: 'medium',
     });
     window.gpuParticleWallpaper = instance;
     instance.init();
@@ -733,6 +1150,7 @@
   window.PARTICLE_QUALITY = PARTICLE_QUALITY;
   window.SNOW_QUALITY = SNOW_QUALITY;
   window.STAR_QUALITY = STAR_QUALITY;
+  window.NIGHT_RAIN_QUALITY = NIGHT_RAIN_QUALITY;
   window.BACKGROUND_MODES = BACKGROUND_MODES;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeParticleWallpaper, { once: true });
