@@ -1,8 +1,25 @@
 (function () {
-  const BUILDING_COUNT = 100;
   const BUILDING_INSTANCE_STRIDE = 20;
   const RAIN_STRIDE = 7;
   const DEG_TO_RAD = Math.PI / 180;
+  const ROAD_HALF_WIDTH = 6.0;
+  const CURB_WIDTH = 0.28;
+  const SIDEWALK_OUTER_EDGE = 9.8;
+  const CITY_BLOCKS = Object.freeze([
+    Object.freeze({ nearZ: -14, farZ: -32 }),
+    Object.freeze({ nearZ: -37, farZ: -56 }),
+    Object.freeze({ nearZ: -61, farZ: -80 }),
+    Object.freeze({ nearZ: -85, farZ: -105 }),
+  ]);
+  const STREETSCAPE_SEGMENTS = Object.freeze([
+    Object.freeze({ nearZ: 10, farZ: -9 }),
+    ...CITY_BLOCKS,
+  ]);
+  const LOT_DEPTH_BANDS = Object.freeze([
+    Object.freeze({ inner: 10.2, outer: 20.5, occupancy: 0.94 }),
+    Object.freeze({ inner: 21.4, outer: 32.2, occupancy: 0.84 }),
+    Object.freeze({ inner: 33.1, outer: 44.0, occupancy: 0.76 }),
+  ]);
 
   function randomBetween(random, min, max) {
     return min + random() * (max - min);
@@ -88,6 +105,19 @@
     return new Float32Array(vertices);
   }
 
+  function appendColoredBox(target, cube, center, size, color) {
+    for (let index = 0; index < cube.length; index += 6) {
+      target.push(
+        center[0] + cube[index] * size[0],
+        center[1] + cube[index + 1] * size[1],
+        center[2] + cube[index + 2] * size[2],
+        color[0],
+        color[1],
+        color[2]
+      );
+    }
+  }
+
   class NightRainCity3D {
     constructor(gl, options) {
       const settings = options || {};
@@ -117,8 +147,10 @@
       this.lightningIntensity = 0;
       this.nextLightningTime = 0;
       this.rainData = null;
+      this.buildingCount = 0;
+      this.buildingLots = [];
       this.resources = [];
-      this.drawCallCount = 4;
+      this.drawCallCount = 5;
     }
 
     init() {
@@ -127,6 +159,7 @@
         this.createSkyResources();
         this.createBuildingResources();
         this.createGroundResources();
+        this.createStreetscapeResources();
         this.createRainResources();
         this.createBuildings();
         this.resetRain();
@@ -421,6 +454,70 @@
       gl.bindVertexArray(null);
     }
 
+    createStreetscapeResources() {
+      const gl = this.gl;
+      const vertexSource = `#version 300 es
+        precision highp float;
+        layout(location = 0) in vec3 a_position;
+        layout(location = 1) in vec3 a_color;
+        uniform mat4 u_projection;
+        uniform mat4 u_view;
+        out vec3 v_color;
+        void main() {
+          v_color = a_color;
+          gl_Position = u_projection * u_view * vec4(a_position, 1.0);
+        }
+      `;
+      const fragmentSource = `#version 300 es
+        precision highp float;
+        in vec3 v_color;
+        out vec4 outColor;
+        void main() {
+          outColor = vec4(v_color, 1.0);
+        }
+      `;
+      this.streetscapeProgram = this.createProgram(vertexSource, fragmentSource);
+      this.streetscapeProjectionLocation = gl.getUniformLocation(this.streetscapeProgram, 'u_projection');
+      this.streetscapeViewLocation = gl.getUniformLocation(this.streetscapeProgram, 'u_view');
+
+      const cube = createCubeVertices();
+      const vertices = [];
+      const sidewalkInnerEdge = ROAD_HALF_WIDTH + CURB_WIDTH;
+      const sidewalkWidth = SIDEWALK_OUTER_EDGE - sidewalkInnerEdge;
+      STREETSCAPE_SEGMENTS.forEach((block) => {
+        const blockDepth = block.nearZ - block.farZ;
+        const centerZ = (block.nearZ + block.farZ) * 0.5;
+        [-1, 1].forEach((side) => {
+          appendColoredBox(
+            vertices,
+            cube,
+            [side * (ROAD_HALF_WIDTH + CURB_WIDTH * 0.5), 0.10, centerZ],
+            [CURB_WIDTH, 0.20, blockDepth],
+            [0.17, 0.18, 0.19]
+          );
+          appendColoredBox(
+            vertices,
+            cube,
+            [side * (sidewalkInnerEdge + sidewalkWidth * 0.5), 0.055, centerZ],
+            [sidewalkWidth, 0.11, blockDepth],
+            [0.075, 0.085, 0.095]
+          );
+        });
+      });
+
+      this.streetscapeVertexCount = vertices.length / 6;
+      this.streetscapeVertexArray = this.trackResource('vertexArray', gl.createVertexArray());
+      gl.bindVertexArray(this.streetscapeVertexArray);
+      this.streetscapeBuffer = this.trackResource('buffer', gl.createBuffer());
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.streetscapeBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+      gl.bindVertexArray(null);
+    }
+
     createRainResources() {
       const gl = this.gl;
       const vertexSource = `#version 300 es
@@ -479,54 +576,103 @@
 
     createBuildings() {
       const random = createSeededRandom(0xC17A3D);
-      this.buildingData = new Float32Array(BUILDING_COUNT * BUILDING_INSTANCE_STRIDE);
-      let buildingIndex = 0;
-      const addBand = (count, zMin, zMax, xMin, widthMin, widthMax, heightMin, heightMax, depthMin, depthMax, colorBase) => {
-        for (let index = 0; index < count; index += 1) {
-          const offset = buildingIndex * BUILDING_INSTANCE_STRIDE;
-          const side = random() < 0.5 ? -1 : 1;
-          const sideXMin = side < 0 ? xMin : xMin + 4.2;
-          const sideXMax = side < 0 ? 32.0 : 37.0;
-          const x = side * randomBetween(random, sideXMin, sideXMax);
-          const sideDepthOffset = side < 0
-            ? randomBetween(random, -2.0, 3.5)
-            : randomBetween(random, -6.0, 1.0);
-          const z = randomBetween(random, zMin, zMax) + sideDepthOffset;
-          const width = randomBetween(random, widthMin, widthMax);
-          const height = randomBetween(random, heightMin, heightMax);
-          const depth = randomBetween(random, depthMin, depthMax);
-          const yaw = randomBetween(random, -0.08, 0.08);
-          const cosine = Math.cos(yaw);
-          const sine = Math.sin(yaw);
+      const buildings = [];
+      this.buildingLots = [];
 
-          this.buildingData[offset] = cosine * width;
-          this.buildingData[offset + 1] = 0;
-          this.buildingData[offset + 2] = -sine * width;
-          this.buildingData[offset + 3] = 0;
-          this.buildingData[offset + 4] = 0;
-          this.buildingData[offset + 5] = height;
-          this.buildingData[offset + 6] = 0;
-          this.buildingData[offset + 7] = 0;
-          this.buildingData[offset + 8] = sine * depth;
-          this.buildingData[offset + 9] = 0;
-          this.buildingData[offset + 10] = cosine * depth;
-          this.buildingData[offset + 11] = 0;
-          this.buildingData[offset + 12] = x;
-          this.buildingData[offset + 13] = height * 0.5;
-          this.buildingData[offset + 14] = z;
-          this.buildingData[offset + 15] = 1;
-          const colorVariation = randomBetween(random, 0.84, 1.16);
-          this.buildingData[offset + 16] = colorBase[0] * colorVariation;
-          this.buildingData[offset + 17] = colorBase[1] * colorVariation;
-          this.buildingData[offset + 18] = colorBase[2] * colorVariation;
-          this.buildingData[offset + 19] = random() * 1000;
-          buildingIndex += 1;
-        }
-      };
+      CITY_BLOCKS.forEach((block, blockIndex) => {
+        [-1, 1].forEach((side) => {
+          LOT_DEPTH_BANDS.forEach((band, bandIndex) => {
+            const lotCount = bandIndex === 0 && random() < 0.38 ? 4 : 3;
+            const blockDepth = block.nearZ - block.farZ;
+            let slotNearZ = block.nearZ;
 
-      addBand(45, -116, -88, 10.5, 1.5, 3.8, 4.0, 10, 2.0, 4.5, [0.18, 0.25, 0.34]);
-      addBand(35, -84, -54, 12.5, 2.4, 5.0, 6.0, 15, 3.0, 6.0, [0.16, 0.23, 0.32]);
-      addBand(20, -52, -30, 15.0, 3.0, 5.4, 7.0, 13, 3.5, 5.5, [0.13, 0.20, 0.29]);
+            for (let lotIndex = 0; lotIndex < lotCount; lotIndex += 1) {
+              const isLastLot = lotIndex === lotCount - 1;
+              const idealFarZ = block.nearZ - blockDepth * ((lotIndex + 1) / lotCount);
+              const slotFarZ = isLastLot
+                ? block.farZ
+                : idealFarZ + randomBetween(random, -0.85, 0.85);
+              const edgeGap = randomBetween(random, 0.35, 0.75);
+              const lotNearZ = slotNearZ - edgeGap;
+              const lotFarZ = slotFarZ + edgeGap;
+              const sideOccupancyBias = side < 0 ? -0.035 : 0.02;
+              const occupied = random() < band.occupancy + sideOccupancyBias;
+              const lot = {
+                blockIndex,
+                bandIndex,
+                side,
+                inner: band.inner,
+                outer: band.outer,
+                nearZ: lotNearZ,
+                farZ: lotFarZ,
+                occupied,
+              };
+              this.buildingLots.push(lot);
+              slotNearZ = slotFarZ;
+
+              if (!occupied || lotNearZ <= lotFarZ) continue;
+
+              const frontSetbackMax = bandIndex === 0 ? 2.6 : 1.9;
+              const frontSetback = randomBetween(random, 0.45, frontSetbackMax);
+              const rearSetback = randomBetween(random, 0.45, 1.4);
+              const availableWidth = band.outer - band.inner - frontSetback - rearSetback;
+              const width = availableWidth * randomBetween(random, 0.72, 0.98);
+              const lotDepth = lotNearZ - lotFarZ;
+              const depth = lotDepth * randomBetween(random, 0.68, 0.94);
+              const freeDepth = Math.max(0, lotDepth - depth);
+              const z = (lotNearZ + lotFarZ) * 0.5
+                + randomBetween(random, -freeDepth * 0.32, freeDepth * 0.32);
+              const xMagnitude = band.inner + frontSetback + width * 0.5;
+              const x = side * xMagnitude;
+              const minimumHeight = bandIndex === 0 ? 7.0 : bandIndex === 1 ? 5.5 : 4.5;
+              const maximumHeight = bandIndex === 0 ? 19.0 : bandIndex === 1 ? 17.0 : 14.0;
+              let height = randomBetween(random, minimumHeight, maximumHeight);
+              if (random() < 0.12) height = Math.min(24, height * randomBetween(random, 1.18, 1.38));
+              const yaw = randomBetween(random, -0.018, 0.018);
+              const colorBase = bandIndex === 0
+                ? [0.14, 0.20, 0.28]
+                : bandIndex === 1
+                  ? [0.16, 0.22, 0.30]
+                  : [0.17, 0.23, 0.31];
+              buildings.push({ x, z, width, height, depth, yaw, colorBase, seed: random() * 1000 });
+
+              lot.setback = frontSetback;
+              lot.width = width;
+              lot.depth = depth;
+              lot.height = height;
+            }
+          });
+        });
+      });
+
+      this.buildingCount = buildings.length;
+      this.buildingData = new Float32Array(this.buildingCount * BUILDING_INSTANCE_STRIDE);
+      buildings.forEach((building, buildingIndex) => {
+        const offset = buildingIndex * BUILDING_INSTANCE_STRIDE;
+        const cosine = Math.cos(building.yaw);
+        const sine = Math.sin(building.yaw);
+        this.buildingData[offset] = cosine * building.width;
+        this.buildingData[offset + 1] = 0;
+        this.buildingData[offset + 2] = -sine * building.width;
+        this.buildingData[offset + 3] = 0;
+        this.buildingData[offset + 4] = 0;
+        this.buildingData[offset + 5] = building.height;
+        this.buildingData[offset + 6] = 0;
+        this.buildingData[offset + 7] = 0;
+        this.buildingData[offset + 8] = sine * building.depth;
+        this.buildingData[offset + 9] = 0;
+        this.buildingData[offset + 10] = cosine * building.depth;
+        this.buildingData[offset + 11] = 0;
+        this.buildingData[offset + 12] = building.x;
+        this.buildingData[offset + 13] = building.height * 0.5;
+        this.buildingData[offset + 14] = building.z;
+        this.buildingData[offset + 15] = 1;
+        const colorVariation = randomBetween(random, 0.84, 1.16);
+        this.buildingData[offset + 16] = building.colorBase[0] * colorVariation;
+        this.buildingData[offset + 17] = building.colorBase[1] * colorVariation;
+        this.buildingData[offset + 18] = building.colorBase[2] * colorVariation;
+        this.buildingData[offset + 19] = building.seed;
+      });
 
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buildingInstanceBuffer);
@@ -657,6 +803,14 @@
       gl.bindVertexArray(this.groundVertexArray);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
+      gl.useProgram(this.streetscapeProgram);
+      this.setCommonMatrices({
+        projection: this.streetscapeProjectionLocation,
+        view: this.streetscapeViewLocation,
+      });
+      gl.bindVertexArray(this.streetscapeVertexArray);
+      gl.drawArrays(gl.TRIANGLES, 0, this.streetscapeVertexCount);
+
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.BACK);
       gl.frontFace(gl.CCW);
@@ -669,7 +823,7 @@
       gl.uniform1f(this.buildingTimeLocation, time * 0.001);
       gl.uniform1f(this.buildingLightningLocation, this.lightningIntensity);
       gl.bindVertexArray(this.buildingVertexArray);
-      gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, BUILDING_COUNT);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, this.buildingCount);
 
       gl.disable(gl.CULL_FACE);
       gl.enable(gl.BLEND);
@@ -702,6 +856,8 @@
       this.resources.length = 0;
       this.rainData = null;
       this.buildingData = null;
+      this.buildingLots = [];
+      this.buildingCount = 0;
       this.initialized = false;
       this.destroyed = true;
     }
