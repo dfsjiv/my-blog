@@ -39,9 +39,9 @@
     z1 /= length;
     z2 /= length;
 
-    let x0 = -z2;
+    let x0 = z2;
     let x1 = 0;
-    let x2 = z0;
+    let x2 = -z0;
     length = Math.hypot(x0, x1, x2) || 1;
     x0 /= length;
     x1 /= length;
@@ -97,17 +97,17 @@
       this.destroyed = false;
       this.projectionMatrix = new Float32Array(16);
       this.viewMatrix = new Float32Array(16);
-      this.cameraPosition = new Float32Array([0, 4.2, 8.0]);
+      this.cameraPosition = new Float32Array([3.2, 9.5, 14.0]);
       this.cameraTarget = new Float32Array(3);
       this.camera = {
-        fieldOfView: 58 * DEG_TO_RAD,
+        fieldOfView: 55 * DEG_TO_RAD,
         near: 0.1,
         far: 140,
         aspect: 1,
-        targetYaw: 0,
-        targetPitch: -2.2 * DEG_TO_RAD,
-        currentYaw: 0,
-        currentPitch: -2.2 * DEG_TO_RAD,
+        targetYaw: -1.5 * DEG_TO_RAD,
+        targetPitch: -6.0 * DEG_TO_RAD,
+        currentYaw: -1.5 * DEG_TO_RAD,
+        currentPitch: -6.0 * DEG_TO_RAD,
       };
       this.mouseX = 0;
       this.mouseY = 0;
@@ -485,8 +485,13 @@
         for (let index = 0; index < count; index += 1) {
           const offset = buildingIndex * BUILDING_INSTANCE_STRIDE;
           const side = random() < 0.5 ? -1 : 1;
-          const x = side * randomBetween(random, xMin, 29.0);
-          const z = randomBetween(random, zMin, zMax);
+          const sideXMin = side < 0 ? xMin : xMin + 4.2;
+          const sideXMax = side < 0 ? 32.0 : 37.0;
+          const x = side * randomBetween(random, sideXMin, sideXMax);
+          const sideDepthOffset = side < 0
+            ? randomBetween(random, -2.0, 3.5)
+            : randomBetween(random, -6.0, 1.0);
+          const z = randomBetween(random, zMin, zMax) + sideDepthOffset;
           const width = randomBetween(random, widthMin, widthMax);
           const height = randomBetween(random, heightMin, heightMax);
           const depth = randomBetween(random, depthMin, depthMax);
@@ -519,9 +524,9 @@
         }
       };
 
-      addBand(45, -115, -72, 9.2, 1.5, 3.8, 4.5, 13, 2.0, 4.5, [0.18, 0.25, 0.34]);
-      addBand(35, -68, -36, 10.0, 2.6, 5.5, 7.5, 20, 3.2, 7.0, [0.16, 0.23, 0.32]);
-      addBand(20, -32, -10, 11.0, 3.5, 6.5, 9, 22, 4.0, 7.0, [0.13, 0.20, 0.29]);
+      addBand(45, -116, -88, 10.5, 1.5, 3.8, 4.0, 10, 2.0, 4.5, [0.18, 0.25, 0.34]);
+      addBand(35, -84, -54, 12.5, 2.4, 5.0, 6.0, 15, 3.0, 6.0, [0.16, 0.23, 0.32]);
+      addBand(20, -52, -30, 15.0, 3.0, 5.4, 7.0, 13, 3.5, 5.5, [0.13, 0.20, 0.29]);
 
       const gl = this.gl;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buildingInstanceBuffer);
@@ -572,8 +577,8 @@
     setMouse(normalizedX, normalizedY) {
       this.mouseX = normalizedX;
       this.mouseY = normalizedY;
-      this.camera.targetYaw = normalizedX * 4.0 * DEG_TO_RAD;
-      this.camera.targetPitch = (-2.2 + normalizedY * 2.0) * DEG_TO_RAD;
+      this.camera.targetYaw = (-1.5 + normalizedX * 3.0) * DEG_TO_RAD;
+      this.camera.targetPitch = (-6.0 + normalizedY * 1.5) * DEG_TO_RAD;
     }
 
     updateCamera(deltaSeconds) {
