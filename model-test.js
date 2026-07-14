@@ -1,245 +1,112 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-const MODEL_URL = '/assets/models/new-york-city.glb';
+import { CityWorld } from './city-world.js';
 
 const canvas = document.getElementById('modelCanvas');
 const loadStatus = document.getElementById('loadStatus');
+const modeValue = document.getElementById('modeValue');
+const weatherValue = document.getElementById('weatherValue');
 const fpsValue = document.getElementById('fpsValue');
 const meshValue = document.getElementById('meshValue');
 const triangleValue = document.getElementById('triangleValue');
 const drawCallValue = document.getElementById('drawCallValue');
 const textureValue = document.getElementById('textureValue');
+const walkModeButton = document.getElementById('walkModeButton');
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050a12);
-
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-  powerPreference: 'high-performance',
-});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.07;
-controls.screenSpacePanning = true;
-
-scene.add(new THREE.AmbientLight(0xffffff, 1.65));
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2.4);
-directionalLight.position.set(1, 2, 1);
-scene.add(directionalLight);
-
-let animationFrameId = 0;
 let disposed = false;
-let loadedModel = null;
-let helperGroup = null;
-let frameCount = 0;
-let fpsSampleStart = performance.now();
 
-function resizeRenderer() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  camera.aspect = width / Math.max(height, 1);
-  camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(width, height, false);
+function setModeUi(mode) {
+  const walking = mode === 'walk';
+  modeValue.textContent = walking ? 'Walk' : 'Orbit';
+  walkModeButton.textContent = walking ? '退出城市 (Esc)' : '进入城市';
 }
 
-function collectModelStats(root) {
-  let meshes = 0;
-  let triangles = 0;
-  const textures = new Set();
+function updateStats(stats) {
+  if (stats.meshes) meshValue.textContent = stats.meshes.toLocaleString();
+  if (stats.triangles) triangleValue.textContent = stats.triangles.toLocaleString();
+  if (stats.textures) textureValue.textContent = stats.textures.toLocaleString();
+  if (stats.fps) fpsValue.textContent = stats.fps.toString();
+  drawCallValue.textContent = stats.drawCalls.toLocaleString();
 
-  root.traverse((object) => {
-    if (!object.isMesh) return;
-    meshes += 1;
-
-    const geometry = object.geometry;
-    if (geometry) {
-      const triangleCount = geometry.index
-        ? geometry.index.count / 3
-        : (geometry.attributes.position?.count || 0) / 3;
-      triangles += triangleCount * (object.isInstancedMesh ? object.count : 1);
-    }
-
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    materials.forEach((material) => {
-      if (!material) return;
-      Object.values(material).forEach((value) => {
-        if (value?.isTexture) textures.add(value);
-      });
+  if (stats.bounds) {
+    loadStatus.dataset.bounds = JSON.stringify({
+      size: stats.bounds.size.toArray(),
+      originalCenter: stats.bounds.originalCenter.toArray(),
+      centeredMin: stats.bounds.centeredBox.min.toArray(),
+      centeredMax: stats.bounds.centeredBox.max.toArray(),
+      cameraDistance: stats.bounds.cameraDistance,
+      rainCount: stats.rainCount,
+      rainVolume: stats.rainVolume,
+      fogDensity: stats.fogDensity,
     });
-  });
-
-  return {
-    meshes,
-    triangles: Math.round(triangles),
-    textures: textures.size,
-  };
-}
-
-function fitModelToView(model) {
-  model.updateWorldMatrix(true, true);
-  const originalBox = new THREE.Box3().setFromObject(model);
-  if (originalBox.isEmpty()) throw new Error('模型没有可见的包围盒');
-
-  const originalCenter = originalBox.getCenter(new THREE.Vector3());
-  model.position.sub(new THREE.Vector3(
-    originalCenter.x,
-    originalBox.min.y,
-    originalCenter.z,
-  ));
-  model.updateWorldMatrix(true, true);
-
-  const box = new THREE.Box3().setFromObject(model);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const sphere = box.getBoundingSphere(new THREE.Sphere());
-  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
-  const limitingFov = Math.min(verticalFov, horizontalFov);
-  const distance = (sphere.radius / Math.sin(limitingFov / 2)) * 1.18;
-  const target = new THREE.Vector3(0, size.y * 0.28, 0);
-  const viewDirection = new THREE.Vector3(1, 0.68, 1).normalize();
-
-  camera.near = Math.max(distance / 2000, 0.01);
-  camera.far = Math.max(distance + sphere.radius * 6, distance * 4);
-  camera.position.copy(target).addScaledVector(viewDirection, distance);
-  camera.updateProjectionMatrix();
-
-  controls.target.copy(target);
-  controls.minDistance = Math.max(sphere.radius * 0.03, 0.01);
-  controls.maxDistance = sphere.radius * 12;
-  controls.update();
-
-  const horizontalSize = Math.max(size.x, size.z);
-  helperGroup = new THREE.Group();
-  const grid = new THREE.GridHelper(horizontalSize * 1.35, 20, 0x58789a, 0x26384c);
-  grid.material.transparent = true;
-  grid.material.opacity = 0.34;
-  const axes = new THREE.AxesHelper(Math.max(horizontalSize, size.y) * 0.12);
-  helperGroup.add(grid, axes);
-  scene.add(helperGroup);
-
-  return {
-    originalCenter,
-    size,
-    centeredBox: box,
-    cameraDistance: distance,
-  };
-}
-
-function setLoadProgress(event) {
-  if (event.total > 0) {
-    const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
-    loadStatus.textContent = `模型加载中：${percent}%`;
-    return;
   }
-  const loadedMb = (event.loaded / 1024 / 1024).toFixed(1);
-  loadStatus.textContent = `模型加载中：${loadedMb} MB`;
 }
 
-function loadModel() {
-  const loader = new GLTFLoader();
-  loader.load(
-    MODEL_URL,
-    (gltf) => {
-      if (disposed) return;
-      loadedModel = gltf.scene;
-      scene.add(loadedModel);
-
-      try {
-        const fit = fitModelToView(loadedModel);
-        const stats = collectModelStats(loadedModel);
-        meshValue.textContent = stats.meshes.toLocaleString();
-        triangleValue.textContent = stats.triangles.toLocaleString();
-        textureValue.textContent = stats.textures.toLocaleString();
-        loadStatus.textContent = '模型加载完成';
-        loadStatus.dataset.bounds = JSON.stringify({
-          size: fit.size.toArray(),
-          originalCenter: fit.originalCenter.toArray(),
-          centeredMin: fit.centeredBox.min.toArray(),
-          centeredMax: fit.centeredBox.max.toArray(),
-          cameraDistance: fit.cameraDistance,
-          cameraPosition: camera.position.toArray(),
-        });
-      } catch (error) {
-        loadStatus.textContent = '模型加载失败';
-        loadStatus.classList.add('is-error');
-        console.error(error);
-      }
-    },
-    setLoadProgress,
-    (error) => {
+const world = new CityWorld({
+  canvas,
+  onProgress(progress) {
+    loadStatus.textContent = progress.percent === null
+      ? `模型加载中：${(progress.loaded / 1024 / 1024).toFixed(1)} MB`
+      : `模型加载中：${progress.percent}%`;
+  },
+  onStatus(status, error) {
+    if (status === 'ready') {
+      loadStatus.textContent = '模型加载完成';
+      loadStatus.classList.remove('is-error');
+      walkModeButton.disabled = false;
+    } else if (status === 'error') {
       loadStatus.textContent = '模型加载失败';
       loadStatus.classList.add('is-error');
       console.error(error);
-    },
-  );
+    }
+  },
+  onStats: updateStats,
+  onModeChange: setModeUi,
+  onWeatherChange(type) {
+    weatherValue.textContent = type === 'rain' ? 'Rain' : 'Clear';
+  },
+  onExitRequest() {
+    world.setMode('orbit');
+  },
+});
+
+function enterWalkMode() {
+  world.setMode('walk');
+  const request = canvas.requestPointerLock();
+  if (request?.catch) request.catch(() => {});
 }
 
-function render(now) {
-  if (disposed) return;
-  controls.update();
-  renderer.render(scene, camera);
-
-  frameCount += 1;
-  const elapsed = now - fpsSampleStart;
-  if (elapsed >= 500) {
-    fpsValue.textContent = Math.round((frameCount * 1000) / elapsed).toString();
-    drawCallValue.textContent = renderer.info.render.calls.toLocaleString();
-    frameCount = 0;
-    fpsSampleStart = now;
+function leaveWalkMode() {
+  if (document.pointerLockElement === canvas) {
+    document.exitPointerLock();
+  } else {
+    world.setMode('orbit');
   }
-
-  animationFrameId = requestAnimationFrame(render);
 }
 
-function disposeSceneResources() {
-  const geometries = new Set();
-  const materials = new Set();
-  const textures = new Set();
+function handlePointerLockChange() {
+  if (document.pointerLockElement === canvas) {
+    world.setMode('walk');
+  } else if (world.mode === 'walk') {
+    world.setMode('orbit');
+  }
+}
 
-  scene.traverse((object) => {
-    if (object.geometry) geometries.add(object.geometry);
-    const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
-    objectMaterials.forEach((material) => {
-      if (!material) return;
-      materials.add(material);
-      Object.values(material).forEach((value) => {
-        if (value?.isTexture) textures.add(value);
-      });
-    });
-  });
-
-  textures.forEach((texture) => texture.dispose());
-  materials.forEach((material) => material.dispose());
-  geometries.forEach((geometry) => geometry.dispose());
+function handleWalkButton() {
+  if (world.mode === 'walk') leaveWalkMode();
+  else enterWalkMode();
 }
 
 function cleanup() {
   if (disposed) return;
   disposed = true;
-  cancelAnimationFrame(animationFrameId);
-  window.removeEventListener('resize', resizeRenderer);
-  window.removeEventListener('pagehide', cleanup);
-  controls.dispose();
-  disposeSceneResources();
-  renderer.dispose();
-  renderer.forceContextLoss();
-  loadedModel = null;
-  helperGroup = null;
+  document.removeEventListener('pointerlockchange', handlePointerLockChange);
+  walkModeButton.removeEventListener('click', handleWalkButton);
+  world.dispose();
 }
 
-resizeRenderer();
-window.addEventListener('resize', resizeRenderer);
+document.addEventListener('pointerlockchange', handlePointerLockChange);
+walkModeButton.addEventListener('click', handleWalkButton);
 window.addEventListener('pagehide', cleanup, { once: true });
-loadModel();
-animationFrameId = requestAnimationFrame(render);
+
+world.init().then(() => {
+  if (!disposed) world.start({ mode: 'orbit' });
+}).catch(() => {});

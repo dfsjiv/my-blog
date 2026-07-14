@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>dfsjiv</title>
+  <link rel="icon" href="data:," />
   <style>
     :root {
       color-scheme: dark;
@@ -38,6 +39,14 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body class="auth-pending">
   <main class="login-screen" id="loginScreen" aria-label="登录">
@@ -85,6 +94,11 @@
       <button class="desktop-icon ai-desktop-icon" id="aiDesktopIcon" type="button" aria-label="AI" aria-selected="false">
         <span class="desktop-icon-image ai-app-icon" aria-hidden="true">AI</span>
         <span class="desktop-icon-label">AI</span>
+      </button>
+
+      <button class="desktop-icon city-desktop-icon" id="cityDesktopIcon" type="button" aria-label="3D 城市" aria-selected="false">
+        <span class="desktop-icon-image city-app-icon" aria-hidden="true">3D</span>
+        <span class="desktop-icon-label">3D 城市</span>
       </button>
 
       <section class="blog-window is-hidden" id="blogWindow" aria-label="博客窗口">
@@ -242,6 +256,15 @@
     </footer>
   </div>
 
+  <section class="city-world-app is-hidden" id="cityWorldApp" aria-label="3D 城市" aria-hidden="true">
+    <canvas class="city-world-canvas" id="cityWorldCanvas" aria-hidden="true"></canvas>
+    <div class="city-world-loading" id="cityWorldLoading" role="status" aria-live="polite">
+      <strong id="cityWorldLoadingTitle">正在进入城市……</strong>
+      <span id="cityWorldLoadingProgress">模型加载中：0%</span>
+      <button class="city-world-return is-hidden" id="cityWorldReturn" type="button">返回桌面</button>
+    </div>
+  </section>
+
   <script src="home-device.js"></script>
   <script src="night-rain-city-3d.js"></script>
   <script src="particle-wallpaper.js"></script>
@@ -249,5 +272,6 @@
   <script src="auth.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
+  <script src="city-world-app.js"></script>
 </body>
 </html>

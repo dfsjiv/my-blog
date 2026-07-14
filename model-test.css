@@ -39,7 +39,6 @@ body {
   background: rgba(7, 13, 23, 0.86);
   border: 1px solid rgba(151, 177, 209, 0.34);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
 }
 
 .model-test-panel h1 {
@@ -79,4 +78,37 @@ body {
 .performance-list dd {
   text-align: right;
   color: #c8d8ea;
+}
+
+.walk-mode-button {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 12px;
+  padding: 5px 10px;
+  color: #f4f8fc;
+  font: 13px "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #0d65a8;
+  border: 1px solid #1686d9;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.walk-mode-button:hover:not(:disabled) {
+  background: #1176bf;
+}
+
+.walk-mode-button:active:not(:disabled) {
+  background: #09558e;
+}
+
+.walk-mode-button:focus-visible {
+  outline: 2px solid #b6ddff;
+  outline-offset: 2px;
+}
+
+.walk-mode-button:disabled {
+  color: #778492;
+  background: #17202a;
+  border-color: #34404d;
+  cursor: default;
 }
