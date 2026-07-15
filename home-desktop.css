@@ -1048,6 +1048,27 @@ body.is-desktop .desktop-shell.is-light-theme {
   flex: 1 1 auto;
   min-height: 0;
   padding: 20px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.start-menu-apps::-webkit-scrollbar {
+  width: 10px;
+}
+
+.start-menu-apps::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.start-menu-apps::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.24);
+  border: 2px solid rgba(28, 28, 28, 0.94);
+}
+
+.start-menu-apps::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.36);
 }
 
 .start-menu-apps h2 {

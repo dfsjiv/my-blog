@@ -356,10 +356,12 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
 
 {
   const indexHtml = fs.readFileSync(indexPath, 'utf8');
+  const homeDesktopCss = fs.readFileSync(cssPath, 'utf8');
   assert.match(indexHtml, /id="desktopShell"/);
   assert.match(indexHtml, /id="blogWindow"/);
   assert.match(indexHtml, /id="blogFrame"[^>]+src="blog\.html"/);
   assert.strictEqual((indexHtml.match(/data-resize-edge="/g) || []).length, 8);
+  assert.match(homeDesktopCss, /\.start-menu-apps\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css"\s*\/>/);
