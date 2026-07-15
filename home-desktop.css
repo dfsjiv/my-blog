@@ -356,7 +356,8 @@ body.is-desktop .desktop-shell.is-light-theme {
 }
 
 .city-desktop-icon {
-  top: 304px;
+  top: 22px;
+  left: 100px;
 }
 
 .ai-app-icon {
