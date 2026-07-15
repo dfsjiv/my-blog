@@ -209,6 +209,7 @@ const rootDir = path.resolve(__dirname, '..');
   assert.match(frontend, /fetch\('\/api\/contests'/);
   assert.doesNotMatch(frontend, /eval\(|new Function/);
   assert.match(frontend, /PLATFORM_ORDER = \[[\s\S]*'Codeforces'[\s\S]*'码蹄杯'/);
+  assert.match(frontend, /睿抗:\s*\['www\.raicom\.com\.cn',\s*'raicom\.com\.cn'\]/);
   assert.match(contestStyles, /\.contest-main\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.match(contestStyles, /data-contest-resize-edge="e"\]\s*\{\s*right:\s*-6px/);
   assert.match(apiRoute, /url\.pathname === "\/api\/contests"/);

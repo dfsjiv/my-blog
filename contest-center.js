@@ -185,6 +185,9 @@
       Codeforces: ['codeforces.com'], AtCoder: ['atcoder.jp'], 牛客: ['ac.nowcoder.com'],
       洛谷: ['www.luogu.com.cn'], LeetCode: ['leetcode.com'], CodeChef: ['www.codechef.com'],
       HackerRank: ['www.hackerrank.com'], DMOJ: ['dmoj.ca'], Kattis: ['open.kattis.com'],
+      蓝桥杯: ['dasai.lanqiao.cn'], 百度之星: ['star.baidu.com'],
+      睿抗: ['www.raicom.com.cn', 'raicom.com.cn'], 传智杯: ['www.boxuegu.com', 'boxuegu.com'],
+      天梯赛: ['gplt.patest.cn'], 码蹄杯: ['www.matiji.net', 'matiji.net'],
     };
     try {
       const url = new URL(contest.url);
