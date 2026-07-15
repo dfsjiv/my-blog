@@ -46,6 +46,8 @@ export function parseLuoguPayload(payload, now = Date.now()) {
         registrationDeadline: unixTime(item.registrationDeadline || item.registration_deadline),
         feeType: "unknown",
         rated: null,
+        importance: /(?:月赛|公开赛|ICPC|CCPC|NOI|NOIP)/i.test(item.name || item.title || "") ? "high" : "normal",
+        sourceConfidence: "official-api",
         sourceUpdatedAt: now
     }, now)).filter(Boolean);
 }

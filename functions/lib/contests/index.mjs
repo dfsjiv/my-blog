@@ -2,20 +2,42 @@ import { fetchCodeforcesContests } from "./codeforces.mjs";
 import { fetchAtCoderContests } from "./atcoder.mjs";
 import { fetchNowCoderContests } from "./nowcoder.mjs";
 import { fetchLuoguContests } from "./luogu.mjs";
+import { fetchLeetCodeContests } from "./leetcode.mjs";
+import { fetchCodeChefContests } from "./codechef.mjs";
+import { fetchHackerRankContests } from "./hackerrank.mjs";
+import { fetchDmojContests } from "./dmoj.mjs";
+import { fetchKattisContests } from "./kattis.mjs";
 import { sortContests } from "./normalize.mjs";
 
 export const CONTEST_CACHE_SECONDS = 10 * 60;
+const SOURCE_TIMEOUT_MS = 12 * 1000;
 
 const SOURCES = [
     ["Codeforces", fetchCodeforcesContests],
     ["AtCoder", fetchAtCoderContests],
     ["NowCoder", fetchNowCoderContests],
-    ["Luogu", fetchLuoguContests]
+    ["Luogu", fetchLuoguContests],
+    ["LeetCode", fetchLeetCodeContests],
+    ["CodeChef", fetchCodeChefContests],
+    ["HackerRank", fetchHackerRankContests],
+    ["DMOJ", fetchDmojContests],
+    ["Kattis", fetchKattisContests]
 ];
+
+function withTimeout(promise, sourceName) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(
+            () => reject(new Error(sourceName + " request timed out")),
+            SOURCE_TIMEOUT_MS
+        );
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 async function fetchAllContests(fetchImpl = fetch, now = Date.now()) {
     const settled = await Promise.allSettled(
-        SOURCES.map(([, adapter]) => adapter(fetchImpl, now))
+        SOURCES.map(([sourceName, adapter]) => withTimeout(adapter(fetchImpl, now), sourceName))
     );
     const contests = [];
     const warnings = [];
@@ -36,7 +58,7 @@ async function fetchAllContests(fetchImpl = fetch, now = Date.now()) {
 export async function getContestsResponse(request, context = {}) {
     const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?source-cache=v3";
+    cacheUrl.search = "?source-cache=v5";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
 
     if (cache) {

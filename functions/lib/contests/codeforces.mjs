@@ -24,6 +24,8 @@ export async function fetchCodeforcesContests(fetchImpl = fetch, now = Date.now(
             durationSeconds: contest.durationSeconds,
             feeType: "unknown",
             rated: typeof contest.type === "string" ? contest.type === "CF" : null,
+            importance: /(?:round|global|educational|div\.?\s*[1-4])/i.test(contest.name) ? "high" : "normal",
+            sourceConfidence: "official-api",
             sourceUpdatedAt: now
         }, now))
         .filter((contest) => contest && (

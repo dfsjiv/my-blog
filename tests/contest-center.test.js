@@ -22,6 +22,11 @@ const rootDir = path.resolve(__dirname, '..');
     rootDir,
     'functions/lib/contests/luogu.mjs'
   )));
+  const leetcode = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/leetcode.mjs')));
+  const codechef = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/codechef.mjs')));
+  const hackerrank = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/hackerrank.mjs')));
+  const dmoj = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/dmoj.mjs')));
+  const kattis = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/kattis.mjs')));
 
   const normalized = normalize.createContest({
     id: 'test-1',
@@ -36,6 +41,9 @@ const rootDir = path.resolve(__dirname, '..');
   assert.strictEqual(normalized.endTime, '2026-07-18T14:00:00.000Z');
   assert.strictEqual(normalized.feeAmount, null);
   assert.strictEqual(normalized.status, 'upcoming');
+  assert.strictEqual(normalized.contestKind, 'competitive-programming');
+  assert.strictEqual(normalized.importance, 'normal');
+  assert.strictEqual(normalized.sourceConfidence, 'official-page');
 
   const atCoderHtml = `
     <div id="contest-table-upcoming"><table><tbody><tr>
@@ -92,16 +100,77 @@ const rootDir = path.resolve(__dirname, '..');
   assert.strictEqual(luoguContests[0].id, 'luogu-100');
   assert.strictEqual(luoguContests[0].feeType, 'unknown');
 
+  const leetCodeContests = leetcode.parseLeetCodePayload({
+    data: { contestUpcomingContests: [
+      { title: 'Weekly Contest 512', titleSlug: 'weekly-contest-512', startTime: 1784451600, duration: 5400 },
+      { title: 'LeetCode Live Event', titleSlug: 'live-event', startTime: 1784451600, duration: 5400 },
+    ] },
+  }, Date.parse('2026-07-15T00:00:00Z'));
+  assert.strictEqual(leetCodeContests.length, 1);
+  assert.strictEqual(leetCodeContests[0].importance, 'high');
+
+  const codeChefContests = codechef.parseCodeChefPayload({
+    status: 'success',
+    present_contests: [],
+    future_contests: [{
+      contest_code: 'START247',
+      contest_name: 'Starters 247 (Rated)',
+      contest_start_date_iso: '2026-07-15T20:00:00+05:30',
+      contest_end_date_iso: '2026-07-15T22:00:00+05:30',
+      contest_duration: '120',
+    }],
+  }, Date.parse('2026-07-15T00:00:00Z'));
+  assert.strictEqual(codeChefContests[0].importance, 'high');
+  assert.strictEqual(codeChefContests[0].durationSeconds, 7200);
+
+  const hackerRankContests = hackerrank.parseHackerRankPayload({
+    models: [
+      { id: 1, name: 'HourRank 99', slug: 'hourrank-99', epoch_starttime: 1784500000, epoch_endtime: 1784503600, rated: true },
+      { id: 2, name: 'Company Hiring Challenge', slug: 'hiring', epoch_starttime: 1784500000, epoch_endtime: 1784503600 },
+      { id: 3, name: 'ProjectEuler+', slug: 'projecteuler', epoch_starttime: 1404747480, epoch_endtime: 1817441090 },
+    ],
+  }, Date.parse('2026-07-15T00:00:00Z'));
+  assert.strictEqual(hackerRankContests.length, 1);
+  assert.strictEqual(hackerRankContests[0].contestKind, 'competitive-programming');
+
+  const dmojContests = dmoj.parseDmojHtml(
+    '<section id="upcoming-contests"><table><tr>'
+      + '<td><a href="/contest/test-round">DMOJ Test Round</a></td>'
+      + '<td><time datetime="2026-07-20T12:00:00Z"></time></td>'
+      + '<td><time datetime="2026-07-20T14:00:00Z"></time></td>'
+      + '</tr></table></section>',
+    Date.parse('2026-07-15T00:00:00Z')
+  );
+  assert.strictEqual(dmojContests.length, 1);
+
+  const kattisContests = kattis.parseKattisHtml(
+    '<table id="table-contests-upcoming"><tr>'
+      + '<td><div class="contest-list-name"><a href="/contests/icpc-open">ICPC Open Contest</a></div></td>'
+      + '<td data-col="start">2026-07-20 12:00:00 CEST</td><td data-col="length">05:00:00</td>'
+      + '</tr><tr><td><span class="fas fa-user"></span>'
+      + '<a href="/contests/class-practice">Class Practice</a></td>'
+      + '<td data-col="start">2026-07-21 12:00:00 CEST</td><td data-col="length">168:00:00</td>'
+      + '</tr></table>',
+    Date.parse('2026-07-15T00:00:00Z')
+  );
+  assert.strictEqual(kattisContests[0].importance, 'high');
+  assert.strictEqual(kattisContests[1].importance, 'low');
+  assert.strictEqual(kattisContests[1].contestKind, 'training');
+
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
   const frontend = fs.readFileSync(path.join(rootDir, 'contest-center.js'), 'utf8');
   const apiRoute = fs.readFileSync(path.join(rootDir, 'functions/api/[[path]].js'), 'utf8');
   assert.match(indexHtml, /id="contestDesktopIcon"/);
   assert.match(indexHtml, /id="contestWindow"/);
   assert.match(indexHtml, /id="contestTaskbarButton"/);
+  assert.match(indexHtml, /data-contest-view="timeline"/);
+  assert.match(indexHtml, /id="contestCalendarView"/);
+  assert.match(indexHtml, /id="contestSearch"/);
   assert.match(frontend, /webos_contest_favorites/);
   assert.match(frontend, /webos_contest_reminders/);
   assert.match(frontend, /fetch\('\/api\/contests'/);
   assert.doesNotMatch(frontend, /eval\(|new Function/);
+  assert.match(frontend, /PLATFORM_ORDER = \['Codeforces'.*'Kattis'\]/);
   assert.match(apiRoute, /url\.pathname === "\/api\/contests"/);
 
   console.log('contest-center tests passed');

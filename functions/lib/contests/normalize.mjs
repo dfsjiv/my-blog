@@ -2,8 +2,19 @@ export const PLATFORM_NAMES = Object.freeze({
     codeforces: "Codeforces",
     atcoder: "AtCoder",
     nowcoder: "牛客",
-    luogu: "洛谷"
+    luogu: "洛谷",
+    leetcode: "LeetCode",
+    codechef: "CodeChef",
+    hackerrank: "HackerRank",
+    dmoj: "DMOJ",
+    kattis: "Kattis"
 });
+
+const CONTEST_KINDS = new Set([
+    "competitive-programming", "training", "mirror", "hiring", "hackathon", "other"
+]);
+const IMPORTANCE_LEVELS = new Set(["high", "normal", "low"]);
+const SOURCE_CONFIDENCE_LEVELS = new Set(["official-api", "official-page", "inferred"]);
 
 export function toIsoTime(value) {
     if (value === null || value === undefined || value === "") return null;
@@ -70,6 +81,11 @@ export function createContest(input, now = Date.now()) {
         feeUnit: input.feeUnit ? String(input.feeUnit) : null,
         rated: typeof input.rated === "boolean" ? input.rated : null,
         ratingRange: input.ratingRange ? String(input.ratingRange).trim() : null,
+        contestKind: CONTEST_KINDS.has(input.contestKind) ? input.contestKind : "competitive-programming",
+        importance: IMPORTANCE_LEVELS.has(input.importance) ? input.importance : "normal",
+        sourceConfidence: SOURCE_CONFIDENCE_LEVELS.has(input.sourceConfidence)
+            ? input.sourceConfidence
+            : "official-page",
         status: getContestStatus(startTime, endTime, now),
         sourceUpdatedAt: toIsoTime(input.sourceUpdatedAt || now)
     };

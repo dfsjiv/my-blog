@@ -41,6 +41,8 @@ export function parseNowCoderHtml(html, now = Date.now()) {
             feeAmount: explicitlyFree ? 0 : null,
             rated: settings.needRatingUpperLimit === true ? true : null,
             ratingRange,
+            importance: /多校|挑战赛|周赛|小白月赛/.test(item.contestName || "") ? "high" : "normal",
+            sourceConfidence: "official-page",
             sourceUpdatedAt: now
         }, now);
         if (contest) {

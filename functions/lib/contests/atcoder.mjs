@@ -39,6 +39,10 @@ export function parseAtCoderHtml(html, now = Date.now()) {
             feeType: "unknown",
             rated: null,
             ratingRange: stripHtml(cells[3][1]) || null,
+            importance: /AtCoder (?:Beginner|Regular|Grand) Contest|\b(?:ABC|ARC|AGC)\s*\d+/i.test(stripHtml(link[2]))
+                ? "high"
+                : "normal",
+            sourceConfidence: "official-page",
             sourceUpdatedAt: now
         }, now);
         if (contest) contests.push(contest);
