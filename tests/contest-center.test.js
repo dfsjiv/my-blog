@@ -196,6 +196,7 @@ const rootDir = path.resolve(__dirname, '..');
 
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
   const frontend = fs.readFileSync(path.join(rootDir, 'contest-center.js'), 'utf8');
+  const contestStyles = fs.readFileSync(path.join(rootDir, 'contest-center.css'), 'utf8');
   const apiRoute = fs.readFileSync(path.join(rootDir, 'functions/api/[[path]].js'), 'utf8');
   assert.match(indexHtml, /id="contestDesktopIcon"/);
   assert.match(indexHtml, /id="contestWindow"/);
@@ -208,6 +209,8 @@ const rootDir = path.resolve(__dirname, '..');
   assert.match(frontend, /fetch\('\/api\/contests'/);
   assert.doesNotMatch(frontend, /eval\(|new Function/);
   assert.match(frontend, /PLATFORM_ORDER = \[[\s\S]*'Codeforces'[\s\S]*'码蹄杯'/);
+  assert.match(contestStyles, /\.contest-main\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(contestStyles, /data-contest-resize-edge="e"\]\s*\{\s*right:\s*-6px/);
   assert.match(apiRoute, /url\.pathname === "\/api\/contests"/);
 
   console.log('contest-center tests passed');

@@ -45,7 +45,10 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: #16191d;
 }
 
@@ -124,11 +127,8 @@
 .contest-view {
   min-width: 0;
   min-height: 0;
-  flex: 1 1 auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 .contest-timeline { padding: 18px 20px 26px; }
 .contest-hero {
@@ -210,7 +210,7 @@
 .contest-calendar-day-list { margin-top: 16px; }
 .contest-calendar-day-list h3 { margin: 0 0 8px; font-size: 14px; }
 
-.contest-table-wrap { overflow: auto; }
+.contest-table-wrap { overflow-x: auto; overflow-y: visible; }
 .contest-table { width: 100%; min-width: 930px; border-collapse: collapse; table-layout: fixed; }
 .contest-table th { position: sticky; top: 0; z-index: 1; padding: 9px 8px; color: #aeb5bd; background: #202429; border-bottom: 1px solid #454b52; text-align: left; font-size: 11px; font-weight: 600; }
 .contest-table th:nth-child(1){width:76px}.contest-table th:nth-child(2){width:44px}.contest-table th:nth-child(3){width:82px}.contest-table th:nth-child(4){width:230px}.contest-table th:nth-child(5){width:128px}.contest-table th:nth-child(6){width:84px}.contest-table th:nth-child(7){width:72px}.contest-table th:nth-child(8){width:96px}.contest-table th:nth-child(9){width:106px}
@@ -236,6 +236,11 @@
 .contest-toast-region { position: fixed; z-index: 250; right: 16px; bottom: 54px; display: grid; gap: 8px; width: min(330px,calc(100vw - 32px)); }
 .contest-toast { padding: 13px 14px; color: #eef1f4; background: #24282d; border: 1px solid #5e656d; border-left: 4px solid #168fe5; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
 .contest-toast strong,.contest-toast span,.contest-toast small { display:block }.contest-toast span{margin-top:5px;font-size:13px}.contest-toast small{margin-top:5px;color:#aeb4bc;font-size:12px}.contest-toast button{margin-top:10px;padding:5px 9px;color:#fff;background:#176da6;border:1px solid #278ed0}
+
+/* Keep the resize hit target outside the content scrollbar. */
+.contest-window > [data-contest-resize-edge="e"] { right: -6px; width: 6px; }
+.contest-window > [data-contest-resize-edge="ne"],
+.contest-window > [data-contest-resize-edge="se"] { right: -6px; }
 
 @media (max-width: 860px) {
   .contest-toolbar { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
