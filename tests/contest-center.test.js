@@ -27,6 +27,7 @@ const rootDir = path.resolve(__dirname, '..');
   const hackerrank = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/hackerrank.mjs')));
   const dmoj = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/dmoj.mjs')));
   const kattis = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/kattis.mjs')));
+  const chinaEvents = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/china-events.mjs')));
 
   const normalized = normalize.createContest({
     id: 'test-1',
@@ -157,6 +158,42 @@ const rootDir = path.resolve(__dirname, '..');
   assert.strictEqual(kattisContests[1].importance, 'low');
   assert.strictEqual(kattisContests[1].contestKind, 'training');
 
+  const officialPageContests = chinaEvents.parseOfficialEventText(
+    '<main>2026年10月18日举行程序设计竞赛全国总决赛</main>',
+    {
+      idPrefix: 'fixture', platform: '天梯赛', title: '团体程序设计天梯赛',
+      url: 'https://gplt.patest.cn/', durationSeconds: 10800,
+    },
+    Date.parse('2026-07-15T00:00:00Z')
+  );
+  assert.strictEqual(officialPageContests.length, 1);
+  assert.strictEqual(officialPageContests[0].platform, '天梯赛');
+  assert.strictEqual(officialPageContests[0].importance, 'high');
+
+  const lanqiaoContests = chinaEvents.parseLanqiaoPayload({
+    datalist: [{
+      nnid: 2001,
+      title: '关于第十八届蓝桥杯省赛比赛时间的通知',
+      synopsis: '软件赛定于2026年11月22日举行。',
+    }],
+  }, Date.parse('2026-07-15T00:00:00Z'));
+  assert.strictEqual(lanqiaoContests.length, 1);
+  assert.strictEqual(lanqiaoContests[0].platform, '蓝桥杯');
+  assert.match(lanqiaoContests[0].url, /notices\/2001/);
+
+  const raicomContests = chinaEvents.parseRaicomPayload({
+    data: [{
+      id: 99,
+      matchname: '2026睿抗机器人开发者大赛',
+      enrollstartdate: Date.parse('2026-03-20T00:00:00+08:00'),
+      enrollenddate: Date.parse('2026-11-30T00:00:00+08:00'),
+      created: Date.parse('2026-03-01T00:00:00+08:00'),
+    }],
+  }, Date.parse('2026-07-15T00:00:00Z'));
+  assert.strictEqual(raicomContests.length, 1);
+  assert.strictEqual(raicomContests[0].status, 'running');
+  assert.strictEqual(raicomContests[0].sourceConfidence, 'official-api');
+
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
   const frontend = fs.readFileSync(path.join(rootDir, 'contest-center.js'), 'utf8');
   const apiRoute = fs.readFileSync(path.join(rootDir, 'functions/api/[[path]].js'), 'utf8');
@@ -170,7 +207,7 @@ const rootDir = path.resolve(__dirname, '..');
   assert.match(frontend, /webos_contest_reminders/);
   assert.match(frontend, /fetch\('\/api\/contests'/);
   assert.doesNotMatch(frontend, /eval\(|new Function/);
-  assert.match(frontend, /PLATFORM_ORDER = \['Codeforces'.*'Kattis'\]/);
+  assert.match(frontend, /PLATFORM_ORDER = \[[\s\S]*'Codeforces'[\s\S]*'码蹄杯'/);
   assert.match(apiRoute, /url\.pathname === "\/api\/contests"/);
 
   console.log('contest-center tests passed');

@@ -6,7 +6,10 @@
   const REMINDERS_KEY = 'webos_contest_reminders';
   const WINDOW_KEY = 'webos_contest_window';
   const REMINDER_CHECK_MS = 30000;
-  const PLATFORM_ORDER = ['Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'CodeChef', 'HackerRank', 'DMOJ', 'Kattis'];
+  const PLATFORM_ORDER = [
+    'Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'CodeChef', 'HackerRank', 'DMOJ', 'Kattis',
+    '蓝桥杯', '百度之星', '睿抗', '传智杯', '天梯赛', '码蹄杯',
+  ];
   const PLATFORM_META = {
     Codeforces: { short: 'CF', color: '#3977a8' },
     AtCoder: { short: 'AT', color: '#67577d' },
@@ -17,6 +20,12 @@
     HackerRank: { short: 'HR', color: '#3f7d62' },
     DMOJ: { short: 'DM', color: '#a65353' },
     Kattis: { short: 'KT', color: '#347e83' },
+    蓝桥杯: { short: 'LQ', color: '#2678c8' },
+    百度之星: { short: 'BD', color: '#3568d4' },
+    睿抗: { short: 'RK', color: '#9b4f43' },
+    传智杯: { short: 'CZ', color: '#31855a' },
+    天梯赛: { short: 'TT', color: '#a66b2c' },
+    码蹄杯: { short: 'MT', color: '#417c91' },
   };
   const STATUS_LABELS = { upcoming: '即将开始', running: '进行中', finished: '已结束' };
   const elements = {
@@ -226,12 +235,15 @@
     return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
   }
   function clampBounds(bounds) {
-    const maxHeight = Math.max(MIN_HEIGHT, window.innerHeight - TASKBAR_HEIGHT);
-    const width = Math.min(Math.max(MIN_WIDTH, bounds.width), window.innerWidth);
-    const height = Math.min(Math.max(MIN_HEIGHT, bounds.height), maxHeight);
+    const viewportWidth = Math.max(1, window.innerWidth);
+    const maxHeight = Math.max(1, window.innerHeight - TASKBAR_HEIGHT);
+    const minWidth = Math.min(MIN_WIDTH, viewportWidth);
+    const minHeight = Math.min(MIN_HEIGHT, maxHeight);
+    const width = Math.min(Math.max(minWidth, Number(bounds.width) || minWidth), viewportWidth);
+    const height = Math.min(Math.max(minHeight, Number(bounds.height) || minHeight), maxHeight);
     return {
-      left: Math.max(0, Math.min(bounds.left, window.innerWidth - width)),
-      top: Math.max(0, Math.min(bounds.top, maxHeight - height)), width: width, height: height,
+      left: Math.max(0, Math.min(Number(bounds.left) || 0, viewportWidth - width)),
+      top: Math.max(0, Math.min(Number(bounds.top) || 0, maxHeight - height)), width: width, height: height,
     };
   }
   function applyBounds(bounds) {
@@ -304,10 +316,14 @@
     if (!state.resize) return;
     const original = state.resize; const dx = event.clientX - original.x; const dy = event.clientY - original.y;
     let left = original.left; let top = original.top; let right = original.right; let bottom = original.bottom;
-    if (original.edge.includes('e')) right = Math.min(window.innerWidth, Math.max(left + MIN_WIDTH, original.right + dx));
-    if (original.edge.includes('s')) bottom = Math.min(window.innerHeight - TASKBAR_HEIGHT, Math.max(top + MIN_HEIGHT, original.bottom + dy));
-    if (original.edge.includes('w')) left = Math.max(0, Math.min(original.right - MIN_WIDTH, original.left + dx));
-    if (original.edge.includes('n')) top = Math.max(0, Math.min(original.bottom - MIN_HEIGHT, original.top + dy));
+    const viewportWidth = Math.max(1, window.innerWidth);
+    const viewportBottom = Math.max(1, window.innerHeight - TASKBAR_HEIGHT);
+    const minWidth = Math.min(MIN_WIDTH, viewportWidth);
+    const minHeight = Math.min(MIN_HEIGHT, viewportBottom);
+    if (original.edge.includes('e')) right = Math.min(viewportWidth, Math.max(left + minWidth, original.right + dx));
+    if (original.edge.includes('s')) bottom = Math.min(viewportBottom, Math.max(top + minHeight, original.bottom + dy));
+    if (original.edge.includes('w')) left = Math.max(0, Math.min(original.right - minWidth, original.left + dx));
+    if (original.edge.includes('n')) top = Math.max(0, Math.min(original.bottom - minHeight, original.top + dy));
     applyBounds({ left: left, top: top, width: right - left, height: bottom - top });
   }
   function stopResize() {

@@ -7,6 +7,14 @@ import { fetchCodeChefContests } from "./codechef.mjs";
 import { fetchHackerRankContests } from "./hackerrank.mjs";
 import { fetchDmojContests } from "./dmoj.mjs";
 import { fetchKattisContests } from "./kattis.mjs";
+import {
+    fetchLanqiaoCupContests,
+    fetchBaiduStarContests,
+    fetchRaicomContests,
+    fetchChuanZhiCupContests,
+    fetchGpltContests,
+    fetchMatiCupContests
+} from "./china-events.mjs";
 import { sortContests } from "./normalize.mjs";
 
 export const CONTEST_CACHE_SECONDS = 10 * 60;
@@ -21,7 +29,13 @@ const SOURCES = [
     ["CodeChef", fetchCodeChefContests],
     ["HackerRank", fetchHackerRankContests],
     ["DMOJ", fetchDmojContests],
-    ["Kattis", fetchKattisContests]
+    ["Kattis", fetchKattisContests],
+    ["Lanqiao Cup", fetchLanqiaoCupContests],
+    ["Baidu Star", fetchBaiduStarContests],
+    ["RAICOM", fetchRaicomContests],
+    ["ChuanZhi Cup", fetchChuanZhiCupContests],
+    ["GPLT", fetchGpltContests],
+    ["Mati Cup", fetchMatiCupContests]
 ];
 
 function withTimeout(promise, sourceName) {
@@ -58,7 +72,7 @@ async function fetchAllContests(fetchImpl = fetch, now = Date.now()) {
 export async function getContestsResponse(request, context = {}) {
     const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?source-cache=v5";
+    cacheUrl.search = "?source-cache=v6";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
 
     if (cache) {

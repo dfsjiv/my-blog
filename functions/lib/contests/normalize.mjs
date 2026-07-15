@@ -7,7 +7,13 @@ export const PLATFORM_NAMES = Object.freeze({
     codechef: "CodeChef",
     hackerrank: "HackerRank",
     dmoj: "DMOJ",
-    kattis: "Kattis"
+    kattis: "Kattis",
+    lanqiao: "\u84dd\u6865\u676f",
+    baidustar: "\u767e\u5ea6\u4e4b\u661f",
+    raicom: "\u777f\u6297",
+    chuanzhi: "\u4f20\u667a\u676f",
+    gplt: "\u5929\u68af\u8d5b",
+    mati: "\u7801\u8e44\u676f"
 });
 
 const CONTEST_KINDS = new Set([

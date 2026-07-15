@@ -10,14 +10,15 @@
 .desktop-icon-image.contest-app-icon { width: 46px; height: 46px; }
 
 .contest-window {
+  box-sizing: border-box;
   position: absolute;
   z-index: 26;
   left: clamp(24px, 8vw, 132px);
   top: clamp(22px, 6vh, 72px);
   width: min(1180px, calc(100vw - 100px));
   height: min(760px, calc(100vh - 100px));
-  min-width: 680px;
-  min-height: 420px;
+  min-width: min(680px, 100vw);
+  min-height: min(420px, calc(100vh - 40px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -30,8 +31,23 @@
 .contest-window.is-hidden,.contest-window.is-minimized { display: none; }
 .contest-window.is-maximized { inset: 0 0 40px 0 !important; width: auto !important; height: auto !important; }
 .contest-window.is-dragging,.contest-window.is-resizing { user-select: none; }
-.contest-layout,.contest-main { min-height: 0; flex: 1; }
-.contest-main { display: flex; flex-direction: column; overflow: hidden; background: #16191d; }
+.contest-layout {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
+}
+.contest-main {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #16191d;
+}
 
 .contest-toolbar {
   flex: 0 0 auto;
@@ -105,7 +121,15 @@
 .contest-warning { margin: 0; padding: 7px 20px; color: #ffd890; background: #3b321f; border-bottom: 1px solid #6c5728; font-size: 12px; }
 .contest-warning.is-hidden,.contest-view.is-hidden,.contest-empty.is-hidden,.contest-detail.is-hidden { display: none; }
 
-.contest-view { min-height: 0; flex: 1; overflow: auto; }
+.contest-view {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .contest-timeline { padding: 18px 20px 26px; }
 .contest-hero {
   min-height: 190px;
@@ -214,7 +238,7 @@
 .contest-toast strong,.contest-toast span,.contest-toast small { display:block }.contest-toast span{margin-top:5px;font-size:13px}.contest-toast small{margin-top:5px;color:#aeb4bc;font-size:12px}.contest-toast button{margin-top:10px;padding:5px 9px;color:#fff;background:#176da6;border:1px solid #278ed0}
 
 @media (max-width: 860px) {
-  .contest-toolbar { align-items: flex-start; }
+  .contest-toolbar { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
   .contest-toolbar-actions { align-items: stretch; flex-direction: column; }
   .contest-search { width: 250px; }
   .contest-card { grid-template-columns: 58px minmax(0,1fr); }
@@ -222,7 +246,7 @@
   .contest-card-actions { justify-content: flex-start; }
 }
 @media (max-width: 720px) {
-  .contest-window { min-width: 0; }
+  .contest-window { min-width: 0; min-height: min(360px, calc(100vh - 40px)); }
   .contest-toolbar { padding: 10px 12px; }
   .contest-toolbar-actions { width: 52%; }
   .contest-search { width: 100%; }
