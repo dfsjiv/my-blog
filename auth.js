@@ -300,6 +300,7 @@
       window.homeDesktop.selectDesktopIcon(false);
       if (window.chatApp) window.chatApp.closeWindow();
       if (window.aiChat) window.aiChat.closeWindow();
+      if (window.contestCenter) window.contestCenter.closeWindow();
     }
 
     function notifyBlogAuthChanged() {

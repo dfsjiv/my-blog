@@ -38,6 +38,7 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
+  <link rel="stylesheet" href="contest-center.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
   <script type="importmap">
     {
@@ -99,6 +100,11 @@
       <button class="desktop-icon city-desktop-icon" id="cityDesktopIcon" type="button" aria-label="3D 城市" aria-selected="false">
         <span class="desktop-icon-image city-app-icon" aria-hidden="true">3D</span>
         <span class="desktop-icon-label">3D 城市</span>
+      </button>
+
+      <button class="desktop-icon contest-desktop-icon" id="contestDesktopIcon" type="button" aria-label="竞赛中心" aria-selected="false">
+        <span class="desktop-icon-image contest-app-icon" aria-hidden="true">OJ</span>
+        <span class="desktop-icon-label">竞赛中心</span>
       </button>
 
       <section class="blog-window is-hidden" id="blogWindow" aria-label="博客窗口">
@@ -186,6 +192,93 @@
         <span class="window-resize-handle resize-sw" data-ai-resize-edge="sw" aria-hidden="true"></span>
         <span class="window-resize-handle resize-nw" data-ai-resize-edge="nw" aria-hidden="true"></span>
       </section>
+
+      <section class="contest-window is-hidden" id="contestWindow" aria-label="竞赛中心窗口">
+        <header class="window-titlebar" id="contestTitlebar">
+          <span class="window-app-icon contest-app-icon" aria-hidden="true">OJ</span>
+          <span class="window-title">竞赛中心</span>
+          <div class="window-controls" aria-label="竞赛中心窗口控制">
+            <button class="window-control" id="contestMinimize" type="button" aria-label="最小化">—</button>
+            <button class="window-control" id="contestMaximize" type="button" aria-label="最大化">□</button>
+            <button class="window-control close" id="contestClose" type="button" aria-label="关闭">×</button>
+          </div>
+        </header>
+        <div class="contest-layout">
+          <aside class="contest-sidebar" aria-label="比赛筛选">
+            <h2>时间与状态</h2>
+            <div class="contest-filter-list" id="contestQuickFilters">
+              <button class="contest-filter is-active" type="button" data-contest-filter="all">全部</button>
+              <button class="contest-filter" type="button" data-contest-filter="day">24小时内</button>
+              <button class="contest-filter" type="button" data-contest-filter="week">7天内</button>
+              <button class="contest-filter" type="button" data-contest-filter="favorites">已收藏</button>
+              <button class="contest-filter" type="button" data-contest-filter="reminders">已设置提醒</button>
+            </div>
+            <h2>平台</h2>
+            <div class="contest-platform-list" id="contestPlatformFilters">
+              <label><input type="checkbox" value="Codeforces" checked />Codeforces</label>
+              <label><input type="checkbox" value="AtCoder" checked />AtCoder</label>
+              <label><input type="checkbox" value="牛客" checked />牛客</label>
+              <label><input type="checkbox" value="洛谷" checked />洛谷</label>
+            </div>
+          </aside>
+          <main class="contest-main">
+            <header class="contest-toolbar">
+              <div>
+                <h2>算法竞赛</h2>
+                <p id="contestSummary">正在获取比赛信息……</p>
+              </div>
+              <button class="contest-command" id="contestEnableNotifications" type="button">开启系统通知</button>
+            </header>
+            <p class="contest-warning is-hidden" id="contestWarning" role="status"></p>
+            <div class="contest-table-wrap" id="contestTableWrap">
+              <table class="contest-table">
+                <thead>
+                  <tr>
+                    <th><button type="button" data-contest-sort="status">状态</button></th>
+                    <th>收藏</th>
+                    <th><button type="button" data-contest-sort="platform">平台</button></th>
+                    <th><button type="button" data-contest-sort="title">比赛名称</button></th>
+                    <th><button type="button" data-contest-sort="startTime">开始时间</button></th>
+                    <th><button type="button" data-contest-sort="durationSeconds">持续时间</button></th>
+                    <th><button type="button" data-contest-sort="feeType">费用</button></th>
+                    <th>距离开始</th>
+                    <th>提醒</th>
+                  </tr>
+                </thead>
+                <tbody id="contestTableBody"></tbody>
+              </table>
+              <div class="contest-empty" id="contestEmpty">正在获取比赛信息……</div>
+            </div>
+            <aside class="contest-detail is-hidden" id="contestDetail" aria-label="比赛详情">
+              <header>
+                <h3 id="contestDetailTitle"></h3>
+                <button id="contestDetailClose" type="button" aria-label="关闭详情">×</button>
+              </header>
+              <dl id="contestDetailFields"></dl>
+              <div class="contest-detail-actions">
+                <a id="contestOfficialLink" href="#" target="_blank" rel="noopener noreferrer">打开官方网站</a>
+                <button id="contestDetailFavorite" type="button">收藏</button>
+                <select id="contestDetailReminder" aria-label="设置提醒">
+                  <option value="">不提醒</option>
+                  <option value="1440">提前1天</option>
+                  <option value="60">提前1小时</option>
+                  <option value="10">提前10分钟</option>
+                </select>
+              </div>
+            </aside>
+          </main>
+        </div>
+        <span class="window-resize-handle resize-n" data-contest-resize-edge="n" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-e" data-contest-resize-edge="e" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-s" data-contest-resize-edge="s" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-w" data-contest-resize-edge="w" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-ne" data-contest-resize-edge="ne" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-se" data-contest-resize-edge="se" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-sw" data-contest-resize-edge="sw" aria-hidden="true"></span>
+        <span class="window-resize-handle resize-nw" data-contest-resize-edge="nw" aria-hidden="true"></span>
+      </section>
+
+      <div class="contest-toast-region" id="contestToastRegion" aria-live="polite"></div>
     </div>
 
     <nav class="start-menu" id="startMenu" aria-label="开始菜单">
@@ -221,6 +314,13 @@
             <small id="startAiStatus">本地测试</small>
           </span>
         </button>
+        <button class="start-menu-app" id="startContestButton" type="button">
+          <span class="start-menu-icon contest-app-icon" aria-hidden="true">OJ</span>
+          <span class="start-menu-app-copy">
+            <strong>竞赛中心</strong>
+            <small id="startContestStatus">比赛聚合与提醒</small>
+          </span>
+        </button>
       </section>
 
       <div class="start-menu-actions">
@@ -248,6 +348,9 @@
       <button class="taskbar-app" id="aiTaskbarButton" type="button" aria-label="AI" aria-pressed="false">
         <span class="taskbar-app-icon ai-app-icon" aria-hidden="true">AI</span>
       </button>
+      <button class="taskbar-app" id="contestTaskbarButton" type="button" aria-label="竞赛中心" aria-pressed="false">
+        <span class="taskbar-app-icon contest-app-icon" aria-hidden="true">OJ</span>
+      </button>
       <div class="taskbar-spacer"></div>
       <time class="taskbar-clock" aria-label="当前时间">
         <span id="clockTime"></span>
@@ -272,6 +375,7 @@
   <script src="auth.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
+  <script src="contest-center.js"></script>
   <script src="city-world-app.js"></script>
 </body>
 </html>

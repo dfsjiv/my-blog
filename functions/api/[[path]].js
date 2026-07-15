@@ -1,3 +1,5 @@
+import { getContestsResponse } from "../lib/contests/index.mjs";
+
 const ALLOWED_ORIGIN = "https://lilinzheng.bbroot.com";
 
 const PBKDF2_ITERATIONS = 100000;
@@ -110,6 +112,17 @@ export async function onRequest(context) {
             response = await handleCreateChatWebSocketTicket(request, env);
         }
 
+        else if (
+            url.pathname === "/api/contests" &&
+            request.method === "GET"
+        ) {
+            response = await getContestsResponse(request, {
+                waitUntil: context.waitUntil
+                    ? context.waitUntil.bind(context)
+                    : null
+            });
+        }
+
         /* ==============================================
            获取文章列表
            GET /api/articles
@@ -217,6 +230,7 @@ export async function onRequest(context) {
             url.pathname === "/api/logout" ||
             url.pathname === "/api/chat/messages" ||
             url.pathname === "/api/chat/ws-ticket" ||
+            url.pathname === "/api/contests" ||
             url.pathname === "/api/articles" ||
             articleMatch ||
             articleCommentsMatch ||
