@@ -11,6 +11,8 @@
     loadingProgress: document.getElementById('cityWorldLoadingProgress'),
     returnButton: document.getElementById('cityWorldReturn'),
     performanceOutput: document.getElementById('cityWorldPerformanceOutput'),
+    nightPanel: document.getElementById('cityWorldNightPanel'),
+    nightReset: document.getElementById('cityWorldNightReset'),
   };
 
   if (!elements.icon || !elements.overlay || !elements.canvas) return;
@@ -25,6 +27,13 @@
   let pointerLockWasOwned = false;
   let iconDragRegistered = false;
   let enterStartedAt = 0;
+  let nightSettingsSaveTimer = null;
+  let debugPanelInteraction = false;
+
+  const nightControls = Array.from(document.querySelectorAll('[data-night-setting]'));
+  const nightOutputs = new Map(Array.from(document.querySelectorAll('[data-night-output]')).map(
+    (output) => [output.dataset.nightOutput, output],
+  ));
 
   function setIconSelected(selected) {
     elements.icon.classList.toggle('is-selected', Boolean(selected));
@@ -114,6 +123,9 @@
   function renderPerformance(stats) {
     if (!elements.performanceOutput || !isOverlayOpen || !stats) return;
     const camera = stats.cameraPosition || {};
+    const clipping = stats.cameraClipping || {};
+    const modelSize = stats.bounds?.size || {};
+    const materialAudit = stats.materialAudit || {};
     elements.performanceOutput.textContent = [
       `FPS: ${stats.fps}`,
       `Frame: ${stats.frameTime.toFixed(1)} ms`,
@@ -129,7 +141,40 @@
       `Model Loaded: ${stats.modelLoaded}`,
       `Model Loads: ${stats.modelLoadCount}`,
       `Camera: ${camera.x.toFixed(1)}, ${camera.y.toFixed(1)}, ${camera.z.toFixed(1)}`,
+      `Clipping: ${Number(clipping.near || 0).toFixed(3)} / ${Number(clipping.far || 0).toFixed(1)}`,
+      `Model Size: ${(modelSize.x || 0).toFixed(1)}, ${(modelSize.y || 0).toFixed(1)}, ${(modelSize.z || 0).toFixed(1)}`,
+      `Model Diagonal: ${(stats.bounds?.diagonal || 0).toFixed(1)}`,
+      `Fog Density: ${Number(stats.fogDensity || 0).toExponential(3)}`,
+      `Emissive: ${materialAudit.emissive || 0} / ${materialAudit.emissiveEnhanced || 0}`,
     ].join('\n');
+  }
+
+  function syncNightControls(settings) {
+    if (!settings) return;
+    nightControls.forEach((control) => {
+      const key = control.dataset.nightSetting;
+      if (!(key in settings)) return;
+      if (control.type === 'checkbox') control.checked = Boolean(settings[key]);
+      else control.value = settings[key];
+      const output = nightOutputs.get(key);
+      if (output) output.value = Number(settings[key]).toFixed(2);
+    });
+  }
+
+  function applyNightControl(control, persist) {
+    if (!world?.initialized) return;
+    const key = control.dataset.nightSetting;
+    const value = control.type === 'checkbox' ? control.checked : control.value;
+    const state = world.updateNightSettings({ [key]: value }, persist);
+    syncNightControls(state);
+  }
+
+  function scheduleNightSettingsSave() {
+    window.clearTimeout(nightSettingsSaveTimer);
+    nightSettingsSaveTimer = window.setTimeout(() => {
+      nightSettingsSaveTimer = null;
+      if (world?.initialized) world.updateNightSettings({}, true);
+    }, 180);
   }
 
   function createWorld() {
@@ -160,7 +205,10 @@
         onStats: renderPerformance,
         onExitRequest: exitCityWorld,
       });
-      return world.init();
+      return world.init().then((initializedWorld) => {
+        syncNightControls(initializedWorld.getNightRenderingState());
+        return initializedWorld;
+      });
     }).catch((error) => {
       if (world) world.dispose();
       world = null;
@@ -221,16 +269,26 @@
   function handlePointerLockChange() {
     if (document.pointerLockElement === elements.canvas) {
       pointerLockWasOwned = true;
+      debugPanelInteraction = false;
       return;
     }
 
     if (pointerLockWasOwned) {
       pointerLockWasOwned = false;
-      if (!isExiting && isOverlayOpen) exitCityWorld();
+      if (!debugPanelInteraction && !isExiting && isOverlayOpen) exitCityWorld();
     }
   }
 
   function handleEscape(event) {
+    if (event.key === 'F2' && isOverlayOpen && !isExiting) {
+      event.preventDefault();
+      debugPanelInteraction = true;
+      pointerLockWasOwned = false;
+      if (document.pointerLockElement === elements.canvas) document.exitPointerLock();
+      elements.nightPanel?.setAttribute('open', '');
+      elements.nightPanel?.querySelector('input')?.focus();
+      return;
+    }
     if (event.key !== 'Escape' || !isOverlayOpen || isExiting) return;
     if (document.pointerLockElement !== elements.canvas) exitCityWorld();
   }
@@ -265,9 +323,26 @@
     if (event.target === elements.desktopSurface) setIconSelected(false);
   });
   elements.returnButton.addEventListener('click', exitCityWorld);
+  elements.canvas.addEventListener('pointerdown', () => {
+    if (!isWorldActive || document.pointerLockElement === elements.canvas) return;
+    debugPanelInteraction = false;
+    requestWorldPointerLock();
+  });
+  nightControls.forEach((control) => {
+    control.addEventListener('input', () => {
+      applyNightControl(control, false);
+      scheduleNightSettingsSave();
+    });
+    control.addEventListener('change', () => applyNightControl(control, true));
+  });
+  elements.nightReset?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncNightControls(world.resetNightSettings());
+  });
   document.addEventListener('pointerlockchange', handlePointerLockChange);
   window.addEventListener('keydown', handleEscape, true);
   window.addEventListener('pagehide', () => {
+    window.clearTimeout(nightSettingsSaveTimer);
     if (world) world.dispose();
   }, { once: true });
 

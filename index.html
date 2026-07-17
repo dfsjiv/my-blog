@@ -401,6 +401,21 @@ World Active: false
 Model Loaded: false
 Model Loads: 0
 Camera: --, --, --</pre>
+      <details class="city-world-night-panel" id="cityWorldNightPanel">
+        <summary>Night Rendering</summary>
+        <div class="city-world-night-controls">
+          <label>Exposure <output data-night-output="exposure"></output><input type="range" min="0.35" max="2.5" step="0.05" data-night-setting="exposure" /></label>
+          <label>Fog Density Factor <output data-night-output="fogDensityFactor"></output><input type="range" min="0" max="8" step="0.05" data-night-setting="fogDensityFactor" /></label>
+          <label>Moon Intensity <output data-night-output="moonIntensity"></output><input type="range" min="0" max="5" step="0.05" data-night-setting="moonIntensity" /></label>
+          <label>Moon Color <input type="color" data-night-setting="moonColor" /></label>
+          <label>Ambient Intensity <output data-night-output="ambientIntensity"></output><input type="range" min="0" max="3" step="0.05" data-night-setting="ambientIntensity" /></label>
+          <label>Environment Intensity <output data-night-output="environmentIntensity"></output><input type="range" min="0" max="2" step="0.05" data-night-setting="environmentIntensity" /></label>
+          <label>Existing Emissive <output data-night-output="existingEmissiveMultiplier"></output><input type="range" min="0" max="4" step="0.05" data-night-setting="existingEmissiveMultiplier" /></label>
+          <label class="city-world-night-toggle"><input type="checkbox" data-night-setting="fogEnabled" /> Fog Enabled</label>
+          <label class="city-world-night-toggle"><input type="checkbox" data-night-setting="nightLightingEnabled" /> Night Lighting Enabled</label>
+          <button id="cityWorldNightReset" type="button">恢复默认夜景参数</button>
+        </div>
+      </details>
     </aside>
     <div class="city-world-loading" id="cityWorldLoading" role="status" aria-live="polite">
       <strong id="cityWorldLoadingTitle">正在进入城市……</strong>

@@ -3,7 +3,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const MODEL_URL = '/assets/models/new-york-city.glb';
-const FOG_COLOR = 0x07111d;
+const NIGHT_SETTINGS_STORAGE_KEY = 'my-blog.city-world.night-rendering.v1';
+const NIGHT_RENDER_DEFAULTS = Object.freeze({
+  nightBackgroundColor: '#07111d',
+  exposure: 1.05,
+  fogDensityFactor: 1.45,
+  moonIntensity: 1.35,
+  moonColor: '#a9c8ff',
+  ambientIntensity: 0.48,
+  environmentIntensity: 0.28,
+  existingEmissiveMultiplier: 1.35,
+  fogEnabled: true,
+  nightLightingEnabled: true,
+});
+const FOG_COLOR = Number.parseInt(NIGHT_RENDER_DEFAULTS.nightBackgroundColor.slice(1), 16);
 const FOG_DENSITY = 0.0021;
 const RAIN_COUNT = 3200;
 const RAIN_VOLUME = Object.freeze({ width: 120, height: 72, depth: 120 });
@@ -15,7 +28,7 @@ const ANISOTROPY_MATERIAL_PATTERN = /streets|side[_\s-]?walks|curb|roof/i;
 
 export const CITY_RENDER_SETTINGS = Object.freeze({
   toneMapping: 'aces',
-  exposure: 1.05,
+  exposure: NIGHT_RENDER_DEFAULTS.exposure,
 });
 
 export const CITY_QUALITY_PRESETS = Object.freeze({
@@ -25,7 +38,8 @@ export const CITY_QUALITY_PRESETS = Object.freeze({
     exposure: 1.05,
     anisotropy: 1,
     environmentEnabled: false,
-    environmentIntensity: 0,
+    environmentIntensityScale: 0,
+    emissiveIntensityScale: 0.72,
     shaderWarmup: false,
   }),
   medium: Object.freeze({
@@ -34,7 +48,8 @@ export const CITY_QUALITY_PRESETS = Object.freeze({
     exposure: 1.05,
     anisotropy: 2,
     environmentEnabled: false,
-    environmentIntensity: 0,
+    environmentIntensityScale: 0.72,
+    emissiveIntensityScale: 0.88,
     shaderWarmup: true,
   }),
   high: Object.freeze({
@@ -43,7 +58,8 @@ export const CITY_QUALITY_PRESETS = Object.freeze({
     exposure: 1.05,
     anisotropy: 4,
     environmentEnabled: false,
-    environmentIntensity: 0,
+    environmentIntensityScale: 1,
+    emissiveIntensityScale: 1,
     shaderWarmup: true,
   }),
   ultra: Object.freeze({
@@ -52,7 +68,8 @@ export const CITY_QUALITY_PRESETS = Object.freeze({
     exposure: 1.05,
     anisotropy: 8,
     environmentEnabled: true,
-    environmentIntensity: 0.42,
+    environmentIntensityScale: 1.18,
+    emissiveIntensityScale: 1.08,
     shaderWarmup: true,
   }),
 });
@@ -68,28 +85,70 @@ function resolveToneMapping(name) {
     : THREE.ACESFilmicToneMapping;
 }
 
+function loadNightSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(NIGHT_SETTINGS_STORAGE_KEY));
+    if (!parsed || typeof parsed !== 'object') return { ...NIGHT_RENDER_DEFAULTS };
+    const settings = { ...NIGHT_RENDER_DEFAULTS };
+    Object.keys(settings).forEach((key) => {
+      if (typeof parsed[key] === typeof settings[key]) settings[key] = parsed[key];
+    });
+    return settings;
+  } catch (error) {
+    return { ...NIGHT_RENDER_DEFAULTS };
+  }
+}
+
+function saveNightSettings(settings) {
+  try {
+    localStorage.setItem(NIGHT_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (error) {
+    console.warn('City night settings could not be saved.');
+  }
+}
+
 class LightingSystem {
   constructor(scene) {
     this.scene = scene;
     this.mode = null;
-    this.ambientLight = new THREE.AmbientLight(0x7890ad, 0.62);
-    this.directionalLight = new THREE.DirectionalLight(0xa9c8ff, 1.65);
+    this.ambientLight = new THREE.AmbientLight(0x7890ad, NIGHT_RENDER_DEFAULTS.ambientIntensity);
+    this.directionalLight = new THREE.DirectionalLight(
+      NIGHT_RENDER_DEFAULTS.moonColor,
+      NIGHT_RENDER_DEFAULTS.moonIntensity,
+    );
     this.directionalLight.position.set(-0.65, 1.5, 0.8);
-    this.scene.add(this.ambientLight, this.directionalLight);
-    this.setMode('night');
+    this.moonTarget = new THREE.Object3D();
+    this.directionalLight.target = this.moonTarget;
+    this.scene.add(this.ambientLight, this.directionalLight, this.moonTarget);
+    this.setMode('night', NIGHT_RENDER_DEFAULTS);
   }
 
-  setMode(mode) {
+  setMode(mode, settings) {
     this.mode = mode;
-    if (mode !== 'night') return;
+    const enabled = mode === 'night' && settings.nightLightingEnabled;
+    this.ambientLight.visible = enabled;
+    this.directionalLight.visible = enabled;
+    if (!enabled) return;
     this.ambientLight.color.setHex(0x7890ad);
-    this.ambientLight.intensity = 0.62;
-    this.directionalLight.color.setHex(0xa9c8ff);
-    this.directionalLight.intensity = 1.65;
+    this.ambientLight.intensity = settings.ambientIntensity;
+    this.directionalLight.color.set(settings.moonColor);
+    this.directionalLight.intensity = settings.moonIntensity;
+  }
+
+  configureForBounds(box, diagonal) {
+    const center = box.getCenter(new THREE.Vector3());
+    const scale = Math.max(diagonal, 1);
+    this.directionalLight.position.set(
+      center.x - scale * 0.42,
+      box.max.y + scale * 0.32,
+      center.z + scale * 0.28,
+    );
+    this.moonTarget.position.copy(center);
+    this.directionalLight.target.updateMatrixWorld();
   }
 
   dispose() {
-    this.scene.remove(this.ambientLight, this.directionalLight);
+    this.scene.remove(this.ambientLight, this.directionalLight, this.moonTarget);
   }
 
   getStats() {
@@ -99,6 +158,10 @@ class LightingSystem {
       directional: 1,
       point: 0,
       spot: 0,
+      ambientIntensity: this.ambientLight.intensity,
+      moonIntensity: this.directionalLight.intensity,
+      moonColor: `#${this.directionalLight.color.getHexString()}`,
+      moonPosition: this.directionalLight.position.toArray(),
     };
   }
 }
@@ -497,9 +560,10 @@ export class CityWorld {
       ? settings.qualityPreset
       : 'high';
     this.dynamicResolution = settings.dynamicResolution !== false;
+    this.nightSettings = loadNightSettings();
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(FOG_COLOR);
-    this.scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY);
+    this.scene.background = new THREE.Color(this.nightSettings.nightBackgroundColor);
+    this.scene.fog = new THREE.FogExp2(this.nightSettings.nightBackgroundColor, 0);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
     this.camera.rotation.order = 'YXZ';
     this.renderer = new THREE.WebGLRenderer({
@@ -544,6 +608,8 @@ export class CityWorld {
     this.modelMaterials = new Set();
     this.modelTextures = new Set();
     this.anisotropyTextures = new Set();
+    this.emissiveMaterials = new Set();
+    this.originalEmissiveIntensities = new Map();
     this.materialAudit = {
       basic: 0,
       standard: 0,
@@ -551,6 +617,10 @@ export class CityWorld {
       transparent: 0,
       doubleSided: 0,
       emissive: 0,
+      emissiveColor: 0,
+      emissiveMap: 0,
+      emissiveIntensity: 0,
+      emissiveEnhanced: 0,
       normalMap: 0,
       roughnessMap: 0,
       metalnessMap: 0,
@@ -568,6 +638,7 @@ export class CityWorld {
     this.compileAsyncAvailable = typeof this.renderer.compileAsync === 'function';
     this.prepared = false;
     this.boundsInfo = null;
+    this.modelDiagonal = 1;
     this.modelLoadCount = 0;
     this.pixelRatioLevels = [];
     this.pixelRatioLevelIndex = 0;
@@ -749,8 +820,19 @@ export class CityWorld {
       else if (material.isMeshBasicMaterial) this.materialAudit.basic += 1;
       if (material.transparent) this.materialAudit.transparent += 1;
       if (material.side === THREE.DoubleSide) this.materialAudit.doubleSided += 1;
-      if (material.emissiveMap || (material.emissive && material.emissive.getHex() !== 0)) {
+      const hasEmissiveColor = Boolean(material.emissive && material.emissive.getHex() !== 0);
+      const hasEmissiveMap = Boolean(material.emissiveMap);
+      const hasEmissive = hasEmissiveColor || hasEmissiveMap;
+      if (hasEmissiveColor) this.materialAudit.emissiveColor += 1;
+      if (hasEmissiveMap) this.materialAudit.emissiveMap += 1;
+      if (Number(material.emissiveIntensity) > 0) this.materialAudit.emissiveIntensity += 1;
+      if (hasEmissive) {
         this.materialAudit.emissive += 1;
+        this.emissiveMaterials.add(material);
+        this.originalEmissiveIntensities.set(
+          material,
+          Number.isFinite(material.emissiveIntensity) ? material.emissiveIntensity : 1,
+        );
       }
       if (material.normalMap) this.materialAudit.normalMap += 1;
       if (material.roughnessMap) this.materialAudit.roughnessMap += 1;
@@ -793,21 +875,13 @@ export class CityWorld {
       (texture) => texture.minFilter !== THREE.LinearFilter
         && texture.minFilter !== THREE.NearestFilter,
     ).length;
+    this.materialAudit.emissiveEnhanced = this.emissiveMaterials.size;
   }
 
   applyQualitySettings() {
     const preset = CITY_QUALITY_PRESETS[this.qualityPresetName];
     this.renderer.toneMapping = resolveToneMapping(preset.toneMapping);
-    this.renderer.toneMappingExposure = preset.exposure;
-    const environmentSetupStartedAt = performance.now();
-    this.environmentLightingSystem.apply(
-      preset.environmentEnabled,
-      preset.environmentIntensity,
-      this.modelMaterials,
-    );
-    if (preset.environmentEnabled && this.timings.environmentSetup === 0) {
-      this.timings.environmentSetup = performance.now() - environmentSetupStartedAt;
-    }
+    this.applyNightRenderingSettings();
 
     const anisotropy = Math.min(
       this.texturePreparation.maxAnisotropy,
@@ -820,6 +894,86 @@ export class CityWorld {
       texture.anisotropy = anisotropy;
       texture.needsUpdate = true;
     });
+  }
+
+  applyNightRenderingSettings() {
+    const preset = CITY_QUALITY_PRESETS[this.qualityPresetName];
+    const settings = this.nightSettings;
+    this.scene.background.set(settings.nightBackgroundColor);
+    this.scene.fog.color.set(settings.nightBackgroundColor);
+    this.scene.fog.density = settings.fogEnabled
+      ? settings.fogDensityFactor / Math.max(this.modelDiagonal, 1)
+      : 0;
+    this.renderer.toneMappingExposure = settings.exposure;
+    this.lightingSystem.setMode('night', settings);
+
+    const environmentSetupStartedAt = performance.now();
+    const environmentIntensity = settings.environmentIntensity
+      * preset.environmentIntensityScale;
+    this.environmentLightingSystem.apply(
+      settings.nightLightingEnabled && preset.environmentEnabled,
+      environmentIntensity,
+      this.modelMaterials,
+    );
+    if (preset.environmentEnabled && this.timings.environmentSetup === 0) {
+      this.timings.environmentSetup = performance.now() - environmentSetupStartedAt;
+    }
+
+    const emissiveMultiplier = settings.existingEmissiveMultiplier
+      * preset.emissiveIntensityScale;
+    this.emissiveMaterials.forEach((material) => {
+      const originalIntensity = this.originalEmissiveIntensities.get(material) ?? 1;
+      material.emissiveIntensity = originalIntensity * emissiveMultiplier;
+    });
+  }
+
+  updateNightSettings(partialSettings, persist = true) {
+    const next = { ...this.nightSettings };
+    const numericRanges = {
+      exposure: [0.35, 2.5],
+      fogDensityFactor: [0, 8],
+      moonIntensity: [0, 5],
+      ambientIntensity: [0, 3],
+      environmentIntensity: [0, 2],
+      existingEmissiveMultiplier: [0, 4],
+    };
+
+    Object.entries(partialSettings || {}).forEach(([key, value]) => {
+      if (!(key in next)) return;
+      if (key === 'moonColor' || key === 'nightBackgroundColor') {
+        if (/^#[0-9a-f]{6}$/i.test(value)) next[key] = value;
+      } else if (key === 'fogEnabled' || key === 'nightLightingEnabled') {
+        next[key] = Boolean(value);
+      } else if (numericRanges[key] && Number.isFinite(Number(value))) {
+        next[key] = THREE.MathUtils.clamp(
+          Number(value),
+          numericRanges[key][0],
+          numericRanges[key][1],
+        );
+      }
+    });
+
+    this.nightSettings = next;
+    this.applyNightRenderingSettings();
+    if (persist) saveNightSettings(this.nightSettings);
+    if (!this.active) this.renderOnce();
+    return this.getNightRenderingState();
+  }
+
+  resetNightSettings() {
+    this.nightSettings = { ...NIGHT_RENDER_DEFAULTS };
+    saveNightSettings(this.nightSettings);
+    this.applyNightRenderingSettings();
+    if (!this.active) this.renderOnce();
+    return this.getNightRenderingState();
+  }
+
+  getNightRenderingState() {
+    return {
+      ...this.nightSettings,
+      fogDensity: this.scene.fog.density,
+      modelDiagonal: this.modelDiagonal,
+    };
   }
 
   preuploadTextures() {
@@ -874,6 +1028,9 @@ export class CityWorld {
 
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const diagonal = size.length();
+    this.modelDiagonal = Math.max(diagonal, 1);
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const verticalFov = THREE.MathUtils.degToRad(this.camera.fov);
     const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * this.camera.aspect);
@@ -882,13 +1039,13 @@ export class CityWorld {
     const target = new THREE.Vector3(0, size.y * 0.28, 0);
     const viewDirection = new THREE.Vector3(1, 0.68, 1).normalize();
 
-    this.camera.near = Math.max(distance / 2000, 0.03);
-    this.camera.far = Math.max(distance + sphere.radius * 6, distance * 4);
+    this.camera.near = THREE.MathUtils.clamp(this.modelDiagonal * 0.0002, 0.05, 2);
+    this.camera.far = Math.max(distance + this.modelDiagonal * 3.2, this.modelDiagonal * 4.5);
     this.camera.position.copy(target).addScaledVector(viewDirection, distance);
     this.camera.updateProjectionMatrix();
     this.controls.target.copy(target);
     this.controls.minDistance = Math.max(sphere.radius * 0.03, 0.01);
-    this.controls.maxDistance = sphere.radius * 12;
+    this.controls.maxDistance = this.modelDiagonal * 3.5;
     this.controls.update();
 
     const horizontalSize = Math.max(size.x, size.z);
@@ -900,10 +1057,14 @@ export class CityWorld {
     this.helperGroup.add(grid, axes);
     this.scene.add(this.helperGroup);
     this.walkController.configureForModel(box);
+    this.lightingSystem.configureForBounds(box, this.modelDiagonal);
+    this.applyNightRenderingSettings();
 
     return {
       originalCenter,
       size,
+      center,
+      diagonal: this.modelDiagonal,
       centeredBox: box,
       cameraDistance: distance,
     };
@@ -1142,7 +1303,8 @@ export class CityWorld {
         toneMapping: CITY_QUALITY_PRESETS[this.qualityPresetName].toneMapping,
         exposure: this.renderer.toneMappingExposure,
         environmentEnabled: Boolean(this.scene.environment),
-        environmentIntensity: CITY_QUALITY_PRESETS[this.qualityPresetName].environmentIntensity,
+        environmentIntensity: this.nightSettings.environmentIntensity
+          * CITY_QUALITY_PRESETS[this.qualityPresetName].environmentIntensityScale,
       },
       materialAudit: this.materialAudit,
       texturePreparation: this.texturePreparation,
@@ -1159,9 +1321,14 @@ export class CityWorld {
         y: this.camera.position.y,
         z: this.camera.position.z,
       },
+      cameraClipping: {
+        near: this.camera.near,
+        far: this.camera.far,
+      },
       rainCount: this.weatherSystem.count,
       rainVolume: this.weatherSystem.volume,
-      fogDensity: FOG_DENSITY,
+      fogDensity: this.scene.fog.density,
+      nightRendering: this.getNightRenderingState(),
       bounds: this.boundsInfo,
     }, runtimeStats || {});
   }
@@ -1221,7 +1388,8 @@ export class CityWorld {
 export const CITY_WORLD_CONFIG = Object.freeze({
   modelUrl: MODEL_URL,
   fogColor: FOG_COLOR,
-  fogDensity: FOG_DENSITY,
+  nightDefaults: NIGHT_RENDER_DEFAULTS,
+  nightSettingsStorageKey: NIGHT_SETTINGS_STORAGE_KEY,
   rainCount: RAIN_COUNT,
   rainVolume: RAIN_VOLUME,
   renderSettings: CITY_RENDER_SETTINGS,
