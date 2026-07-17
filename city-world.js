@@ -18,12 +18,13 @@ const NIGHT_RENDER_DEFAULTS = Object.freeze({
 });
 const FOG_COLOR = Number.parseInt(NIGHT_RENDER_DEFAULTS.nightBackgroundColor.slice(1), 16);
 const FOG_DENSITY = 0.0021;
-const RAIN_SETTINGS_STORAGE_KEY = 'my-blog.city-world.rain-rendering.v1';
+const RAIN_SETTINGS_STORAGE_KEY = 'my-blog.city-world.rain-rendering.v2';
 const RAIN_DEFAULTS = Object.freeze({
   enabled: true,
-  intensity: 0.65,
-  fallSpeed: 42,
-  dropLength: 1.5,
+  intensity: 0.9,
+  fallSpeed: 46,
+  dropLength: 1.9,
+  brightness: 1.25,
   windX: 4.5,
   windZ: 1.2,
   volumeWidth: 120,
@@ -31,10 +32,10 @@ const RAIN_DEFAULTS = Object.freeze({
   volumeDepth: 120,
 });
 const RAIN_QUALITY_COUNTS = Object.freeze({
-  low: 1500,
-  medium: 3000,
-  high: 5200,
-  ultra: 8000,
+  low: 1800,
+  medium: 3500,
+  high: 6000,
+  ultra: 9000,
 });
 const PERFORMANCE_UPDATE_INTERVAL = 500;
 const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
@@ -334,8 +335,9 @@ class RainSystem {
         uVolumeSize: { value: new THREE.Vector3(120, 72, 120) },
         uWind: { value: new THREE.Vector2(4.5, 1.2) },
         uFallSpeed: { value: 42 },
-        uDropLength: { value: 1.5 },
-        uIntensity: { value: 0.65 },
+        uDropLength: { value: 1.9 },
+        uIntensity: { value: 0.9 },
+        uBrightness: { value: 1.25 },
         uFogColor: { value: new THREE.Color(FOG_COLOR) },
         uFogDensity: { value: FOG_DENSITY },
       },
@@ -351,6 +353,7 @@ class RainSystem {
         uniform float uFallSpeed;
         uniform float uDropLength;
         uniform float uIntensity;
+        uniform float uBrightness;
 
         varying vec2 vRainUv;
         varying float vAlpha;
@@ -366,12 +369,12 @@ class RainSystem {
           dropCenter.z += instanceOrigin.z * uVolumeSize.z + uWind.y * fallProgress;
 
           float viewDistance = distance(cameraPosition, dropCenter);
-          float farDistance = max(uVolumeSize.x, uVolumeSize.z) * 0.72;
+          float farDistance = max(uVolumeSize.x, uVolumeSize.z) * 0.9;
           float nearFade = smoothstep(2.2, 7.5, viewDistance);
-          float farFade = 1.0 - smoothstep(farDistance * 0.55, farDistance, viewDistance);
+          float farFade = 1.0 - smoothstep(farDistance * 0.65, farDistance, viewDistance);
           float nearDetail = 1.0 - smoothstep(18.0, farDistance, viewDistance);
           float visibleLength = uDropLength * instanceVariation.y * mix(0.48, 1.18, nearDetail);
-          float width = mix(0.009, 0.032, nearDetail);
+          float width = mix(0.014, 0.046, nearDetail);
           vec3 side = normalize(uCameraRight - rainDirection * dot(uCameraRight, rainDirection));
 
           vec3 worldPosition = dropCenter;
@@ -379,8 +382,8 @@ class RainSystem {
           worldPosition += side * position.x * width;
 
           vRainUv = position.xy;
-          vAlpha = instanceVariation.z * uIntensity * nearFade * farFade
-            * mix(0.34, 0.82, nearDetail);
+          vAlpha = instanceVariation.z * uIntensity * uBrightness * nearFade * farFade
+            * mix(0.46, 0.94, nearDetail);
           vViewDistance = viewDistance;
           gl_Position = projectionMatrix * viewMatrix * vec4(worldPosition, 1.0);
         }
@@ -400,7 +403,7 @@ class RainSystem {
           float alpha = vAlpha * edge * tipFade;
           if (alpha < 0.008) discard;
 
-          vec3 rainColor = vec3(0.54, 0.72, 0.9);
+          vec3 rainColor = vec3(0.64, 0.8, 0.98);
           float fogFactor = 1.0 - exp(
             -uFogDensity * uFogDensity * vViewDistance * vViewDistance
           );
@@ -443,6 +446,7 @@ class RainSystem {
       intensity: [0, 1],
       fallSpeed: [5, 100],
       dropLength: [0.2, 4],
+      brightness: [0.2, 2],
       windX: [-20, 20],
       windZ: [-20, 20],
       volumeWidth: [30, 220],
@@ -476,6 +480,7 @@ class RainSystem {
     this.material.uniforms.uWind.value.set(settings.windX, settings.windZ);
     this.material.uniforms.uFallSpeed.value = settings.fallSpeed;
     this.material.uniforms.uDropLength.value = settings.dropLength;
+    this.material.uniforms.uBrightness.value = settings.brightness;
     this.material.uniforms.uIntensity.value = settings.intensity;
     this.geometry.instanceCount = Math.round(this.count * settings.intensity);
     this.rain.visible = settings.enabled && settings.intensity > 0 && this.type === 'rain';
