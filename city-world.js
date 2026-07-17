@@ -7,6 +7,17 @@ const FOG_COLOR = 0x07111d;
 const FOG_DENSITY = 0.0021;
 const RAIN_COUNT = 3200;
 const RAIN_VOLUME = Object.freeze({ width: 120, height: 72, depth: 120 });
+const PERFORMANCE_UPDATE_INTERVAL = 500;
+const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
+const DYNAMIC_RESOLUTION_COOLDOWN = 5000;
+const DPR_LEVELS = Object.freeze([0.75, 1, 1.25, 1.5, 2]);
+
+export const CITY_QUALITY_PRESETS = Object.freeze({
+  low: Object.freeze({ maxDpr: 0.75 }),
+  medium: Object.freeze({ maxDpr: 1 }),
+  high: Object.freeze({ maxDpr: 1.5 }),
+  ultra: Object.freeze({ maxDpr: 2 }),
+});
 
 class LightingSystem {
   constructor(scene) {
@@ -360,6 +371,10 @@ export class CityWorld {
     this.onModeChange = settings.onModeChange;
     this.onWeatherChange = settings.onWeatherChange;
     this.onExitRequest = settings.onExitRequest;
+    this.qualityPresetName = CITY_QUALITY_PRESETS[settings.qualityPreset]
+      ? settings.qualityPreset
+      : 'high';
+    this.dynamicResolution = settings.dynamicResolution !== false;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(FOG_COLOR);
     this.scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY);
@@ -368,9 +383,11 @@ export class CityWorld {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
+      alpha: false,
       powerPreference: 'high-performance',
+      preserveDrawingBuffer: false,
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.shadowMap.enabled = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.96;
@@ -401,11 +418,26 @@ export class CityWorld {
     this.helperGroup = null;
     this.modelStats = null;
     this.boundsInfo = null;
-    this.frameCount = 0;
-    this.fpsSampleStart = performance.now();
+    this.modelLoadCount = 0;
+    this.pixelRatioLevels = [];
+    this.pixelRatioLevelIndex = 0;
+    this.currentPixelRatio = 1;
+    this.statsFrameCount = 0;
+    this.statsElapsed = 0;
+    this.statsFrameTimeTotal = 0;
+    this.lastFrameTimestamp = 0;
+    this.lastStats = { fps: 0, frameTime: 0 };
+    this.dynamicFrameCount = 0;
+    this.dynamicElapsed = 0;
+    this.lowFpsSamples = 0;
+    this.highFpsSamples = 0;
+    this.lastResolutionAdjustment = 0;
     this.handleResize = this.resize.bind(this);
+    this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.renderFrame = this.renderFrame.bind(this);
     window.addEventListener('resize', this.handleResize);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    this.configurePixelRatioLevels(true);
     this.resize();
   }
 
@@ -429,6 +461,7 @@ export class CityWorld {
   }
 
   loadModel() {
+    this.modelLoadCount += 1;
     const loader = new GLTFLoader();
     return new Promise((resolve, reject) => {
       loader.load(
@@ -562,30 +595,27 @@ export class CityWorld {
   start(options) {
     if (!this.initialized || this.disposed) return false;
     this.setMode(options?.mode || 'walk');
-    if (this.active) return true;
+    if (this.active) {
+      this.resumeRendering();
+      return true;
+    }
     this.active = true;
-    this.clock.start();
-    this.frameCount = 0;
-    this.fpsSampleStart = performance.now();
+    this.resetPerformanceSampling();
     this.resize();
-    this.animationFrameId = requestAnimationFrame(this.renderFrame);
+    this.resumeRendering();
     return true;
   }
 
   stop() {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
     this.active = false;
-    this.clock.stop();
+    this.pauseRendering();
     this.walkController.disable(true);
     this.mode = 'orbit';
     if (this.onModeChange) this.onModeChange(this.mode);
   }
 
   renderFrame(now) {
-    if (!this.active || this.disposed) {
+    if (!this.active || this.disposed || document.hidden) {
       this.animationFrameId = null;
       return;
     }
@@ -598,20 +628,146 @@ export class CityWorld {
     }
     this.weatherSystem.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
-
-    this.frameCount += 1;
-    const elapsed = now - this.fpsSampleStart;
-    if (elapsed >= 750) {
-      if (this.onStats) {
-        this.onStats(this.getStats({
-          fps: Math.round((this.frameCount * 1000) / elapsed),
-          drawCalls: this.renderer.info.render.calls,
-        }));
-      }
-      this.frameCount = 0;
-      this.fpsSampleStart = now;
+    this.updatePerformance(now);
+    if (this.active && !this.disposed && !document.hidden) {
+      this.animationFrameId = requestAnimationFrame(this.renderFrame);
     }
+  }
+
+  resetPerformanceSampling() {
+    this.statsFrameCount = 0;
+    this.statsElapsed = 0;
+    this.statsFrameTimeTotal = 0;
+    this.dynamicFrameCount = 0;
+    this.dynamicElapsed = 0;
+    this.lowFpsSamples = 0;
+    this.highFpsSamples = 0;
+    this.lastFrameTimestamp = 0;
+  }
+
+  updatePerformance(now) {
+    if (this.lastFrameTimestamp === 0) {
+      this.lastFrameTimestamp = now;
+      return;
+    }
+
+    const frameTime = Math.min(now - this.lastFrameTimestamp, 250);
+    this.lastFrameTimestamp = now;
+    this.statsFrameCount += 1;
+    this.statsElapsed += frameTime;
+    this.statsFrameTimeTotal += frameTime;
+    this.dynamicFrameCount += 1;
+    this.dynamicElapsed += frameTime;
+
+    if (this.statsElapsed >= PERFORMANCE_UPDATE_INTERVAL) {
+      this.lastStats.fps = Math.round((this.statsFrameCount * 1000) / this.statsElapsed);
+      this.lastStats.frameTime = this.statsFrameTimeTotal / this.statsFrameCount;
+      if (this.onStats) this.onStats(this.getStats());
+      this.statsFrameCount = 0;
+      this.statsElapsed = 0;
+      this.statsFrameTimeTotal = 0;
+    }
+
+    if (this.dynamicResolution && this.dynamicElapsed >= DYNAMIC_RESOLUTION_SAMPLE_INTERVAL) {
+      const averageFps = (this.dynamicFrameCount * 1000) / this.dynamicElapsed;
+      this.adjustDynamicResolution(averageFps, now);
+      this.dynamicFrameCount = 0;
+      this.dynamicElapsed = 0;
+    }
+  }
+
+  adjustDynamicResolution(averageFps, now) {
+    if (averageFps < 45) {
+      this.lowFpsSamples += 1;
+      this.highFpsSamples = 0;
+    } else if (averageFps > 58) {
+      this.highFpsSamples += 1;
+      this.lowFpsSamples = 0;
+    } else {
+      this.lowFpsSamples = 0;
+      this.highFpsSamples = 0;
+    }
+
+    if (now - this.lastResolutionAdjustment < DYNAMIC_RESOLUTION_COOLDOWN) return;
+    if (this.lowFpsSamples >= 2 && this.pixelRatioLevelIndex > 0) {
+      this.pixelRatioLevelIndex -= 1;
+      this.applyPixelRatio(this.pixelRatioLevels[this.pixelRatioLevelIndex]);
+      this.lowFpsSamples = 0;
+      this.lastResolutionAdjustment = now;
+    } else if (
+      this.highFpsSamples >= 4
+      && this.pixelRatioLevelIndex < this.pixelRatioLevels.length - 1
+    ) {
+      this.pixelRatioLevelIndex += 1;
+      this.applyPixelRatio(this.pixelRatioLevels[this.pixelRatioLevelIndex]);
+      this.highFpsSamples = 0;
+      this.lastResolutionAdjustment = now;
+    }
+  }
+
+  configurePixelRatioLevels(useHighestLevel) {
+    const deviceDpr = Math.max(0.5, window.devicePixelRatio || 1);
+    const maximumDpr = Math.min(
+      deviceDpr,
+      CITY_QUALITY_PRESETS[this.qualityPresetName].maxDpr,
+    );
+    this.pixelRatioLevels = DPR_LEVELS.filter((level) => level <= maximumDpr);
+    if (this.pixelRatioLevels.length === 0) this.pixelRatioLevels.push(maximumDpr);
+
+    if (useHighestLevel) {
+      this.pixelRatioLevelIndex = this.pixelRatioLevels.length - 1;
+    } else {
+      let nextIndex = 0;
+      for (let index = 0; index < this.pixelRatioLevels.length; index += 1) {
+        if (this.pixelRatioLevels[index] <= this.currentPixelRatio) nextIndex = index;
+      }
+      this.pixelRatioLevelIndex = nextIndex;
+    }
+    this.applyPixelRatio(this.pixelRatioLevels[this.pixelRatioLevelIndex]);
+  }
+
+  applyPixelRatio(pixelRatio) {
+    if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) return;
+    if (Math.abs(this.currentPixelRatio - pixelRatio) < 0.001) return;
+    this.currentPixelRatio = pixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
+  }
+
+  setQualityPreset(presetName) {
+    if (!CITY_QUALITY_PRESETS[presetName]) return false;
+    this.qualityPresetName = presetName;
+    this.configurePixelRatioLevels(true);
+    this.lowFpsSamples = 0;
+    this.highFpsSamples = 0;
+    this.lastResolutionAdjustment = performance.now();
+    return true;
+  }
+
+  pauseRendering() {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.clock.stop();
+    this.lastFrameTimestamp = 0;
+    this.walkController.handleBlur();
+    if (this.onStats) this.onStats(this.getStats());
+  }
+
+  resumeRendering() {
+    if (!this.active || this.disposed || document.hidden || this.animationFrameId !== null) return;
+    this.clock.start();
+    this.lastFrameTimestamp = 0;
     this.animationFrameId = requestAnimationFrame(this.renderFrame);
+    if (this.onStats) this.onStats(this.getStats());
+  }
+
+  handleVisibilityChange() {
+    if (document.hidden) {
+      this.pauseRendering();
+    } else if (this.active) {
+      this.resumeRendering();
+    }
   }
 
   renderOnce() {
@@ -624,22 +780,48 @@ export class CityWorld {
     const height = this.canvas.clientHeight || window.innerHeight;
     this.camera.aspect = width / Math.max(height, 1);
     this.camera.updateProjectionMatrix();
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.configurePixelRatioLevels(false);
     this.renderer.setSize(width, height, false);
   }
 
   getStats(runtimeStats) {
     return Object.assign({
       meshes: this.modelStats?.meshes || 0,
-      triangles: this.modelStats?.triangles || 0,
-      textures: this.modelStats?.textures || 0,
+      triangles: this.renderer.info.render.triangles,
+      geometries: this.renderer.info.memory.geometries,
+      textures: this.renderer.info.memory.textures,
       drawCalls: this.renderer.info.render.calls,
-      fps: 0,
+      fps: this.lastStats.fps,
+      frameTime: this.lastStats.frameTime,
+      pixelRatio: this.currentPixelRatio,
+      qualityPreset: this.qualityPresetName,
+      isRendering: this.animationFrameId !== null,
+      worldActive: this.active,
+      modelLoaded: Boolean(this.initialized && this.loadedModel),
+      modelLoadCount: this.modelLoadCount,
+      cameraPosition: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
       rainCount: this.weatherSystem.count,
       rainVolume: this.weatherSystem.volume,
       fogDensity: FOG_DENSITY,
       bounds: this.boundsInfo,
     }, runtimeStats || {});
+  }
+
+  getDebugState() {
+    return {
+      active: this.active,
+      isRendering: this.animationFrameId !== null,
+      modelLoaded: Boolean(this.initialized && this.loadedModel),
+      modelLoadCount: this.modelLoadCount,
+      qualityPreset: this.qualityPresetName,
+      dynamicResolution: this.dynamicResolution,
+      pixelRatio: this.currentPixelRatio,
+      stats: this.getStats(),
+    };
   }
 
   disposeSceneResources() {
@@ -667,6 +849,7 @@ export class CityWorld {
     this.stop();
     this.disposed = true;
     window.removeEventListener('resize', this.handleResize);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     this.walkController.dispose();
     this.controls.dispose();
     this.weatherSystem.dispose();

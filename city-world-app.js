@@ -10,6 +10,7 @@
     loadingTitle: document.getElementById('cityWorldLoadingTitle'),
     loadingProgress: document.getElementById('cityWorldLoadingProgress'),
     returnButton: document.getElementById('cityWorldReturn'),
+    performanceOutput: document.getElementById('cityWorldPerformanceOutput'),
   };
 
   if (!elements.icon || !elements.overlay || !elements.canvas) return;
@@ -109,6 +110,25 @@
     }
   }
 
+  function renderPerformance(stats) {
+    if (!elements.performanceOutput || !isOverlayOpen || !stats) return;
+    const camera = stats.cameraPosition || {};
+    elements.performanceOutput.textContent = [
+      `FPS: ${stats.fps}`,
+      `Frame: ${stats.frameTime.toFixed(1)} ms`,
+      `Triangles: ${stats.triangles}`,
+      `Draw Calls: ${stats.drawCalls}`,
+      `Geometries: ${stats.geometries}`,
+      `Textures: ${stats.textures}`,
+      `Pixel Ratio: ${stats.pixelRatio.toFixed(2)}`,
+      `Rendering: ${stats.isRendering}`,
+      `World Active: ${stats.worldActive}`,
+      `Model Loaded: ${stats.modelLoaded}`,
+      `Model Loads: ${stats.modelLoadCount}`,
+      `Camera: ${camera.x.toFixed(1)}, ${camera.y.toFixed(1)}, ${camera.z.toFixed(1)}`,
+    ].join('\n');
+  }
+
   function createWorld() {
     if (worldPromise) return worldPromise;
 
@@ -126,6 +146,7 @@
             elements.loadingProgress.textContent = '模型加载完成';
           }
         },
+        onStats: renderPerformance,
         onExitRequest: exitCityWorld,
       });
       return world.init();
@@ -148,7 +169,7 @@
     showOverlay();
     suspendDesktop();
 
-    // This stays in the original user gesture; waiting for the 60 MB model would
+    // This stays in the original user gesture; waiting for the city model would
     // otherwise lose permission to request Pointer Lock.
     requestWorldPointerLock();
 
@@ -252,6 +273,7 @@
         isOverlayOpen,
         modelLoaded: Boolean(world?.initialized),
         animationRunning: Boolean(world && world.animationFrameId !== null),
+        world: world?.getDebugState() || null,
       };
     },
   };
