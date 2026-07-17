@@ -24,6 +24,7 @@
   let isOverlayOpen = false;
   let pointerLockWasOwned = false;
   let iconDragRegistered = false;
+  let enterStartedAt = 0;
 
   function setIconSelected(selected) {
     elements.icon.classList.toggle('is-selected', Boolean(selected));
@@ -116,8 +117,10 @@
     elements.performanceOutput.textContent = [
       `FPS: ${stats.fps}`,
       `Frame: ${stats.frameTime.toFixed(1)} ms`,
+      `Max Frame: ${stats.maxFrameTime.toFixed(1)} ms`,
       `Triangles: ${stats.triangles}`,
       `Draw Calls: ${stats.drawCalls}`,
+      `Shader Programs: ${stats.shaderPrograms}`,
       `Geometries: ${stats.geometries}`,
       `Textures: ${stats.textures}`,
       `Pixel Ratio: ${stats.pixelRatio.toFixed(2)}`,
@@ -135,6 +138,7 @@
     worldPromise = import('./city-world.js').then(({ CityWorld }) => {
       world = new CityWorld({
         canvas: elements.canvas,
+        initializationStartedAt: enterStartedAt,
         onProgress(progress) {
           if (!isOverlayOpen) return;
           elements.loadingProgress.textContent = progress.percent === null
@@ -142,9 +146,16 @@
             : `模型加载中：${progress.percent}%`;
         },
         onStatus(status) {
-          if (status === 'ready' && isOverlayOpen) {
-            elements.loadingProgress.textContent = '模型加载完成';
-          }
+          if (!isOverlayOpen) return;
+          const stages = {
+            'loading-model': '正在加载城市模型……',
+            'parsing-model': '正在解析模型……',
+            'preparing-textures': '正在准备纹理……',
+            'compiling-shaders': '正在编译 Shader……',
+            'warming-up': '正在准备首帧……',
+            entering: '正在进入城市……',
+          };
+          if (stages[status]) elements.loadingProgress.textContent = stages[status];
         },
         onStats: renderPerformance,
         onExitRequest: exitCityWorld,
@@ -164,6 +175,7 @@
     if (isEntering || isWorldActive || isExiting) return;
 
     isEntering = true;
+    enterStartedAt = performance.now();
     uiSnapshot = captureUiState();
     setIconSelected(false);
     showOverlay();

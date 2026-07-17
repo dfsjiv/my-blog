@@ -11,13 +11,62 @@ const PERFORMANCE_UPDATE_INTERVAL = 500;
 const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
 const DYNAMIC_RESOLUTION_COOLDOWN = 5000;
 const DPR_LEVELS = Object.freeze([0.75, 1, 1.25, 1.5, 2]);
+const ANISOTROPY_MATERIAL_PATTERN = /streets|side[_\s-]?walks|curb|roof/i;
+
+export const CITY_RENDER_SETTINGS = Object.freeze({
+  toneMapping: 'aces',
+  exposure: 1.05,
+});
 
 export const CITY_QUALITY_PRESETS = Object.freeze({
-  low: Object.freeze({ maxDpr: 0.75 }),
-  medium: Object.freeze({ maxDpr: 1 }),
-  high: Object.freeze({ maxDpr: 1.5 }),
-  ultra: Object.freeze({ maxDpr: 2 }),
+  low: Object.freeze({
+    maxDpr: 0.75,
+    toneMapping: 'aces',
+    exposure: 1.05,
+    anisotropy: 1,
+    environmentEnabled: false,
+    environmentIntensity: 0,
+    shaderWarmup: false,
+  }),
+  medium: Object.freeze({
+    maxDpr: 1,
+    toneMapping: 'aces',
+    exposure: 1.05,
+    anisotropy: 2,
+    environmentEnabled: false,
+    environmentIntensity: 0,
+    shaderWarmup: true,
+  }),
+  high: Object.freeze({
+    maxDpr: 1.5,
+    toneMapping: 'aces',
+    exposure: 1.05,
+    anisotropy: 4,
+    environmentEnabled: false,
+    environmentIntensity: 0,
+    shaderWarmup: true,
+  }),
+  ultra: Object.freeze({
+    maxDpr: 2,
+    toneMapping: 'aces',
+    exposure: 1.05,
+    anisotropy: 8,
+    environmentEnabled: true,
+    environmentIntensity: 0.42,
+    shaderWarmup: true,
+  }),
 });
+
+function resolveToneMapping(name) {
+  const toneMappings = {
+    agx: THREE.AgXToneMapping,
+    aces: THREE.ACESFilmicToneMapping,
+    neutral: THREE.NeutralToneMapping,
+  };
+  return Number.isFinite(toneMappings[name])
+    ? toneMappings[name]
+    : THREE.ACESFilmicToneMapping;
+}
 
 class LightingSystem {
   constructor(scene) {
@@ -41,6 +90,78 @@ class LightingSystem {
 
   dispose() {
     this.scene.remove(this.ambientLight, this.directionalLight);
+  }
+
+  getStats() {
+    return {
+      ambient: 1,
+      hemisphere: 0,
+      directional: 1,
+      point: 0,
+      spot: 0,
+    };
+  }
+}
+
+class EnvironmentLightingSystem {
+  constructor(renderer, scene) {
+    this.renderer = renderer;
+    this.scene = scene;
+    this.pmremGenerator = null;
+    this.renderTarget = null;
+    this.environmentTexture = null;
+  }
+
+  createEnvironment() {
+    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    this.pmremGenerator.compileEquirectangularShader();
+    const width = 32;
+    const height = 16;
+    const data = new Uint8Array(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      const vertical = y / (height - 1);
+      const horizon = Math.max(0, 1 - Math.abs(vertical - 0.52) * 5.5);
+      const ground = vertical > 0.56 ? (vertical - 0.56) / 0.44 : 0;
+      const red = Math.round(7 + horizon * 34 - ground * 3);
+      const green = Math.round(15 + horizon * 43 - ground * 8);
+      const blue = Math.round(28 + horizon * 55 - ground * 13);
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
+        data[offset] = red;
+        data[offset + 1] = green;
+        data[offset + 2] = blue;
+        data[offset + 3] = 255;
+      }
+    }
+
+    const sourceTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+    sourceTexture.colorSpace = THREE.SRGBColorSpace;
+    sourceTexture.mapping = THREE.EquirectangularReflectionMapping;
+    sourceTexture.needsUpdate = true;
+    this.renderTarget = this.pmremGenerator.fromEquirectangular(sourceTexture);
+    this.environmentTexture = this.renderTarget.texture;
+    sourceTexture.dispose();
+    this.pmremGenerator.dispose();
+    this.pmremGenerator = null;
+  }
+
+  apply(enabled, intensity, materials) {
+    if (enabled && !this.environmentTexture) this.createEnvironment();
+    this.scene.environment = enabled ? this.environmentTexture : null;
+    if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = intensity;
+    materials?.forEach((material) => {
+      if (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) {
+        material.envMapIntensity = intensity;
+      }
+    });
+  }
+
+  dispose() {
+    if (this.scene.environment === this.environmentTexture) this.scene.environment = null;
+    this.renderTarget?.dispose();
+    this.pmremGenerator?.dispose();
+    this.renderTarget = null;
+    this.environmentTexture = null;
   }
 }
 
@@ -371,6 +492,7 @@ export class CityWorld {
     this.onModeChange = settings.onModeChange;
     this.onWeatherChange = settings.onWeatherChange;
     this.onExitRequest = settings.onExitRequest;
+    this.initializationStartedAt = settings.initializationStartedAt || performance.now();
     this.qualityPresetName = CITY_QUALITY_PRESETS[settings.qualityPreset]
       ? settings.qualityPreset
       : 'high';
@@ -389,13 +511,15 @@ export class CityWorld {
     });
     this.renderer.shadowMap.enabled = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.96;
+    this.renderer.toneMapping = resolveToneMapping(CITY_RENDER_SETTINGS.toneMapping);
+    this.renderer.toneMappingExposure = CITY_RENDER_SETTINGS.exposure;
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.07;
     this.controls.screenSpacePanning = true;
     this.lightingSystem = new LightingSystem(this.scene);
+    this.environmentLightingSystem = new EnvironmentLightingSystem(this.renderer, this.scene);
+    this.environmentSetupDuration = 0;
     this.weatherSystem = new WeatherSystem(
       this.scene,
       this.camera,
@@ -417,6 +541,32 @@ export class CityWorld {
     this.loadedModel = null;
     this.helperGroup = null;
     this.modelStats = null;
+    this.modelMaterials = new Set();
+    this.modelTextures = new Set();
+    this.anisotropyTextures = new Set();
+    this.materialAudit = {
+      basic: 0,
+      standard: 0,
+      physical: 0,
+      transparent: 0,
+      doubleSided: 0,
+      emissive: 0,
+      normalMap: 0,
+      roughnessMap: 0,
+      metalnessMap: 0,
+      transparentModified: 0,
+      doubleSidedModified: 0,
+      colorSpaceCorrections: 0,
+    };
+    this.texturePreparation = {
+      maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
+      appliedAnisotropy: 1,
+      anisotropicTextures: 0,
+      uploadedTextures: 0,
+      mipmappedTextures: 0,
+    };
+    this.compileAsyncAvailable = typeof this.renderer.compileAsync === 'function';
+    this.prepared = false;
     this.boundsInfo = null;
     this.modelLoadCount = 0;
     this.pixelRatioLevels = [];
@@ -426,7 +576,16 @@ export class CityWorld {
     this.statsElapsed = 0;
     this.statsFrameTimeTotal = 0;
     this.lastFrameTimestamp = 0;
-    this.lastStats = { fps: 0, frameTime: 0 };
+    this.lastStats = { fps: 0, frameTime: 0, maxFrameTime: 0 };
+    this.timings = {
+      modelLoad: 0,
+      modelParse: 0,
+      textureUpload: 0,
+      shaderCompile: 0,
+      warmup: 0,
+      environmentSetup: this.environmentSetupDuration,
+      clickToStable: 0,
+    };
     this.dynamicFrameCount = 0;
     this.dynamicElapsed = 0;
     this.lowFpsSamples = 0;
@@ -446,13 +605,7 @@ export class CityWorld {
     if (this.initialized) return Promise.resolve(this);
     if (this.initPromise) return this.initPromise;
 
-    if (this.onStatus) this.onStatus('loading');
-    this.initPromise = this.loadModel().then(() => {
-      this.initialized = true;
-      if (this.onStatus) this.onStatus('ready');
-      this.renderOnce();
-      return this;
-    }).catch((error) => {
+    this.initPromise = this.prepareInitialScene().catch((error) => {
       this.initPromise = null;
       if (this.onStatus) this.onStatus('error', error);
       throw error;
@@ -460,13 +613,49 @@ export class CityWorld {
     return this.initPromise;
   }
 
+  async prepareInitialScene() {
+    if (this.onStatus) this.onStatus('loading-model');
+    await this.waitForBrowserFrame();
+    await this.loadModel();
+
+    if (this.onStatus) this.onStatus('preparing-textures');
+    await this.waitForBrowserFrame();
+    this.auditModelResources();
+    this.applyQualitySettings();
+    this.preuploadTextures();
+
+    if (this.onStatus) this.onStatus('compiling-shaders');
+    await this.waitForBrowserFrame();
+    await this.precompileShaders();
+
+    if (this.onStatus) this.onStatus('warming-up');
+    await this.waitForBrowserFrame();
+    this.warmupRenderer();
+    this.prepared = true;
+    this.initialized = true;
+    if (this.onStatus) this.onStatus('entering');
+    await this.waitForBrowserFrame();
+    return this;
+  }
+
+  waitForBrowserFrame() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  }
+
   loadModel() {
     this.modelLoadCount += 1;
+    const loadStartedAt = performance.now();
+    let networkCompletedAt = 0;
     const loader = new GLTFLoader();
     return new Promise((resolve, reject) => {
       loader.load(
         MODEL_URL,
         (gltf) => {
+          const modelReadyAt = performance.now();
+          this.timings.modelLoad = (networkCompletedAt || modelReadyAt) - loadStartedAt;
+          this.timings.modelParse = networkCompletedAt ? modelReadyAt - networkCompletedAt : 0;
           if (this.disposed) {
             reject(new Error('CityWorld was disposed while loading'));
             return;
@@ -483,16 +672,22 @@ export class CityWorld {
           }
         },
         (event) => {
-          if (!this.onProgress) return;
-          if (event.total > 0) {
+          const networkJustCompleted = event.total > 0
+            && event.loaded >= event.total
+            && networkCompletedAt === 0;
+          if (networkJustCompleted) {
+            networkCompletedAt = performance.now();
+          }
+          if (this.onProgress && event.total > 0) {
             this.onProgress({
               percent: Math.min(100, Math.round((event.loaded / event.total) * 100)),
               loaded: event.loaded,
               total: event.total,
             });
-          } else {
+          } else if (this.onProgress) {
             this.onProgress({ percent: null, loaded: event.loaded, total: 0 });
           }
+          if (networkJustCompleted && this.onStatus) this.onStatus('parsing-model');
         },
         reject,
       );
@@ -524,6 +719,144 @@ export class CityWorld {
     });
 
     return { meshes, triangles: Math.round(triangles), textures: textures.size };
+  }
+
+  auditModelResources() {
+    const colorTextureSlots = ['map', 'emissiveMap'];
+    const dataTextureSlots = [
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'alphaMap',
+      'bumpMap',
+      'displacementMap',
+      'transmissionMap',
+      'thicknessMap',
+    ];
+
+    this.loadedModel.traverse((object) => {
+      if (!object.isMesh) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        if (material) this.modelMaterials.add(material);
+      });
+    });
+
+    this.modelMaterials.forEach((material) => {
+      if (material.isMeshPhysicalMaterial) this.materialAudit.physical += 1;
+      else if (material.isMeshStandardMaterial) this.materialAudit.standard += 1;
+      else if (material.isMeshBasicMaterial) this.materialAudit.basic += 1;
+      if (material.transparent) this.materialAudit.transparent += 1;
+      if (material.side === THREE.DoubleSide) this.materialAudit.doubleSided += 1;
+      if (material.emissiveMap || (material.emissive && material.emissive.getHex() !== 0)) {
+        this.materialAudit.emissive += 1;
+      }
+      if (material.normalMap) this.materialAudit.normalMap += 1;
+      if (material.roughnessMap) this.materialAudit.roughnessMap += 1;
+      if (material.metalnessMap) this.materialAudit.metalnessMap += 1;
+
+      Object.values(material).forEach((value) => {
+        if (value?.isTexture) this.modelTextures.add(value);
+      });
+
+      colorTextureSlots.forEach((slot) => {
+        const texture = material[slot];
+        if (!texture?.isTexture || texture.colorSpace === THREE.SRGBColorSpace) return;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        this.materialAudit.colorSpaceCorrections += 1;
+      });
+
+      dataTextureSlots.forEach((slot) => {
+        const texture = material[slot];
+        if (!texture?.isTexture || texture.colorSpace !== THREE.SRGBColorSpace) return;
+        texture.colorSpace = THREE.NoColorSpace;
+        texture.needsUpdate = true;
+        this.materialAudit.colorSpaceCorrections += 1;
+      });
+
+      if (ANISOTROPY_MATERIAL_PATTERN.test(material.name || '')) {
+        Object.values(material).forEach((value) => {
+          if (value?.isTexture) this.anisotropyTextures.add(value);
+        });
+      }
+    });
+
+    console.info('City model material audit:', {
+      ...this.materialAudit,
+      materials: this.modelMaterials.size,
+      textures: this.modelTextures.size,
+      anisotropyCandidates: this.anisotropyTextures.size,
+    });
+    this.texturePreparation.mipmappedTextures = Array.from(this.modelTextures).filter(
+      (texture) => texture.minFilter !== THREE.LinearFilter
+        && texture.minFilter !== THREE.NearestFilter,
+    ).length;
+  }
+
+  applyQualitySettings() {
+    const preset = CITY_QUALITY_PRESETS[this.qualityPresetName];
+    this.renderer.toneMapping = resolveToneMapping(preset.toneMapping);
+    this.renderer.toneMappingExposure = preset.exposure;
+    const environmentSetupStartedAt = performance.now();
+    this.environmentLightingSystem.apply(
+      preset.environmentEnabled,
+      preset.environmentIntensity,
+      this.modelMaterials,
+    );
+    if (preset.environmentEnabled && this.timings.environmentSetup === 0) {
+      this.timings.environmentSetup = performance.now() - environmentSetupStartedAt;
+    }
+
+    const anisotropy = Math.min(
+      this.texturePreparation.maxAnisotropy,
+      preset.anisotropy,
+    );
+    this.texturePreparation.appliedAnisotropy = anisotropy;
+    this.texturePreparation.anisotropicTextures = this.anisotropyTextures.size;
+    this.anisotropyTextures.forEach((texture) => {
+      if (texture.anisotropy === anisotropy) return;
+      texture.anisotropy = anisotropy;
+      texture.needsUpdate = true;
+    });
+  }
+
+  preuploadTextures() {
+    const startedAt = performance.now();
+    let uploadedTextures = 0;
+    if (typeof this.renderer.initTexture === 'function') {
+      this.modelTextures.forEach((texture) => {
+        this.renderer.initTexture(texture);
+        uploadedTextures += 1;
+      });
+    }
+    this.texturePreparation.uploadedTextures = uploadedTextures;
+    this.timings.textureUpload = performance.now() - startedAt;
+  }
+
+  async precompileShaders() {
+    const preset = CITY_QUALITY_PRESETS[this.qualityPresetName];
+    if (!preset.shaderWarmup) return;
+    const startedAt = performance.now();
+    if (this.compileAsyncAvailable) {
+      await this.renderer.compileAsync(this.scene, this.camera);
+    } else {
+      this.renderer.compile(this.scene, this.camera);
+    }
+    this.timings.shaderCompile = performance.now() - startedAt;
+  }
+
+  warmupRenderer() {
+    const preset = CITY_QUALITY_PRESETS[this.qualityPresetName];
+    if (!preset.shaderWarmup) return;
+    const startedAt = performance.now();
+    this.renderer.render(this.scene, this.camera);
+    if (this.walkController.enable()) {
+      this.renderer.render(this.scene, this.camera);
+      this.walkController.disable(true);
+    }
+    this.timings.warmup = performance.now() - startedAt;
   }
 
   fitModelToView(model) {
@@ -638,6 +971,7 @@ export class CityWorld {
     this.statsFrameCount = 0;
     this.statsElapsed = 0;
     this.statsFrameTimeTotal = 0;
+    this.statsFrameTimeMax = 0;
     this.dynamicFrameCount = 0;
     this.dynamicElapsed = 0;
     this.lowFpsSamples = 0;
@@ -656,16 +990,22 @@ export class CityWorld {
     this.statsFrameCount += 1;
     this.statsElapsed += frameTime;
     this.statsFrameTimeTotal += frameTime;
+    this.statsFrameTimeMax = Math.max(this.statsFrameTimeMax, frameTime);
     this.dynamicFrameCount += 1;
     this.dynamicElapsed += frameTime;
 
     if (this.statsElapsed >= PERFORMANCE_UPDATE_INTERVAL) {
       this.lastStats.fps = Math.round((this.statsFrameCount * 1000) / this.statsElapsed);
       this.lastStats.frameTime = this.statsFrameTimeTotal / this.statsFrameCount;
+      this.lastStats.maxFrameTime = this.statsFrameTimeMax;
+      if (this.timings.clickToStable === 0) {
+        this.timings.clickToStable = now - this.initializationStartedAt;
+      }
       if (this.onStats) this.onStats(this.getStats());
       this.statsFrameCount = 0;
       this.statsElapsed = 0;
       this.statsFrameTimeTotal = 0;
+      this.statsFrameTimeMax = 0;
     }
 
     if (this.dynamicResolution && this.dynamicElapsed >= DYNAMIC_RESOLUTION_SAMPLE_INTERVAL) {
@@ -737,6 +1077,7 @@ export class CityWorld {
     if (!CITY_QUALITY_PRESETS[presetName]) return false;
     this.qualityPresetName = presetName;
     this.configurePixelRatioLevels(true);
+    this.applyQualitySettings();
     this.lowFpsSamples = 0;
     this.highFpsSamples = 0;
     this.lastResolutionAdjustment = performance.now();
@@ -791,14 +1132,28 @@ export class CityWorld {
       geometries: this.renderer.info.memory.geometries,
       textures: this.renderer.info.memory.textures,
       drawCalls: this.renderer.info.render.calls,
+      shaderPrograms: this.renderer.info.programs?.length || 0,
       fps: this.lastStats.fps,
       frameTime: this.lastStats.frameTime,
+      maxFrameTime: this.lastStats.maxFrameTime,
       pixelRatio: this.currentPixelRatio,
       qualityPreset: this.qualityPresetName,
+      renderSettings: {
+        toneMapping: CITY_QUALITY_PRESETS[this.qualityPresetName].toneMapping,
+        exposure: this.renderer.toneMappingExposure,
+        environmentEnabled: Boolean(this.scene.environment),
+        environmentIntensity: CITY_QUALITY_PRESETS[this.qualityPresetName].environmentIntensity,
+      },
+      materialAudit: this.materialAudit,
+      texturePreparation: this.texturePreparation,
+      lighting: this.lightingSystem.getStats(),
+      compileAsyncAvailable: this.compileAsyncAvailable,
+      prepared: this.prepared,
       isRendering: this.animationFrameId !== null,
       worldActive: this.active,
       modelLoaded: Boolean(this.initialized && this.loadedModel),
       modelLoadCount: this.modelLoadCount,
+      timings: this.timings,
       cameraPosition: {
         x: this.camera.position.x,
         y: this.camera.position.y,
@@ -854,6 +1209,7 @@ export class CityWorld {
     this.controls.dispose();
     this.weatherSystem.dispose();
     this.lightingSystem.dispose();
+    this.environmentLightingSystem.dispose();
     this.disposeSceneResources();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
@@ -868,4 +1224,6 @@ export const CITY_WORLD_CONFIG = Object.freeze({
   fogDensity: FOG_DENSITY,
   rainCount: RAIN_COUNT,
   rainVolume: RAIN_VOLUME,
+  renderSettings: CITY_RENDER_SETTINGS,
+  qualityPresets: CITY_QUALITY_PRESETS,
 });
