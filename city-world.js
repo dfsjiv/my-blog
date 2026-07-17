@@ -25,6 +25,7 @@ const RAIN_DEFAULTS = Object.freeze({
   fallSpeed: 46,
   dropLength: 1.9,
   brightness: 1.25,
+  dropWidth: 1.25,
   windX: 4.5,
   windZ: 1.2,
   volumeWidth: 120,
@@ -32,10 +33,10 @@ const RAIN_DEFAULTS = Object.freeze({
   volumeDepth: 120,
 });
 const RAIN_QUALITY_COUNTS = Object.freeze({
-  low: 1800,
-  medium: 3500,
-  high: 6000,
-  ultra: 9000,
+  low: 6000,
+  medium: 12000,
+  high: 20000,
+  ultra: 32000,
 });
 const PERFORMANCE_UPDATE_INTERVAL = 500;
 const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
@@ -283,6 +284,9 @@ class RainSystem {
     this.type = 'rain';
     this.time = 0;
     this.cameraRight = new THREE.Vector3(1, 0, 0);
+    this.cameraUp = new THREE.Vector3(0, 1, 0);
+    this.cameraForward = new THREE.Vector3(0, 0, -1);
+    this.rainCenter = new THREE.Vector3();
     this.material = this.createMaterial();
     this.geometry = this.createGeometry(this.count);
     this.rain = new THREE.Mesh(this.geometry, this.material);
@@ -332,10 +336,12 @@ class RainSystem {
         uTime: { value: 0 },
         uRainCenter: { value: new THREE.Vector3() },
         uCameraRight: { value: new THREE.Vector3(1, 0, 0) },
+        uCameraUp: { value: new THREE.Vector3(0, 1, 0) },
         uVolumeSize: { value: new THREE.Vector3(120, 72, 120) },
         uWind: { value: new THREE.Vector2(4.5, 1.2) },
         uFallSpeed: { value: 42 },
         uDropLength: { value: 1.9 },
+        uDropWidth: { value: 1.25 },
         uIntensity: { value: 0.9 },
         uBrightness: { value: 1.25 },
         uFogColor: { value: new THREE.Color(FOG_COLOR) },
@@ -348,10 +354,12 @@ class RainSystem {
         uniform float uTime;
         uniform vec3 uRainCenter;
         uniform vec3 uCameraRight;
+        uniform vec3 uCameraUp;
         uniform vec3 uVolumeSize;
         uniform vec2 uWind;
         uniform float uFallSpeed;
         uniform float uDropLength;
+        uniform float uDropWidth;
         uniform float uIntensity;
         uniform float uBrightness;
 
@@ -374,16 +382,26 @@ class RainSystem {
           float farFade = 1.0 - smoothstep(farDistance * 0.65, farDistance, viewDistance);
           float nearDetail = 1.0 - smoothstep(18.0, farDistance, viewDistance);
           float visibleLength = uDropLength * instanceVariation.y * mix(0.48, 1.18, nearDetail);
-          float width = mix(0.014, 0.046, nearDetail);
-          vec3 side = normalize(uCameraRight - rainDirection * dot(uCameraRight, rainDirection));
+          float width = mix(0.035, 0.09, nearDetail) * uDropWidth;
+          vec3 toCamera = normalize(cameraPosition - dropCenter);
+          vec3 projectedDirection = rainDirection
+            - toCamera * dot(rainDirection, toCamera);
+          float projectionStrength = length(projectedDirection);
+          vec3 projectedStreak = projectedDirection / max(projectionStrength, 0.001);
+          vec3 streakDirection = normalize(mix(
+            -uCameraUp,
+            projectedStreak,
+            smoothstep(0.08, 0.38, projectionStrength)
+          ));
+          vec3 side = normalize(cross(streakDirection, toCamera));
 
           vec3 worldPosition = dropCenter;
-          worldPosition += rainDirection * position.y * visibleLength;
+          worldPosition += streakDirection * position.y * visibleLength;
           worldPosition += side * position.x * width;
 
           vRainUv = position.xy;
           vAlpha = instanceVariation.z * uIntensity * uBrightness * nearFade * farFade
-            * mix(0.46, 0.94, nearDetail);
+            * mix(0.55, 1.0, nearDetail);
           vViewDistance = viewDistance;
           gl_Position = projectionMatrix * viewMatrix * vec4(worldPosition, 1.0);
         }
@@ -447,6 +465,7 @@ class RainSystem {
       fallSpeed: [5, 100],
       dropLength: [0.2, 4],
       brightness: [0.2, 2],
+      dropWidth: [0.5, 3],
       windX: [-20, 20],
       windZ: [-20, 20],
       volumeWidth: [30, 220],
@@ -480,6 +499,7 @@ class RainSystem {
     this.material.uniforms.uWind.value.set(settings.windX, settings.windZ);
     this.material.uniforms.uFallSpeed.value = settings.fallSpeed;
     this.material.uniforms.uDropLength.value = settings.dropLength;
+    this.material.uniforms.uDropWidth.value = settings.dropWidth;
     this.material.uniforms.uBrightness.value = settings.brightness;
     this.material.uniforms.uIntensity.value = settings.intensity;
     this.geometry.instanceCount = Math.round(this.count * settings.intensity);
@@ -510,9 +530,16 @@ class RainSystem {
     this.time += deltaTime;
     const matrix = this.camera.matrixWorld.elements;
     this.cameraRight.set(matrix[0], matrix[1], matrix[2]).normalize();
+    this.cameraUp.set(matrix[4], matrix[5], matrix[6]).normalize();
+    this.cameraForward.set(-matrix[8], -matrix[9], -matrix[10]).normalize();
+    this.rainCenter.copy(this.camera.position).addScaledVector(
+      this.cameraForward,
+      this.settings.volumeDepth * 0.18,
+    );
     this.material.uniforms.uTime.value = this.time;
-    this.material.uniforms.uRainCenter.value.copy(this.camera.position);
+    this.material.uniforms.uRainCenter.value.copy(this.rainCenter);
     this.material.uniforms.uCameraRight.value.copy(this.cameraRight);
+    this.material.uniforms.uCameraUp.value.copy(this.cameraUp);
   }
 
   getState() {
