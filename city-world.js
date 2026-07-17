@@ -18,8 +18,24 @@ const NIGHT_RENDER_DEFAULTS = Object.freeze({
 });
 const FOG_COLOR = Number.parseInt(NIGHT_RENDER_DEFAULTS.nightBackgroundColor.slice(1), 16);
 const FOG_DENSITY = 0.0021;
-const RAIN_COUNT = 3200;
-const RAIN_VOLUME = Object.freeze({ width: 120, height: 72, depth: 120 });
+const RAIN_SETTINGS_STORAGE_KEY = 'my-blog.city-world.rain-rendering.v1';
+const RAIN_DEFAULTS = Object.freeze({
+  enabled: true,
+  intensity: 0.65,
+  fallSpeed: 42,
+  dropLength: 1.5,
+  windX: 4.5,
+  windZ: 1.2,
+  volumeWidth: 120,
+  volumeHeight: 72,
+  volumeDepth: 120,
+});
+const RAIN_QUALITY_COUNTS = Object.freeze({
+  low: 1500,
+  medium: 3000,
+  high: 5200,
+  ultra: 8000,
+});
 const PERFORMANCE_UPDATE_INTERVAL = 500;
 const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
 const DYNAMIC_RESOLUTION_COOLDOWN = 5000;
@@ -104,6 +120,31 @@ function saveNightSettings(settings) {
     localStorage.setItem(NIGHT_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (error) {
     console.warn('City night settings could not be saved.');
+  }
+}
+
+function loadRainSettings() {
+  try {
+    const raw = localStorage.getItem(RAIN_SETTINGS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== 'object') {
+      return { settings: { ...RAIN_DEFAULTS }, restored: false };
+    }
+    const settings = { ...RAIN_DEFAULTS };
+    Object.keys(settings).forEach((key) => {
+      if (typeof parsed[key] === typeof settings[key]) settings[key] = parsed[key];
+    });
+    return { settings, restored: true };
+  } catch (error) {
+    return { settings: { ...RAIN_DEFAULTS }, restored: false };
+  }
+}
+
+function saveRainSettings(settings) {
+  try {
+    localStorage.setItem(RAIN_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (error) {
+    console.warn('City rain settings could not be saved.');
   }
 }
 
@@ -228,24 +269,29 @@ class EnvironmentLightingSystem {
   }
 }
 
-class WeatherSystem {
-  constructor(scene, camera, onWeatherChange) {
+class RainSystem {
+  constructor(scene, camera, qualityPreset, onWeatherChange) {
     this.scene = scene;
     this.camera = camera;
     this.onWeatherChange = onWeatherChange;
-    this.type = 'clear';
-    this.count = RAIN_COUNT;
-    this.volume = RAIN_VOLUME;
-    this.positions = new Float32Array(this.count * 3);
-    this.speeds = new Float32Array(this.count);
-    this.lengths = new Float32Array(this.count);
-    this.alphas = new Float32Array(this.count);
-    this.rain = this.createRainMesh();
+    const stored = loadRainSettings();
+    this.settings = stored.settings;
+    this.hasStoredSettings = stored.restored;
+    this.qualityPreset = qualityPreset;
+    this.count = RAIN_QUALITY_COUNTS[qualityPreset];
+    this.type = 'rain';
+    this.time = 0;
+    this.cameraRight = new THREE.Vector3(1, 0, 0);
+    this.material = this.createMaterial();
+    this.geometry = this.createGeometry(this.count);
+    this.rain = new THREE.Mesh(this.geometry, this.material);
+    this.rain.frustumCulled = false;
+    this.rain.renderOrder = 8;
     this.scene.add(this.rain);
-    this.setWeather('rain');
+    this.updateSettings(this.settings, false);
   }
 
-  createRainMesh() {
+  createGeometry(count) {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute([
       -1, 0, 0,
@@ -256,58 +302,85 @@ class WeatherSystem {
       -1, 1, 0,
     ], 3));
 
-    for (let index = 0; index < this.count; index += 1) {
-      this.speeds[index] = THREE.MathUtils.randFloat(25, 54);
-      this.lengths[index] = THREE.MathUtils.randFloat(0.7, 2.6);
-      this.alphas[index] = THREE.MathUtils.randFloat(0.14, 0.55);
-      this.respawnParticle(index, true);
+    const origins = new Float32Array(count * 3);
+    const variations = new Float32Array(count * 4);
+    for (let index = 0; index < count; index += 1) {
+      const originOffset = index * 3;
+      const variationOffset = index * 4;
+      origins[originOffset] = Math.random() - 0.5;
+      origins[originOffset + 1] = Math.random();
+      origins[originOffset + 2] = Math.random() - 0.5;
+      variations[variationOffset] = THREE.MathUtils.randFloat(0.72, 1.28);
+      variations[variationOffset + 1] = THREE.MathUtils.randFloat(0.62, 1.38);
+      variations[variationOffset + 2] = THREE.MathUtils.randFloat(0.28, 0.82);
+      variations[variationOffset + 3] = Math.random();
     }
+    geometry.setAttribute('instanceOrigin', new THREE.InstancedBufferAttribute(origins, 3));
+    geometry.setAttribute('instanceVariation', new THREE.InstancedBufferAttribute(variations, 4));
+    geometry.instanceCount = count;
+    return geometry;
+  }
 
-    const positionAttribute = new THREE.InstancedBufferAttribute(this.positions, 3);
-    positionAttribute.setUsage(THREE.DynamicDrawUsage);
-    geometry.setAttribute('instancePosition', positionAttribute);
-    geometry.setAttribute('instanceSpeed', new THREE.InstancedBufferAttribute(this.speeds, 1));
-    geometry.setAttribute('instanceLength', new THREE.InstancedBufferAttribute(this.lengths, 1));
-    geometry.setAttribute('instanceAlpha', new THREE.InstancedBufferAttribute(this.alphas, 1));
-    geometry.instanceCount = this.count;
-
-    const material = new THREE.ShaderMaterial({
+  createMaterial() {
+    return new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
       depthTest: true,
       blending: THREE.NormalBlending,
       uniforms: {
+        uTime: { value: 0 },
+        uRainCenter: { value: new THREE.Vector3() },
+        uCameraRight: { value: new THREE.Vector3(1, 0, 0) },
+        uVolumeSize: { value: new THREE.Vector3(120, 72, 120) },
+        uWind: { value: new THREE.Vector2(4.5, 1.2) },
+        uFallSpeed: { value: 42 },
+        uDropLength: { value: 1.5 },
+        uIntensity: { value: 0.65 },
         uFogColor: { value: new THREE.Color(FOG_COLOR) },
         uFogDensity: { value: FOG_DENSITY },
       },
       vertexShader: `
-        attribute vec3 instancePosition;
-        attribute float instanceSpeed;
-        attribute float instanceLength;
-        attribute float instanceAlpha;
+        attribute vec3 instanceOrigin;
+        attribute vec4 instanceVariation;
+
+        uniform float uTime;
+        uniform vec3 uRainCenter;
+        uniform vec3 uCameraRight;
+        uniform vec3 uVolumeSize;
+        uniform vec2 uWind;
+        uniform float uFallSpeed;
+        uniform float uDropLength;
+        uniform float uIntensity;
 
         varying vec2 vRainUv;
         varying float vAlpha;
         varying float vViewDistance;
 
         void main() {
-          vec3 rainDirection = normalize(vec3(0.14, -1.0, 0.035));
-          vec3 toCamera = normalize(cameraPosition - instancePosition);
-          vec3 side = cross(rainDirection, toCamera);
-          side /= max(length(side), 0.001);
+          float speed = uFallSpeed * instanceVariation.x;
+          float fallProgress = fract(instanceOrigin.y + instanceVariation.w + uTime * speed / uVolumeSize.y);
+          vec3 rainDirection = normalize(vec3(uWind.x, -uFallSpeed, uWind.y));
+          vec3 dropCenter = uRainCenter;
+          dropCenter.x += instanceOrigin.x * uVolumeSize.x + uWind.x * fallProgress;
+          dropCenter.y += (0.56 - fallProgress) * uVolumeSize.y;
+          dropCenter.z += instanceOrigin.z * uVolumeSize.z + uWind.y * fallProgress;
 
-          float viewDistance = distance(cameraPosition, instancePosition);
-          float nearFactor = 1.0 - smoothstep(22.0, 120.0, viewDistance);
-          float visibleLength = instanceLength * mix(0.34, 1.15, nearFactor);
-          visibleLength += instanceSpeed * 0.003 * nearFactor;
-          float width = mix(0.01, 0.037, nearFactor);
+          float viewDistance = distance(cameraPosition, dropCenter);
+          float farDistance = max(uVolumeSize.x, uVolumeSize.z) * 0.72;
+          float nearFade = smoothstep(2.2, 7.5, viewDistance);
+          float farFade = 1.0 - smoothstep(farDistance * 0.55, farDistance, viewDistance);
+          float nearDetail = 1.0 - smoothstep(18.0, farDistance, viewDistance);
+          float visibleLength = uDropLength * instanceVariation.y * mix(0.48, 1.18, nearDetail);
+          float width = mix(0.009, 0.032, nearDetail);
+          vec3 side = normalize(uCameraRight - rainDirection * dot(uCameraRight, rainDirection));
 
-          vec3 worldPosition = instancePosition;
+          vec3 worldPosition = dropCenter;
           worldPosition += rainDirection * position.y * visibleLength;
           worldPosition += side * position.x * width;
 
           vRainUv = position.xy;
-          vAlpha = instanceAlpha * mix(0.18, 0.78, nearFactor);
+          vAlpha = instanceVariation.z * uIntensity * nearFade * farFade
+            * mix(0.34, 0.82, nearDetail);
           vViewDistance = viewDistance;
           gl_Position = projectionMatrix * viewMatrix * vec4(worldPosition, 1.0);
         }
@@ -321,81 +394,138 @@ class WeatherSystem {
         varying float vViewDistance;
 
         void main() {
-          float edge = 1.0 - smoothstep(0.42, 1.0, abs(vRainUv.x));
-          float tipFade = smoothstep(0.0, 0.1, vRainUv.y)
-            * (1.0 - smoothstep(0.82, 1.0, vRainUv.y));
+          float edge = 1.0 - smoothstep(0.38, 1.0, abs(vRainUv.x));
+          float tipFade = smoothstep(0.0, 0.12, vRainUv.y)
+            * (1.0 - smoothstep(0.78, 1.0, vRainUv.y));
           float alpha = vAlpha * edge * tipFade;
-          if (alpha < 0.01) discard;
+          if (alpha < 0.008) discard;
 
-          vec3 rainColor = vec3(0.58, 0.76, 0.95);
+          vec3 rainColor = vec3(0.54, 0.72, 0.9);
           float fogFactor = 1.0 - exp(
             -uFogDensity * uFogDensity * vViewDistance * vViewDistance
           );
-          rainColor = mix(rainColor, uFogColor, clamp(fogFactor, 0.0, 0.88));
+          rainColor = mix(rainColor, uFogColor, clamp(fogFactor, 0.0, 0.9));
+          alpha *= 1.0 - clamp(fogFactor, 0.0, 0.82);
           gl_FragColor = vec4(rainColor, alpha);
         }
       `,
     });
-
-    const rain = new THREE.Mesh(geometry, material);
-    rain.frustumCulled = false;
-    rain.renderOrder = 8;
-    return rain;
   }
 
-  respawnParticle(index, randomizeHeight) {
-    const offset = index * 3;
-    const bottom = Math.max(0.15, this.camera.position.y - this.volume.height * 0.44);
-    const top = bottom + this.volume.height;
-    this.positions[offset] = this.camera.position.x
-      + THREE.MathUtils.randFloatSpread(this.volume.width);
-    this.positions[offset + 1] = randomizeHeight
-      ? THREE.MathUtils.randFloat(bottom, top)
-      : THREE.MathUtils.randFloat(top - 8, top);
-    this.positions[offset + 2] = this.camera.position.z
-      + THREE.MathUtils.randFloatSpread(this.volume.depth);
+  configureForModel(boundsInfo) {
+    if (!boundsInfo || this.hasStoredSettings) return;
+    const diagonal = boundsInfo.diagonal;
+    this.settings.volumeWidth = THREE.MathUtils.clamp(diagonal * 0.36, 80, 150);
+    this.settings.volumeHeight = THREE.MathUtils.clamp(diagonal * 0.215, 45, 100);
+    this.settings.volumeDepth = THREE.MathUtils.clamp(diagonal * 0.36, 80, 150);
+    this.hasStoredSettings = true;
+    saveRainSettings(this.settings);
+    this.applySettings();
+  }
+
+  setQuality(qualityPreset) {
+    if (!RAIN_QUALITY_COUNTS[qualityPreset]) return;
+    const nextCount = RAIN_QUALITY_COUNTS[qualityPreset];
+    this.qualityPreset = qualityPreset;
+    if (nextCount !== this.count) {
+      const previousGeometry = this.geometry;
+      this.geometry = this.createGeometry(nextCount);
+      this.rain.geometry = this.geometry;
+      previousGeometry.dispose();
+      this.count = nextCount;
+    }
+    this.applySettings();
+  }
+
+  updateSettings(partialSettings, persist = true) {
+    const next = { ...this.settings };
+    const numericRanges = {
+      intensity: [0, 1],
+      fallSpeed: [5, 100],
+      dropLength: [0.2, 4],
+      windX: [-20, 20],
+      windZ: [-20, 20],
+      volumeWidth: [30, 220],
+      volumeHeight: [20, 160],
+      volumeDepth: [30, 220],
+    };
+    Object.entries(partialSettings || {}).forEach(([key, value]) => {
+      if (!(key in next)) return;
+      if (key === 'enabled') next.enabled = Boolean(value);
+      else if (numericRanges[key] && Number.isFinite(Number(value))) {
+        next[key] = THREE.MathUtils.clamp(
+          Number(value),
+          numericRanges[key][0],
+          numericRanges[key][1],
+        );
+      }
+    });
+    this.settings = next;
+    this.applySettings();
+    if (persist) saveRainSettings(this.settings);
+    return this.getState();
+  }
+
+  applySettings() {
+    const settings = this.settings;
+    this.material.uniforms.uVolumeSize.value.set(
+      settings.volumeWidth,
+      settings.volumeHeight,
+      settings.volumeDepth,
+    );
+    this.material.uniforms.uWind.value.set(settings.windX, settings.windZ);
+    this.material.uniforms.uFallSpeed.value = settings.fallSpeed;
+    this.material.uniforms.uDropLength.value = settings.dropLength;
+    this.material.uniforms.uIntensity.value = settings.intensity;
+    this.geometry.instanceCount = Math.round(this.count * settings.intensity);
+    this.rain.visible = settings.enabled && settings.intensity > 0 && this.type === 'rain';
+  }
+
+  setFog(color, density) {
+    this.material.uniforms.uFogColor.value.copy(color);
+    this.material.uniforms.uFogDensity.value = density;
   }
 
   setWeather(type) {
     this.type = type;
-    this.rain.visible = type === 'rain';
+    this.applySettings();
     if (this.onWeatherChange) this.onWeatherChange(type);
   }
 
+  resetSettings() {
+    this.settings = { ...RAIN_DEFAULTS };
+    this.hasStoredSettings = false;
+    saveRainSettings(this.settings);
+    this.applySettings();
+    return this.getState();
+  }
+
   update(deltaTime) {
-    if (this.type !== 'rain') return;
+    if (!this.rain.visible) return;
+    this.time += deltaTime;
+    const matrix = this.camera.matrixWorld.elements;
+    this.cameraRight.set(matrix[0], matrix[1], matrix[2]).normalize();
+    this.material.uniforms.uTime.value = this.time;
+    this.material.uniforms.uRainCenter.value.copy(this.camera.position);
+    this.material.uniforms.uCameraRight.value.copy(this.cameraRight);
+  }
 
-    const halfWidth = this.volume.width * 0.5;
-    const halfDepth = this.volume.depth * 0.5;
-    const bottom = Math.max(0.15, this.camera.position.y - this.volume.height * 0.44);
-    const top = bottom + this.volume.height;
-
-    for (let index = 0; index < this.count; index += 1) {
-      const offset = index * 3;
-      const speed = this.speeds[index];
-      this.positions[offset] += speed * 0.14 * deltaTime;
-      this.positions[offset + 1] -= speed * deltaTime;
-      this.positions[offset + 2] += speed * 0.035 * deltaTime;
-
-      const outsideHorizontalVolume = Math.abs(this.positions[offset] - this.camera.position.x) > halfWidth
-        || Math.abs(this.positions[offset + 2] - this.camera.position.z) > halfDepth;
-      const outsideVerticalVolume = this.positions[offset + 1] < bottom
-        || this.positions[offset + 1] > top;
-
-      if (outsideHorizontalVolume) {
-        this.respawnParticle(index, true);
-      } else if (outsideVerticalVolume) {
-        this.respawnParticle(index, false);
-      }
-    }
-
-    this.rain.geometry.getAttribute('instancePosition').needsUpdate = true;
+  getState() {
+    return {
+      ...this.settings,
+      dropCount: this.geometry.instanceCount,
+      maximumDropCount: this.count,
+      drawCalls: this.rain.visible ? 1 : 0,
+      qualityPreset: this.qualityPreset,
+      instanceBufferUploadsPerFrame: 0,
+    };
   }
 
   dispose() {
     this.scene.remove(this.rain);
-    this.rain.geometry.dispose();
-    this.rain.material.dispose();
+    this.geometry.dispose();
+    this.material.dispose();
+    this.rain = null;
   }
 }
 
@@ -487,11 +617,6 @@ class WalkController {
 
   handleKeyDown(event) {
     const key = event.key.toLowerCase();
-    if (this.enabled && key === 'escape' && document.pointerLockElement !== this.canvas) {
-      event.preventDefault();
-      if (this.onExitRequest) this.onExitRequest();
-      return;
-    }
     if (!this.enabled || !['w', 'a', 's', 'd', 'shift'].includes(key)) return;
     event.preventDefault();
     this.keys.add(key);
@@ -584,9 +709,10 @@ export class CityWorld {
     this.lightingSystem = new LightingSystem(this.scene);
     this.environmentLightingSystem = new EnvironmentLightingSystem(this.renderer, this.scene);
     this.environmentSetupDuration = 0;
-    this.weatherSystem = new WeatherSystem(
+    this.rainSystem = new RainSystem(
       this.scene,
       this.camera,
+      this.qualityPresetName,
       this.onWeatherChange,
     );
     this.walkController = new WalkController(
@@ -735,6 +861,7 @@ export class CityWorld {
           this.scene.add(this.loadedModel);
           try {
             this.boundsInfo = this.fitModelToView(this.loadedModel);
+            this.rainSystem.configureForModel(this.boundsInfo);
             this.modelStats = this.collectModelStats(this.loadedModel);
             if (this.onStats) this.onStats(this.getStats());
             resolve(this.loadedModel);
@@ -904,6 +1031,7 @@ export class CityWorld {
     this.scene.fog.density = settings.fogEnabled
       ? settings.fogDensityFactor / Math.max(this.modelDiagonal, 1)
       : 0;
+    this.rainSystem.setFog(this.scene.fog.color, this.scene.fog.density);
     this.renderer.toneMappingExposure = settings.exposure;
     this.lightingSystem.setMode('night', settings);
 
@@ -974,6 +1102,23 @@ export class CityWorld {
       fogDensity: this.scene.fog.density,
       modelDiagonal: this.modelDiagonal,
     };
+  }
+
+  updateRainSettings(partialSettings, persist = true) {
+    const state = this.rainSystem.updateSettings(partialSettings, persist);
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  resetRainSettings() {
+    this.rainSystem.resetSettings();
+    this.rainSystem.configureForModel(this.boundsInfo);
+    if (!this.active) this.renderOnce();
+    return this.rainSystem.getState();
+  }
+
+  getRainRenderingState() {
+    return this.rainSystem.getState();
   }
 
   preuploadTextures() {
@@ -1120,7 +1265,7 @@ export class CityWorld {
     } else {
       this.controls.update();
     }
-    this.weatherSystem.update(deltaTime);
+    this.rainSystem.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
     this.updatePerformance(now);
     if (this.active && !this.disposed && !document.hidden) {
@@ -1239,6 +1384,7 @@ export class CityWorld {
     this.qualityPresetName = presetName;
     this.configurePixelRatioLevels(true);
     this.applyQualitySettings();
+    this.rainSystem.setQuality(presetName);
     this.lowFpsSamples = 0;
     this.highFpsSamples = 0;
     this.lastResolutionAdjustment = performance.now();
@@ -1325,8 +1471,7 @@ export class CityWorld {
         near: this.camera.near,
         far: this.camera.far,
       },
-      rainCount: this.weatherSystem.count,
-      rainVolume: this.weatherSystem.volume,
+      rainRendering: this.rainSystem.getState(),
       fogDensity: this.scene.fog.density,
       nightRendering: this.getNightRenderingState(),
       bounds: this.boundsInfo,
@@ -1374,7 +1519,7 @@ export class CityWorld {
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     this.walkController.dispose();
     this.controls.dispose();
-    this.weatherSystem.dispose();
+    this.rainSystem.dispose();
     this.lightingSystem.dispose();
     this.environmentLightingSystem.dispose();
     this.disposeSceneResources();
@@ -1390,8 +1535,9 @@ export const CITY_WORLD_CONFIG = Object.freeze({
   fogColor: FOG_COLOR,
   nightDefaults: NIGHT_RENDER_DEFAULTS,
   nightSettingsStorageKey: NIGHT_SETTINGS_STORAGE_KEY,
-  rainCount: RAIN_COUNT,
-  rainVolume: RAIN_VOLUME,
+  rainDefaults: RAIN_DEFAULTS,
+  rainQualityCounts: RAIN_QUALITY_COUNTS,
+  rainSettingsStorageKey: RAIN_SETTINGS_STORAGE_KEY,
   renderSettings: CITY_RENDER_SETTINGS,
   qualityPresets: CITY_QUALITY_PRESETS,
 });

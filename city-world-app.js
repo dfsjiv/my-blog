@@ -13,6 +13,10 @@
     performanceOutput: document.getElementById('cityWorldPerformanceOutput'),
     nightPanel: document.getElementById('cityWorldNightPanel'),
     nightReset: document.getElementById('cityWorldNightReset'),
+    rainPanel: document.getElementById('cityWorldRainPanel'),
+    rainReset: document.getElementById('cityWorldRainReset'),
+    rainSummary: document.getElementById('cityWorldRainSummary'),
+    panelExit: document.getElementById('cityWorldPanelExit'),
   };
 
   if (!elements.icon || !elements.overlay || !elements.canvas) return;
@@ -28,11 +32,17 @@
   let iconDragRegistered = false;
   let enterStartedAt = 0;
   let nightSettingsSaveTimer = null;
+  let rainSettingsSaveTimer = null;
   let debugPanelInteraction = false;
+  let ignoreEscapeUntil = 0;
 
   const nightControls = Array.from(document.querySelectorAll('[data-night-setting]'));
   const nightOutputs = new Map(Array.from(document.querySelectorAll('[data-night-output]')).map(
     (output) => [output.dataset.nightOutput, output],
+  ));
+  const rainControls = Array.from(document.querySelectorAll('[data-rain-setting]'));
+  const rainOutputs = new Map(Array.from(document.querySelectorAll('[data-rain-output]')).map(
+    (output) => [output.dataset.rainOutput, output],
   ));
 
   function setIconSelected(selected) {
@@ -126,6 +136,7 @@
     const clipping = stats.cameraClipping || {};
     const modelSize = stats.bounds?.size || {};
     const materialAudit = stats.materialAudit || {};
+    const rain = stats.rainRendering || {};
     elements.performanceOutput.textContent = [
       `FPS: ${stats.fps}`,
       `Frame: ${stats.frameTime.toFixed(1)} ms`,
@@ -146,7 +157,10 @@
       `Model Diagonal: ${(stats.bounds?.diagonal || 0).toFixed(1)}`,
       `Fog Density: ${Number(stats.fogDensity || 0).toExponential(3)}`,
       `Emissive: ${materialAudit.emissive || 0} / ${materialAudit.emissiveEnhanced || 0}`,
+      `Rain: ${rain.dropCount || 0} / ${rain.maximumDropCount || 0}`,
+      `Rain Draw Calls: ${rain.drawCalls || 0}`,
     ].join('\n');
+    updateRainSummary(rain);
   }
 
   function syncNightControls(settings) {
@@ -174,6 +188,43 @@
     nightSettingsSaveTimer = window.setTimeout(() => {
       nightSettingsSaveTimer = null;
       if (world?.initialized) world.updateNightSettings({}, true);
+    }, 180);
+  }
+
+  function syncRainControls(settings) {
+    if (!settings) return;
+    rainControls.forEach((control) => {
+      const key = control.dataset.rainSetting;
+      if (!(key in settings)) return;
+      if (control.type === 'checkbox') control.checked = Boolean(settings[key]);
+      else control.value = settings[key];
+      const output = rainOutputs.get(key);
+      if (output) output.value = Number(settings[key]).toFixed(key.startsWith('volume') ? 0 : 2);
+    });
+    updateRainSummary(settings);
+  }
+
+  function updateRainSummary(settings) {
+    if (!elements.rainSummary || !settings) return;
+    elements.rainSummary.value = [
+      `雨滴：${settings.dropCount} / ${settings.maximumDropCount}`,
+      `绘制调用：${settings.drawCalls}`,
+      `质量档位：${settings.qualityPreset}`,
+    ].join('\n');
+  }
+
+  function applyRainControl(control, persist) {
+    if (!world?.initialized) return;
+    const key = control.dataset.rainSetting;
+    const value = control.type === 'checkbox' ? control.checked : control.value;
+    syncRainControls(world.updateRainSettings({ [key]: value }, persist));
+  }
+
+  function scheduleRainSettingsSave() {
+    window.clearTimeout(rainSettingsSaveTimer);
+    rainSettingsSaveTimer = window.setTimeout(() => {
+      rainSettingsSaveTimer = null;
+      if (world?.initialized) world.updateRainSettings({}, true);
     }, 180);
   }
 
@@ -207,6 +258,7 @@
       });
       return world.init().then((initializedWorld) => {
         syncNightControls(initializedWorld.getNightRenderingState());
+        syncRainControls(initializedWorld.getRainRenderingState());
         return initializedWorld;
       });
     }).catch((error) => {
@@ -223,6 +275,8 @@
     if (isEntering || isWorldActive || isExiting) return;
 
     isEntering = true;
+    debugPanelInteraction = false;
+    ignoreEscapeUntil = 0;
     enterStartedAt = performance.now();
     uiSnapshot = captureUiState();
     setIconSelected(false);
@@ -275,7 +329,11 @@
 
     if (pointerLockWasOwned) {
       pointerLockWasOwned = false;
-      if (!debugPanelInteraction && !isExiting && isOverlayOpen) exitCityWorld();
+      if (!isExiting && isOverlayOpen) {
+        debugPanelInteraction = true;
+        ignoreEscapeUntil = performance.now() + 400;
+        elements.nightPanel?.setAttribute('open', '');
+      }
     }
   }
 
@@ -290,6 +348,18 @@
       return;
     }
     if (event.key !== 'Escape' || !isOverlayOpen || isExiting) return;
+    if (performance.now() < ignoreEscapeUntil) {
+      event.preventDefault();
+      return;
+    }
+    if (!debugPanelInteraction || pointerLockWasOwned || document.pointerLockElement === elements.canvas) {
+      debugPanelInteraction = true;
+      pointerLockWasOwned = false;
+      ignoreEscapeUntil = performance.now() + 400;
+      if (document.pointerLockElement === elements.canvas) document.exitPointerLock();
+      elements.nightPanel?.setAttribute('open', '');
+      return;
+    }
     if (document.pointerLockElement !== elements.canvas) exitCityWorld();
   }
 
@@ -323,6 +393,7 @@
     if (event.target === elements.desktopSurface) setIconSelected(false);
   });
   elements.returnButton.addEventListener('click', exitCityWorld);
+  elements.panelExit?.addEventListener('click', exitCityWorld);
   elements.canvas.addEventListener('pointerdown', () => {
     if (!isWorldActive || document.pointerLockElement === elements.canvas) return;
     debugPanelInteraction = false;
@@ -339,10 +410,22 @@
     if (!world?.initialized) return;
     syncNightControls(world.resetNightSettings());
   });
+  rainControls.forEach((control) => {
+    control.addEventListener('input', () => {
+      applyRainControl(control, false);
+      scheduleRainSettingsSave();
+    });
+    control.addEventListener('change', () => applyRainControl(control, true));
+  });
+  elements.rainReset?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncRainControls(world.resetRainSettings());
+  });
   document.addEventListener('pointerlockchange', handlePointerLockChange);
   window.addEventListener('keydown', handleEscape, true);
   window.addEventListener('pagehide', () => {
     window.clearTimeout(nightSettingsSaveTimer);
+    window.clearTimeout(rainSettingsSaveTimer);
     if (world) world.dispose();
   }, { once: true });
 

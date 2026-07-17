@@ -1408,6 +1408,28 @@ body.city-world-active .desktop-shell {
   background: #1d3850;
 }
 
+.city-world-rain-summary {
+  color: #9ecbff;
+  font: 10px/1.45 Consolas, "Segoe UI", monospace;
+  white-space: pre-line;
+}
+
+.city-world-panel-exit {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 10px;
+  color: #ffffff;
+  background: #0d65a8;
+  border: 1px solid #1686d9;
+  border-radius: 0;
+  font: 12px "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.city-world-panel-exit:hover,
+.city-world-panel-exit:focus-visible {
+  background: #1176bf;
+}
+
 .city-world-loading {
   position: absolute;
   inset: 0;
