@@ -16,6 +16,15 @@
     rainPanel: document.getElementById('cityWorldRainPanel'),
     rainReset: document.getElementById('cityWorldRainReset'),
     rainSummary: document.getElementById('cityWorldRainSummary'),
+    wetPanel: document.getElementById('cityWorldWetPanel'),
+    wetReset: document.getElementById('cityWorldWetReset'),
+    wetSummary: document.getElementById('cityWorldWetSummary'),
+    wetInspectorPanel: document.getElementById('cityWorldWetInspectorPanel'),
+    wetCandidates: document.getElementById('cityWorldWetCandidates'),
+    wetAutoSelect: document.getElementById('cityWorldWetAutoSelect'),
+    wetClearSelection: document.getElementById('cityWorldWetClearSelection'),
+    wetSaveSelection: document.getElementById('cityWorldWetSaveSelection'),
+    wetRestoreSelection: document.getElementById('cityWorldWetRestoreSelection'),
     panelExit: document.getElementById('cityWorldPanelExit'),
   };
 
@@ -33,6 +42,7 @@
   let enterStartedAt = 0;
   let nightSettingsSaveTimer = null;
   let rainSettingsSaveTimer = null;
+  let wetSettingsSaveTimer = null;
   let debugPanelInteraction = false;
   let ignoreEscapeUntil = 0;
 
@@ -43,6 +53,10 @@
   const rainControls = Array.from(document.querySelectorAll('[data-rain-setting]'));
   const rainOutputs = new Map(Array.from(document.querySelectorAll('[data-rain-output]')).map(
     (output) => [output.dataset.rainOutput, output],
+  ));
+  const wetControls = Array.from(document.querySelectorAll('[data-wet-setting]'));
+  const wetOutputs = new Map(Array.from(document.querySelectorAll('[data-wet-output]')).map(
+    (output) => [output.dataset.wetOutput, output],
   ));
 
   function setIconSelected(selected) {
@@ -137,6 +151,7 @@
     const modelSize = stats.bounds?.size || {};
     const materialAudit = stats.materialAudit || {};
     const rain = stats.rainRendering || {};
+    const wet = stats.wetSurfaceRendering || {};
     elements.performanceOutput.textContent = [
       `FPS: ${stats.fps}`,
       `Frame: ${stats.frameTime.toFixed(1)} ms`,
@@ -157,10 +172,15 @@
       `Model Diagonal: ${(stats.bounds?.diagonal || 0).toFixed(1)}`,
       `Fog Density: ${Number(stats.fogDensity || 0).toExponential(3)}`,
       `Emissive: ${materialAudit.emissive || 0} / ${materialAudit.emissiveEnhanced || 0}`,
+      `Materials S/P/B: ${materialAudit.standard || 0} / ${materialAudit.physical || 0} / ${materialAudit.basic || 0}`,
+      `Maps R/N/M: ${materialAudit.roughnessMap || 0} / ${materialAudit.normalMap || 0} / ${materialAudit.metalnessMap || 0}`,
       `Rain: ${rain.dropCount || 0} / ${rain.maximumDropCount || 0}`,
       `Rain Draw Calls: ${rain.drawCalls || 0}`,
+      `Wet Surfaces: ${wet.selectedSurfaceCount || 0} / ${wet.candidateCount || 0}`,
+      `Wet Materials: ${wet.clonedMaterialCount || 0}`,
     ].join('\n');
     updateRainSummary(rain);
+    updateWetSummary(wet);
   }
 
   function syncNightControls(settings) {
@@ -228,6 +248,120 @@
     }, 180);
   }
 
+  function syncWetControls(settings) {
+    if (!settings) return;
+    wetControls.forEach((control) => {
+      const key = control.dataset.wetSetting;
+      if (!(key in settings)) return;
+      if (control.type === 'checkbox') control.checked = Boolean(settings[key]);
+      else control.value = settings[key];
+      const output = wetOutputs.get(key);
+      if (output) output.value = Number(settings[key]).toFixed(2);
+    });
+    updateWetSummary(settings);
+  }
+
+  function updateWetSummary(settings) {
+    if (!elements.wetSummary || !settings) return;
+    elements.wetSummary.value = [
+      `有效湿润度：${Number(settings.effectiveWetness || 0).toFixed(2)}`,
+      `已选表面：${settings.selectedSurfaceCount || 0} / ${settings.candidateCount || 0}`,
+      `克隆材质：${settings.clonedMaterialCount || 0}`,
+      `Physical / Standard：${settings.physicalMaterialCount || 0} / ${settings.standardMaterialCount || 0}`,
+      `湿润 Shader 类型：${settings.wetShaderPrograms || 0}`,
+      `共享材质候选：${settings.sharedMaterialConflicts || 0}`,
+      `湿润绘制调用差值：${settings.wetDrawCallDifference || 0}`,
+    ].join('\n');
+  }
+
+  function applyWetControl(control, persist) {
+    if (!world?.initialized) return;
+    const key = control.dataset.wetSetting;
+    const value = control.type === 'checkbox' ? control.checked : control.value;
+    syncWetControls(world.updateWetSurfaceSettings({ [key]: value }, persist));
+  }
+
+  function scheduleWetSettingsSave() {
+    window.clearTimeout(wetSettingsSaveTimer);
+    wetSettingsSaveTimer = window.setTimeout(() => {
+      wetSettingsSaveTimer = null;
+      if (world?.initialized) world.updateWetSurfaceSettings({}, true);
+    }, 180);
+  }
+
+  function renderWetCandidates() {
+    if (!elements.wetCandidates || !world?.initialized) return;
+    const candidates = world.getWetSurfaceCandidates();
+    const fragment = document.createDocumentFragment();
+
+    if (candidates.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'city-world-wet-empty';
+      empty.textContent = '没有检测到符合条件的道路或地面候选。';
+      fragment.append(empty);
+    }
+
+    candidates.forEach((candidate) => {
+      const item = document.createElement('article');
+      item.className = 'city-world-wet-candidate';
+      item.classList.toggle('is-selected', candidate.selected);
+
+      const title = document.createElement('label');
+      title.className = 'city-world-wet-candidate-title';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = candidate.selected;
+      checkbox.setAttribute('aria-label', `将 ${candidate.meshName} 作为湿润表面`);
+      const name = document.createElement('span');
+      name.textContent = candidate.meshName;
+      name.title = candidate.path;
+      const score = document.createElement('output');
+      score.value = `评分 ${candidate.score}`;
+      title.append(checkbox, name, score);
+
+      const info = document.createElement('p');
+      info.className = 'city-world-wet-candidate-info';
+      info.textContent = [
+        `材质：${candidate.materialName} (${candidate.materialType})`,
+        `底部高度：${candidate.relativeBottom.toFixed(2)}  XZ面积：${candidate.xzArea.toFixed(1)}`,
+        `包围盒：${candidate.bounds.min.map((value) => value.toFixed(1)).join(', ')} → ${candidate.bounds.max.map((value) => value.toFixed(1)).join(', ')}`,
+        `水平面：${Math.round(candidate.horizontalRatio * 100)}%  粗糙度：${Number(candidate.roughness).toFixed(2)}  金属度：${Number(candidate.metalness).toFixed(2)}`,
+        `贴图：粗糙度 ${candidate.hasRoughnessMap ? '有' : '无'} / 法线 ${candidate.hasNormalMap ? '有' : '无'}  共享材质：${candidate.sharedMaterial ? '是' : '否'}`,
+        `依据：${candidate.reasons.join('、')}`,
+        `路径：${candidate.path}`,
+      ].join('\n');
+
+      const actions = document.createElement('div');
+      actions.className = 'city-world-wet-candidate-actions';
+      const focusButton = document.createElement('button');
+      focusButton.type = 'button';
+      focusButton.textContent = '定位查看';
+      const highlightButton = document.createElement('button');
+      highlightButton.type = 'button';
+      highlightButton.textContent = world.getWetSurfaceState()?.highlightedPath === candidate.path
+        ? '取消高亮'
+        : '临时高亮';
+      actions.append(focusButton, highlightButton);
+
+      checkbox.addEventListener('change', () => {
+        world.selectWetSurface(candidate.path, checkbox.checked, false);
+        syncWetControls(world.getWetSurfaceState());
+        scheduleWetSettingsSave();
+        renderWetCandidates();
+      });
+      focusButton.addEventListener('click', () => world.focusWetSurface(candidate.path));
+      highlightButton.addEventListener('click', () => {
+        world.highlightWetSurface(candidate.path);
+        renderWetCandidates();
+      });
+
+      item.append(title, info, actions);
+      fragment.append(item);
+    });
+
+    elements.wetCandidates.replaceChildren(fragment);
+  }
+
   function createWorld() {
     if (worldPromise) return worldPromise;
 
@@ -259,6 +393,8 @@
       return world.init().then((initializedWorld) => {
         syncNightControls(initializedWorld.getNightRenderingState());
         syncRainControls(initializedWorld.getRainRenderingState());
+        syncWetControls(initializedWorld.getWetSurfaceState());
+        renderWetCandidates();
         return initializedWorld;
       });
     }).catch((error) => {
@@ -421,11 +557,43 @@
     if (!world?.initialized) return;
     syncRainControls(world.resetRainSettings());
   });
+  wetControls.forEach((control) => {
+    control.addEventListener('input', () => {
+      applyWetControl(control, false);
+      scheduleWetSettingsSave();
+    });
+    control.addEventListener('change', () => applyWetControl(control, true));
+  });
+  elements.wetReset?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncWetControls(world.resetWetSurfaceSettings());
+    renderWetCandidates();
+  });
+  elements.wetAutoSelect?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncWetControls(world.autoSelectWetSurfaces());
+    renderWetCandidates();
+  });
+  elements.wetClearSelection?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncWetControls(world.clearWetSurfaces());
+    renderWetCandidates();
+  });
+  elements.wetSaveSelection?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncWetControls(world.saveWetSurfaceSelection());
+  });
+  elements.wetRestoreSelection?.addEventListener('click', () => {
+    if (!world?.initialized) return;
+    syncWetControls(world.restoreDefaultWetSurfaces());
+    renderWetCandidates();
+  });
   document.addEventListener('pointerlockchange', handlePointerLockChange);
   window.addEventListener('keydown', handleEscape, true);
   window.addEventListener('pagehide', () => {
     window.clearTimeout(nightSettingsSaveTimer);
     window.clearTimeout(rainSettingsSaveTimer);
+    window.clearTimeout(wetSettingsSaveTimer);
     if (world) world.dispose();
   }, { once: true });
 

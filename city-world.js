@@ -38,6 +38,19 @@ const RAIN_QUALITY_COUNTS = Object.freeze({
   high: 20000,
   ultra: 32000,
 });
+const WET_SURFACE_STORAGE_KEY = 'my-blog.city-world.wet-surfaces.v1';
+const WET_SURFACE_DEFAULTS = Object.freeze({
+  enabled: true,
+  wetness: 0.65,
+  wetRoughnessTarget: 0.28,
+  wetColorFactor: 0.88,
+  clearcoat: 0.45,
+  clearcoatRoughness: 0.22,
+  autoWetnessFromRain: true,
+  rainWetnessInfluence: 0.2,
+});
+const ROAD_NAME_PATTERN = /road|street|ground|asphalt|pavement|side[_\s-]?walk|curb|floor|lane|decal|stain/i;
+const NON_ROAD_NAME_PATTERN = /roof|wall|facade|glass|window|door|foliage|bark|grass|lamp|sign|sky|solar|firescape|trash/i;
 const PERFORMANCE_UPDATE_INTERVAL = 500;
 const DYNAMIC_RESOLUTION_SAMPLE_INTERVAL = 2000;
 const DYNAMIC_RESOLUTION_COOLDOWN = 5000;
@@ -147,6 +160,58 @@ function saveRainSettings(settings) {
     localStorage.setItem(RAIN_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (error) {
     console.warn('City rain settings could not be saved.');
+  }
+}
+
+function loadWetSurfaceSettings() {
+  try {
+    const raw = localStorage.getItem(WET_SURFACE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== 'object') {
+      return {
+        settings: { ...WET_SURFACE_DEFAULTS },
+        selectedPaths: null,
+      };
+    }
+    const settings = { ...WET_SURFACE_DEFAULTS };
+    const ranges = {
+      wetness: [0, 1],
+      wetRoughnessTarget: [0.08, 1],
+      wetColorFactor: [0.65, 1],
+      clearcoat: [0, 1],
+      clearcoatRoughness: [0.05, 0.6],
+      rainWetnessInfluence: [0, 0.5],
+    };
+    Object.keys(settings).forEach((key) => {
+      const value = parsed.settings?.[key];
+      if (typeof settings[key] === 'boolean' && typeof value === 'boolean') {
+        settings[key] = value;
+      } else if (ranges[key] && Number.isFinite(value)) {
+        settings[key] = Math.min(ranges[key][1], Math.max(ranges[key][0], value));
+      }
+    });
+    return {
+      settings,
+      selectedPaths: Array.isArray(parsed.selectedPaths)
+        ? parsed.selectedPaths.filter((path) => typeof path === 'string')
+        : null,
+    };
+  } catch (error) {
+    return {
+      settings: { ...WET_SURFACE_DEFAULTS },
+      selectedPaths: null,
+    };
+  }
+}
+
+function saveWetSurfaceSettings(settings, selectedPaths) {
+  try {
+    localStorage.setItem(WET_SURFACE_STORAGE_KEY, JSON.stringify({
+      settings,
+      selectedPaths: Array.from(selectedPaths),
+    }));
+  } catch (error) {
+    console.warn('City wet surface settings could not be saved.');
   }
 }
 
@@ -268,6 +333,540 @@ class EnvironmentLightingSystem {
     this.pmremGenerator?.dispose();
     this.renderTarget = null;
     this.environmentTexture = null;
+  }
+}
+
+class WetSurfaceSystem {
+  constructor(root, modelBounds, qualityPreset, rainIntensity) {
+    this.root = root;
+    this.modelBounds = modelBounds;
+    this.qualityPreset = qualityPreset;
+    this.rainIntensity = rainIntensity;
+    const stored = loadWetSurfaceSettings();
+    this.settings = stored.settings;
+    this.selectedPaths = new Set();
+    this.candidates = [];
+    this.candidatesByPath = new Map();
+    this.materialUsage = new Map();
+    this.records = new Map();
+    this.defaultSelectedPaths = new Set();
+    this.highlightedPath = null;
+    this.highlightMaterials = [];
+    this.highlightPreviousMaterial = null;
+    this.sharedMaterialConflicts = 0;
+    this.tempBox = new THREE.Box3();
+    this.tempSize = new THREE.Vector3();
+    this.tempNormal = new THREE.Vector3();
+    this.normalMatrix = new THREE.Matrix3();
+    this.analyzeCandidates();
+
+    const initialPaths = stored.selectedPaths === null
+      ? this.defaultSelectedPaths
+      : new Set(stored.selectedPaths.filter((path) => this.candidatesByPath.has(path)));
+    initialPaths.forEach((path) => this.selectSurface(path, true, false));
+    this.applyWetness();
+    if (stored.selectedPaths === null) this.save();
+  }
+
+  getStablePath(object) {
+    const segments = [];
+    let current = object;
+    while (current && current !== this.root) {
+      const siblings = current.parent?.children || [];
+      const siblingIndex = siblings.indexOf(current);
+      segments.push(`${current.name || current.type || 'node'}[${siblingIndex}]`);
+      current = current.parent;
+    }
+    return `/${segments.reverse().join('/')}`;
+  }
+
+  collectMaterialUsage() {
+    this.root.traverse((object) => {
+      if (!object.isMesh) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        if (!material) return;
+        if (!this.materialUsage.has(material)) this.materialUsage.set(material, new Set());
+        this.materialUsage.get(material).add(object);
+      });
+    });
+  }
+
+  getHorizontalRatio(mesh) {
+    const normals = mesh.geometry?.attributes?.normal;
+    if (!normals || normals.count === 0) return 0;
+    this.normalMatrix.getNormalMatrix(mesh.matrixWorld);
+    const step = Math.max(1, Math.floor(normals.count / 192));
+    let horizontal = 0;
+    let sampled = 0;
+    for (let index = 0; index < normals.count; index += step) {
+      this.tempNormal.fromBufferAttribute(normals, index)
+        .applyNormalMatrix(this.normalMatrix)
+        .normalize();
+      if (this.tempNormal.y > 0.72) horizontal += 1;
+      sampled += 1;
+    }
+    return sampled > 0 ? horizontal / sampled : 0;
+  }
+
+  analyzeCandidates() {
+    this.root.updateWorldMatrix(true, true);
+    this.collectMaterialUsage();
+    const modelSize = this.modelBounds.size;
+    const modelArea = Math.max(modelSize.x * modelSize.z, 0.001);
+    const bottomBand = Math.max(modelSize.y * 0.1, 0.5);
+
+    this.root.traverse((mesh) => {
+      if (!mesh.isMesh || !mesh.geometry) return;
+      const materials = (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+        .filter(Boolean);
+      const pbrMaterials = materials.filter(
+        (material) => material.isMeshStandardMaterial || material.isMeshPhysicalMaterial,
+      );
+      if (pbrMaterials.length === 0) return;
+
+      this.tempBox.setFromObject(mesh);
+      if (this.tempBox.isEmpty()) return;
+      this.tempBox.getSize(this.tempSize);
+      const xzArea = this.tempSize.x * this.tempSize.z;
+      const areaRatio = xzArea / modelArea;
+      const relativeBottom = this.tempBox.min.y - this.modelBounds.centeredBox.min.y;
+      const horizontalRatio = this.getHorizontalRatio(mesh);
+      const materialNames = materials.map((material) => material.name || '').join(' ');
+      const searchableName = `${mesh.name || ''} ${materialNames}`;
+      const hasRoadNameSignal = ROAD_NAME_PATTERN.test(searchableName);
+      const hasNonRoadNameSignal = NON_ROAD_NAME_PATTERN.test(searchableName);
+      const reasons = [];
+      let score = 0;
+
+      if (relativeBottom <= bottomBand) {
+        score += 28;
+        reasons.push('位于模型底部区域');
+      }
+      if (areaRatio >= 0.004) {
+        score += 18;
+        reasons.push('XZ 覆盖面积较大');
+      }
+      if (areaRatio >= 0.02) score += 12;
+      if (horizontalRatio >= 0.68) {
+        score += 28;
+        reasons.push('主要为朝上的水平表面');
+      } else if (horizontalRatio >= 0.4) {
+        score += 12;
+        reasons.push('包含较多水平表面');
+      }
+      if (hasRoadNameSignal) {
+        score += 22;
+        reasons.push('节点或材质名称包含道路辅助信号');
+      }
+      if (hasNonRoadNameSignal) {
+        score -= 32;
+        reasons.push('名称包含建筑或非道路信号');
+      }
+      if (this.tempSize.y > Math.max(this.tempSize.x, this.tempSize.z) * 0.8) {
+        score -= 18;
+        reasons.push('垂直尺寸偏大');
+      }
+      if (score < 38) return;
+
+      const path = this.getStablePath(mesh);
+      const sharedMaterial = materials.some(
+        (material) => (this.materialUsage.get(material)?.size || 0) > 1,
+      );
+      const candidate = {
+        path,
+        mesh,
+        meshName: mesh.name || '(未命名 Mesh)',
+        materialName: materialNames || '(未命名材质)',
+        materialType: Array.from(new Set(materials.map((material) => material.type))).join(', '),
+        bounds: {
+          min: this.tempBox.min.toArray(),
+          max: this.tempBox.max.toArray(),
+        },
+        relativeBottom,
+        xzArea,
+        horizontalRatio,
+        score,
+        reasons,
+        sharedMaterial,
+        roughness: pbrMaterials[0].roughness,
+        metalness: pbrMaterials[0].metalness,
+        hasRoughnessMap: pbrMaterials.some((material) => Boolean(material.roughnessMap)),
+        hasNormalMap: pbrMaterials.some((material) => Boolean(material.normalMap)),
+      };
+      this.candidates.push(candidate);
+      this.candidatesByPath.set(path, candidate);
+      const maximumMetalness = Math.max(...pbrMaterials.map(
+        (material) => Number.isFinite(material.metalness) ? material.metalness : 0,
+      ));
+      if (score >= 70
+        && relativeBottom <= bottomBand
+        && hasRoadNameSignal
+        && !hasNonRoadNameSignal
+        && maximumMetalness < 0.5) {
+        this.defaultSelectedPaths.add(path);
+      }
+      if (sharedMaterial) this.sharedMaterialConflicts += 1;
+    });
+
+    this.candidates.sort((a, b) => b.score - a.score || b.xzArea - a.xzArea);
+    console.info('City wet surface candidate audit:', {
+      candidates: this.candidates.length,
+      highConfidence: this.defaultSelectedPaths.size,
+      sharedMaterialConflicts: this.sharedMaterialConflicts,
+    });
+  }
+
+  copyStandardToPhysical(source) {
+    const target = new THREE.MeshPhysicalMaterial();
+    THREE.Material.prototype.copy.call(target, source);
+    target.name = `${source.name || 'material'}__wet`;
+    target.color.copy(source.color);
+    target.roughness = source.roughness;
+    target.metalness = source.metalness;
+    target.map = source.map;
+    target.lightMap = source.lightMap;
+    target.lightMapIntensity = source.lightMapIntensity;
+    target.aoMap = source.aoMap;
+    target.aoMapIntensity = source.aoMapIntensity;
+    target.emissive.copy(source.emissive);
+    target.emissiveIntensity = source.emissiveIntensity;
+    target.emissiveMap = source.emissiveMap;
+    target.bumpMap = source.bumpMap;
+    target.bumpScale = source.bumpScale;
+    target.normalMap = source.normalMap;
+    target.normalMapType = source.normalMapType;
+    if (source.normalScale) target.normalScale.copy(source.normalScale);
+    target.displacementMap = source.displacementMap;
+    target.displacementScale = source.displacementScale;
+    target.displacementBias = source.displacementBias;
+    target.roughnessMap = source.roughnessMap;
+    target.metalnessMap = source.metalnessMap;
+    target.alphaMap = source.alphaMap;
+    target.envMap = source.envMap;
+    if (source.envMapRotation) target.envMapRotation.copy(source.envMapRotation);
+    target.envMapIntensity = source.envMapIntensity;
+    target.wireframe = source.wireframe;
+    target.wireframeLinewidth = source.wireframeLinewidth;
+    target.flatShading = source.flatShading;
+    target.fog = source.fog;
+    return target;
+  }
+
+  createWetMaterial(source) {
+    const usePhysical = (this.qualityPreset === 'high' || this.qualityPreset === 'ultra')
+      && source.isMeshStandardMaterial;
+    const material = usePhysical
+      ? this.copyStandardToPhysical(source)
+      : source.clone();
+    material.name = `${source.name || 'material'}__wet`;
+    return {
+      material,
+      source,
+      originalColor: source.color?.clone() || null,
+      originalRoughness: Number.isFinite(source.roughness) ? source.roughness : 1,
+      originalMetalness: Number.isFinite(source.metalness) ? source.metalness : 0,
+      originalEnvMapIntensity: Number.isFinite(source.envMapIntensity)
+        ? source.envMapIntensity
+        : 1,
+      originalClearcoat: Number.isFinite(source.clearcoat) ? source.clearcoat : 0,
+      originalClearcoatRoughness: Number.isFinite(source.clearcoatRoughness)
+        ? source.clearcoatRoughness
+        : 0,
+    };
+  }
+
+  ensureRecord(path) {
+    if (this.records.has(path)) return this.records.get(path);
+    const candidate = this.candidatesByPath.get(path);
+    if (!candidate) return null;
+    const sourceMaterials = Array.isArray(candidate.mesh.material)
+      ? candidate.mesh.material
+      : [candidate.mesh.material];
+    const materialStates = sourceMaterials.map((material) => this.createWetMaterial(material));
+    const record = {
+      path,
+      mesh: candidate.mesh,
+      originalMaterial: candidate.mesh.material,
+      wetMaterial: Array.isArray(candidate.mesh.material)
+        ? materialStates.map((state) => state.material)
+        : materialStates[0].material,
+      materialStates,
+      active: false,
+    };
+    this.records.set(path, record);
+    return record;
+  }
+
+  getEffectiveWetness() {
+    if (!this.settings.enabled) return 0;
+    const rainContribution = this.settings.autoWetnessFromRain
+      ? this.rainIntensity * this.settings.rainWetnessInfluence
+      : 0;
+    return THREE.MathUtils.clamp(this.settings.wetness + rainContribution, 0, 1);
+  }
+
+  applyRecord(record, wetness) {
+    if (!record.active) {
+      record.mesh.material = record.originalMaterial;
+      return;
+    }
+    if (wetness <= 0.0001) {
+      record.mesh.material = record.originalMaterial;
+      return;
+    }
+    record.mesh.material = record.wetMaterial;
+    const qualityClearcoat = this.qualityPreset === 'ultra'
+      ? 1.12
+      : (this.qualityPreset === 'high' ? 1 : 0);
+    record.materialStates.forEach((state) => {
+      const material = state.material;
+      material.roughness = THREE.MathUtils.lerp(
+        state.originalRoughness,
+        this.settings.wetRoughnessTarget,
+        wetness,
+      );
+      material.metalness = state.originalMetalness;
+      if (state.originalColor && material.color) {
+        material.color.copy(state.originalColor).multiplyScalar(
+          THREE.MathUtils.lerp(1, this.settings.wetColorFactor, wetness),
+        );
+      }
+      if (Number.isFinite(material.envMapIntensity)) {
+        material.envMapIntensity = state.originalEnvMapIntensity * (1 + wetness * 0.3);
+      }
+      if (material.isMeshPhysicalMaterial) {
+        material.clearcoat = THREE.MathUtils.lerp(
+          state.originalClearcoat,
+          this.settings.clearcoat * qualityClearcoat,
+          wetness,
+        );
+        material.clearcoatRoughness = THREE.MathUtils.lerp(
+          state.originalClearcoatRoughness,
+          this.settings.clearcoatRoughness,
+          wetness,
+        );
+      }
+    });
+  }
+
+  applyWetness() {
+    const wetness = this.getEffectiveWetness();
+    this.records.forEach((record) => this.applyRecord(record, wetness));
+  }
+
+  selectSurface(path, selected, persist = true) {
+    this.clearHighlight();
+    const candidate = this.candidatesByPath.get(path);
+    if (!candidate) return false;
+    const record = this.ensureRecord(path);
+    record.active = Boolean(selected);
+    if (selected) this.selectedPaths.add(path);
+    else this.selectedPaths.delete(path);
+    this.applyRecord(record, this.getEffectiveWetness());
+    if (persist) this.save();
+    return true;
+  }
+
+  replaceSelection(paths, persist = true) {
+    this.clearHighlight();
+    const nextPaths = new Set(Array.from(paths).filter((path) => this.candidatesByPath.has(path)));
+    this.records.forEach((record, path) => {
+      record.active = nextPaths.has(path);
+      this.applyRecord(record, this.getEffectiveWetness());
+    });
+    nextPaths.forEach((path) => {
+      const record = this.ensureRecord(path);
+      record.active = true;
+      this.applyRecord(record, this.getEffectiveWetness());
+    });
+    this.selectedPaths = nextPaths;
+    if (persist) this.save();
+  }
+
+  autoSelect() {
+    this.replaceSelection(this.defaultSelectedPaths, true);
+    return this.getState();
+  }
+
+  restoreDefaultSelection() {
+    this.replaceSelection(this.defaultSelectedPaths, true);
+    return this.getState();
+  }
+
+  clearSelection() {
+    this.replaceSelection([], true);
+    return this.getState();
+  }
+
+  updateSettings(partialSettings, persist = true) {
+    const next = { ...this.settings };
+    const ranges = {
+      wetness: [0, 1],
+      wetRoughnessTarget: [0.08, 1],
+      wetColorFactor: [0.65, 1],
+      clearcoat: [0, 1],
+      clearcoatRoughness: [0.05, 0.6],
+      rainWetnessInfluence: [0, 0.5],
+    };
+    Object.entries(partialSettings || {}).forEach(([key, value]) => {
+      if (!(key in next)) return;
+      if (key === 'enabled' || key === 'autoWetnessFromRain') next[key] = Boolean(value);
+      else if (ranges[key] && Number.isFinite(Number(value))) {
+        next[key] = THREE.MathUtils.clamp(Number(value), ranges[key][0], ranges[key][1]);
+      }
+    });
+    this.settings = next;
+    this.applyWetness();
+    if (persist) this.save();
+    return this.getState();
+  }
+
+  setRainIntensity(intensity) {
+    const nextIntensity = THREE.MathUtils.clamp(Number(intensity) || 0, 0, 1);
+    if (Math.abs(nextIntensity - this.rainIntensity) < 0.02) return;
+    this.rainIntensity = nextIntensity;
+    if (this.settings.autoWetnessFromRain) this.applyWetness();
+  }
+
+  setQuality(qualityPreset) {
+    if (qualityPreset === this.qualityPreset) return;
+    this.clearHighlight();
+    this.qualityPreset = qualityPreset;
+    this.records.forEach((record) => {
+      record.mesh.material = record.originalMaterial;
+      record.materialStates.forEach((state) => state.material.dispose());
+    });
+    const selected = new Set(this.selectedPaths);
+    this.records.clear();
+    selected.forEach((path) => {
+      const record = this.ensureRecord(path);
+      record.active = true;
+    });
+    this.applyWetness();
+  }
+
+  highlightCandidate(path) {
+    if (this.highlightedPath === path) {
+      this.clearHighlight();
+      return false;
+    }
+    this.clearHighlight();
+    const candidate = this.candidatesByPath.get(path);
+    if (!candidate) return false;
+    this.highlightPreviousMaterial = candidate.mesh.material;
+    const sourceMaterials = Array.isArray(candidate.mesh.material)
+      ? candidate.mesh.material
+      : [candidate.mesh.material];
+    this.highlightMaterials = sourceMaterials.map(() => new THREE.MeshBasicMaterial({
+      color: 0x00d7ff,
+      transparent: true,
+      opacity: 0.72,
+      depthTest: true,
+      depthWrite: false,
+    }));
+    candidate.mesh.material = Array.isArray(candidate.mesh.material)
+      ? this.highlightMaterials
+      : this.highlightMaterials[0];
+    this.highlightedPath = path;
+    return true;
+  }
+
+  clearHighlight() {
+    if (!this.highlightedPath) return;
+    const candidate = this.candidatesByPath.get(this.highlightedPath);
+    if (candidate) candidate.mesh.material = this.highlightPreviousMaterial;
+    this.highlightMaterials.forEach((material) => material.dispose());
+    this.highlightMaterials = [];
+    this.highlightPreviousMaterial = null;
+    this.highlightedPath = null;
+  }
+
+  getCandidateView(path) {
+    const candidate = this.candidatesByPath.get(path);
+    if (!candidate) return null;
+    const box = new THREE.Box3(
+      new THREE.Vector3().fromArray(candidate.bounds.min),
+      new THREE.Vector3().fromArray(candidate.bounds.max),
+    );
+    return {
+      center: box.getCenter(new THREE.Vector3()),
+      size: box.getSize(new THREE.Vector3()),
+    };
+  }
+
+  resetSettings() {
+    this.settings = { ...WET_SURFACE_DEFAULTS };
+    this.applyWetness();
+    this.save();
+    return this.getState();
+  }
+
+  save() {
+    saveWetSurfaceSettings(this.settings, this.selectedPaths);
+  }
+
+  getCandidates() {
+    return this.candidates.map((candidate) => ({
+      path: candidate.path,
+      meshName: candidate.meshName,
+      materialName: candidate.materialName,
+      materialType: candidate.materialType,
+      bounds: candidate.bounds,
+      relativeBottom: candidate.relativeBottom,
+      xzArea: candidate.xzArea,
+      horizontalRatio: candidate.horizontalRatio,
+      score: candidate.score,
+      reasons: candidate.reasons,
+      sharedMaterial: candidate.sharedMaterial,
+      roughness: candidate.roughness,
+      metalness: candidate.metalness,
+      hasRoughnessMap: candidate.hasRoughnessMap,
+      hasNormalMap: candidate.hasNormalMap,
+      selected: this.selectedPaths.has(candidate.path),
+    }));
+  }
+
+  getState() {
+    let clonedMaterialCount = 0;
+    let physicalMaterialCount = 0;
+    let standardMaterialCount = 0;
+    const wetShaderTypes = new Set();
+    this.records.forEach((record) => {
+      clonedMaterialCount += record.materialStates.length;
+      record.materialStates.forEach((state) => {
+        wetShaderTypes.add(state.material.type);
+        if (state.material.isMeshPhysicalMaterial) physicalMaterialCount += 1;
+        else if (state.material.isMeshStandardMaterial) standardMaterialCount += 1;
+      });
+    });
+    return {
+      ...this.settings,
+      effectiveWetness: this.getEffectiveWetness(),
+      candidateCount: this.candidates.length,
+      highConfidenceCount: this.defaultSelectedPaths.size,
+      selectedSurfaceCount: this.selectedPaths.size,
+      clonedMaterialCount,
+      physicalMaterialCount,
+      standardMaterialCount,
+      wetShaderPrograms: wetShaderTypes.size,
+      sharedMaterialConflicts: this.sharedMaterialConflicts,
+      wetDrawCallDifference: 0,
+      highlightedPath: this.highlightedPath,
+      qualityPreset: this.qualityPreset,
+    };
+  }
+
+  dispose() {
+    this.clearHighlight();
+    this.records.forEach((record) => {
+      record.mesh.material = record.originalMaterial;
+      record.materialStates.forEach((state) => state.material.dispose());
+    });
+    this.records.clear();
+    this.candidates.length = 0;
+    this.candidatesByPath.clear();
+    this.materialUsage.clear();
   }
 }
 
@@ -747,6 +1346,7 @@ export class CityWorld {
       this.qualityPresetName,
       this.onWeatherChange,
     );
+    this.wetSurfaceSystem = null;
     this.walkController = new WalkController(
       this.camera,
       this.canvas,
@@ -850,6 +1450,12 @@ export class CityWorld {
     if (this.onStatus) this.onStatus('preparing-textures');
     await this.waitForBrowserFrame();
     this.auditModelResources();
+    this.wetSurfaceSystem = new WetSurfaceSystem(
+      this.loadedModel,
+      this.boundsInfo,
+      this.qualityPresetName,
+      this.rainSystem.settings.enabled ? this.rainSystem.settings.intensity : 0,
+    );
     this.applyQualitySettings();
     this.preuploadTextures();
 
@@ -1138,6 +1744,7 @@ export class CityWorld {
 
   updateRainSettings(partialSettings, persist = true) {
     const state = this.rainSystem.updateSettings(partialSettings, persist);
+    this.wetSurfaceSystem?.setRainIntensity(state.enabled ? state.intensity : 0);
     if (!this.active) this.renderOnce();
     return state;
   }
@@ -1145,12 +1752,84 @@ export class CityWorld {
   resetRainSettings() {
     this.rainSystem.resetSettings();
     this.rainSystem.configureForModel(this.boundsInfo);
+    const state = this.rainSystem.getState();
+    this.wetSurfaceSystem?.setRainIntensity(state.enabled ? state.intensity : 0);
     if (!this.active) this.renderOnce();
-    return this.rainSystem.getState();
+    return state;
   }
 
   getRainRenderingState() {
     return this.rainSystem.getState();
+  }
+
+  updateWetSurfaceSettings(partialSettings, persist = true) {
+    const state = this.wetSurfaceSystem.updateSettings(partialSettings, persist);
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  resetWetSurfaceSettings() {
+    const state = this.wetSurfaceSystem.resetSettings();
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  getWetSurfaceState() {
+    return this.wetSurfaceSystem?.getState() || null;
+  }
+
+  getWetSurfaceCandidates() {
+    return this.wetSurfaceSystem?.getCandidates() || [];
+  }
+
+  selectWetSurface(path, selected, persist = false) {
+    const changed = this.wetSurfaceSystem?.selectSurface(path, selected, persist) || false;
+    if (changed && !this.active) this.renderOnce();
+    return changed;
+  }
+
+  autoSelectWetSurfaces() {
+    const state = this.wetSurfaceSystem.autoSelect();
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  restoreDefaultWetSurfaces() {
+    const state = this.wetSurfaceSystem.restoreDefaultSelection();
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  clearWetSurfaces() {
+    const state = this.wetSurfaceSystem.clearSelection();
+    if (!this.active) this.renderOnce();
+    return state;
+  }
+
+  saveWetSurfaceSelection() {
+    this.wetSurfaceSystem.save();
+    return this.wetSurfaceSystem.getState();
+  }
+
+  highlightWetSurface(path) {
+    const highlighted = this.wetSurfaceSystem.highlightCandidate(path);
+    if (!this.active) this.renderOnce();
+    return highlighted;
+  }
+
+  focusWetSurface(path) {
+    const view = this.wetSurfaceSystem.getCandidateView(path);
+    if (!view) return false;
+    this.setMode('orbit');
+    const radius = Math.max(view.size.length() * 0.65, this.modelDiagonal * 0.025);
+    this.controls.target.copy(view.center);
+    this.camera.position.copy(view.center).add(new THREE.Vector3(
+      radius * 0.8,
+      radius * 0.65,
+      radius,
+    ));
+    this.controls.update();
+    return true;
   }
 
   preuploadTextures() {
@@ -1417,6 +2096,7 @@ export class CityWorld {
     this.configurePixelRatioLevels(true);
     this.applyQualitySettings();
     this.rainSystem.setQuality(presetName);
+    this.wetSurfaceSystem?.setQuality(presetName);
     this.lowFpsSamples = 0;
     this.highFpsSamples = 0;
     this.lastResolutionAdjustment = performance.now();
@@ -1504,6 +2184,7 @@ export class CityWorld {
         far: this.camera.far,
       },
       rainRendering: this.rainSystem.getState(),
+      wetSurfaceRendering: this.wetSurfaceSystem?.getState() || null,
       fogDensity: this.scene.fog.density,
       nightRendering: this.getNightRenderingState(),
       bounds: this.boundsInfo,
@@ -1552,6 +2233,8 @@ export class CityWorld {
     this.walkController.dispose();
     this.controls.dispose();
     this.rainSystem.dispose();
+    this.wetSurfaceSystem?.dispose();
+    this.wetSurfaceSystem = null;
     this.lightingSystem.dispose();
     this.environmentLightingSystem.dispose();
     this.disposeSceneResources();
@@ -1570,6 +2253,8 @@ export const CITY_WORLD_CONFIG = Object.freeze({
   rainDefaults: RAIN_DEFAULTS,
   rainQualityCounts: RAIN_QUALITY_COUNTS,
   rainSettingsStorageKey: RAIN_SETTINGS_STORAGE_KEY,
+  wetSurfaceDefaults: WET_SURFACE_DEFAULTS,
+  wetSurfaceStorageKey: WET_SURFACE_STORAGE_KEY,
   renderSettings: CITY_RENDER_SETTINGS,
   qualityPresets: CITY_QUALITY_PRESETS,
 });

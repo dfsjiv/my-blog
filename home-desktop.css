@@ -1414,6 +1414,94 @@ body.city-world-active .desktop-shell {
   white-space: pre-line;
 }
 
+.city-world-wet-inspector {
+  display: grid;
+  gap: 8px;
+  padding-top: 9px;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.city-world-wet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.city-world-wet-actions button,
+.city-world-wet-candidate-actions button {
+  min-height: 27px;
+  color: #eaf4ff;
+  background: #142536;
+  border: 1px solid rgba(143, 201, 255, 0.4);
+  border-radius: 0;
+  font: 10px "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.city-world-wet-actions button:hover,
+.city-world-wet-actions button:focus-visible,
+.city-world-wet-candidate-actions button:hover,
+.city-world-wet-candidate-actions button:focus-visible {
+  background: #1d3850;
+}
+
+.city-world-wet-candidates {
+  display: grid;
+  gap: 5px;
+  max-height: 280px;
+  overflow: auto;
+  scrollbar-color: #55738d #091522;
+}
+
+.city-world-wet-empty {
+  margin: 0;
+  color: #a9bfd3;
+  font-size: 11px;
+}
+
+.city-world-wet-candidate {
+  padding: 6px;
+  background: rgba(10, 25, 39, 0.75);
+  border: 1px solid rgba(129, 169, 207, 0.25);
+}
+
+.city-world-wet-candidate.is-selected {
+  border-left: 3px solid #1686d9;
+}
+
+.city-world-wet-candidate-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  color: #ecf6ff;
+  font-size: 11px;
+}
+
+.city-world-wet-candidate-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-world-wet-candidate-title output {
+  color: #8fc9ff;
+  font: 10px Consolas, monospace;
+}
+
+.city-world-wet-candidate-info {
+  margin: 5px 0;
+  color: #a9bfd3;
+  font: 9px/1.45 Consolas, "Microsoft YaHei", monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.city-world-wet-candidate-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
 .city-world-panel-exit {
   width: 100%;
   min-height: 30px;

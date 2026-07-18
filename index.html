@@ -434,6 +434,33 @@ Camera: --, --, --</pre>
           <button id="cityWorldRainReset" type="button">恢复默认雨水参数</button>
         </div>
       </details>
+      <details class="city-world-night-panel" id="cityWorldWetPanel">
+        <summary>湿润表面渲染</summary>
+        <div class="city-world-night-controls">
+          <label class="city-world-night-toggle"><input type="checkbox" data-wet-setting="enabled" /> 启用湿润表面</label>
+          <label>湿润程度 <output data-wet-output="wetness"></output><input type="range" min="0" max="1" step="0.05" data-wet-setting="wetness" /></label>
+          <label>湿润粗糙度目标 <output data-wet-output="wetRoughnessTarget"></output><input type="range" min="0.08" max="1" step="0.02" data-wet-setting="wetRoughnessTarget" /></label>
+          <label>基础色压暗系数 <output data-wet-output="wetColorFactor"></output><input type="range" min="0.65" max="1" step="0.01" data-wet-setting="wetColorFactor" /></label>
+          <label>清漆层强度 <output data-wet-output="clearcoat"></output><input type="range" min="0" max="1" step="0.05" data-wet-setting="clearcoat" /></label>
+          <label>清漆层粗糙度 <output data-wet-output="clearcoatRoughness"></output><input type="range" min="0.05" max="0.6" step="0.01" data-wet-setting="clearcoatRoughness" /></label>
+          <label class="city-world-night-toggle"><input type="checkbox" data-wet-setting="autoWetnessFromRain" /> 雨量自动影响湿润程度</label>
+          <label>雨量影响系数 <output data-wet-output="rainWetnessInfluence"></output><input type="range" min="0" max="0.5" step="0.02" data-wet-setting="rainWetnessInfluence" /></label>
+          <output class="city-world-rain-summary" id="cityWorldWetSummary"></output>
+          <button id="cityWorldWetReset" type="button">恢复默认湿润参数</button>
+        </div>
+      </details>
+      <details class="city-world-night-panel" id="cityWorldWetInspectorPanel">
+        <summary>湿润表面检查器</summary>
+        <div class="city-world-wet-inspector">
+          <div class="city-world-wet-actions">
+            <button id="cityWorldWetAutoSelect" type="button">自动选择高置信候选</button>
+            <button id="cityWorldWetClearSelection" type="button">清除全部选择</button>
+            <button id="cityWorldWetSaveSelection" type="button">保存选择</button>
+            <button id="cityWorldWetRestoreSelection" type="button">恢复默认选择</button>
+          </div>
+          <div class="city-world-wet-candidates" id="cityWorldWetCandidates" aria-live="polite"></div>
+        </div>
+      </details>
       <button class="city-world-panel-exit" id="cityWorldPanelExit" type="button">返回桌面</button>
     </aside>
     <div class="city-world-loading" id="cityWorldLoading" role="status" aria-live="polite">
