@@ -38,7 +38,7 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
-  <link rel="stylesheet" href="elegant-shell.css" />
+  <link rel="stylesheet" href="knowledge-site.css" />
   <link rel="stylesheet" href="contest-center.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
   <script type="importmap">
@@ -89,200 +89,184 @@
     </div>
   </main>
 
-  <section class="elegant-shell" id="elegantShell" aria-label="高雅人士版本" aria-hidden="true">
-    <div class="portal-background" data-hero-background aria-hidden="true"></div>
-    <header class="elegant-header">
-      <nav class="elegant-navbar" aria-label="高雅人士版主导航">
-        <button class="elegant-brand" type="button" data-portal-scroll="portalHome" aria-label="返回首页">
-          <span class="elegant-brand-mark" aria-hidden="true">D</span>
-          <span>dfsjiv</span>
+  <section class="knowledge-site" id="elegantShell" aria-label="Lee Ethan 个人知识站" aria-hidden="true">
+    <div class="knowledge-backdrop" data-knowledge-background aria-hidden="true"></div>
+
+    <header class="knowledge-header">
+      <nav class="knowledge-nav" aria-label="知识站主导航">
+        <button class="knowledge-brand" type="button" data-knowledge-route="home">
+          <span class="knowledge-brand-mark" aria-hidden="true">LE</span>
+          <span><strong>Lee Ethan</strong><small>KNOWLEDGE</small></span>
         </button>
 
-        <div class="elegant-nav-menu" id="elegantNavMenu">
-          <button class="elegant-nav-link is-active" type="button" data-portal-scroll="portalHome" aria-current="page">
-            <span class="elegant-nav-icon" aria-hidden="true">⌂</span>
-            <span>首页</span>
-          </button>
-          <a class="elegant-nav-link" href="blog.html"><span class="elegant-nav-icon" aria-hidden="true">▤</span><span>博客</span></a>
-          <button class="elegant-nav-link" type="button" data-portal-scroll="portalProjects"><span class="elegant-nav-icon" aria-hidden="true">◇</span><span>项目</span></button>
-          <button class="elegant-nav-link" type="button" data-portal-scroll="portalActivities"><span class="elegant-nav-icon" aria-hidden="true">○</span><span>动态</span></button>
-          <button class="elegant-nav-link" type="button" data-portal-scroll="portalAbout"><span class="elegant-nav-icon" aria-hidden="true">ⓘ</span><span>关于</span></button>
-          <button class="elegant-nav-link" type="button" data-portal-action="desktop"><span class="elegant-nav-icon" aria-hidden="true">▣</span><span>Web OS</span></button>
+        <div class="knowledge-nav-links" id="knowledgeNavLinks">
+          <button class="is-active" type="button" data-knowledge-route="home">首页</button>
+          <button type="button" data-knowledge-route="all">全部文章</button>
+          <button type="button" data-knowledge-route="solutions">算法题解</button>
+          <button type="button" data-knowledge-route="notes">学习笔记</button>
+          <button type="button" data-knowledge-route="projects">项目记录</button>
+          <button type="button" data-knowledge-route="archives">归档</button>
+          <button type="button" data-knowledge-route="about">关于</button>
         </div>
 
-        <div class="elegant-nav-tools">
-          <button class="elegant-tool-button" id="portalSearchButton" type="button" aria-label="搜索（待接入）" title="搜索（待接入）">⌕</button>
-          <button class="elegant-tool-button" id="portalThemeToggle" type="button" aria-label="切换主题" title="切换主题">☾</button>
-          <details class="portal-user-menu">
-            <summary aria-label="打开用户菜单">
-              <span class="portal-user-avatar" data-avatar aria-hidden="true">U</span>
-              <span id="portalNavUserName">用户</span>
-            </summary>
-            <div class="portal-user-menu-panel">
-              <strong id="portalMenuUserName">用户</strong>
-              <span id="portalMenuUserRole">当前用户</span>
-              <button type="button" disabled>个人设置（待接入）</button>
-              <button type="button" data-portal-action="desktop">返回 Web OS</button>
-              <button type="button" id="portalLogoutButton">退出登录</button>
-              <button type="button" id="elegantVersionSwitch">切换版本</button>
+        <div class="knowledge-nav-actions">
+          <button class="knowledge-icon-button" id="knowledgeSearchButton" type="button" aria-label="打开搜索">⌕</button>
+          <button class="knowledge-icon-button" id="knowledgeThemeButton" type="button" aria-label="切换主题">◐</button>
+          <details class="knowledge-author-tools" id="knowledgeAuthorTools" hidden>
+            <summary>写文章</summary>
+            <div>
+              <button type="button" data-knowledge-route="writer">写文章</button>
+              <button type="button" data-knowledge-route="drafts">草稿箱</button>
+              <button type="button" data-knowledge-route="manage">文章管理</button>
             </div>
           </details>
+          <details class="knowledge-account-menu">
+            <summary aria-label="打开账户菜单"><span id="knowledgeAccountInitial">U</span></summary>
+            <div>
+              <strong id="knowledgeAccountName">当前用户</strong>
+              <small>已登录账户</small>
+              <button type="button" data-knowledge-action="desktop">返回 Web OS</button>
+              <button type="button" id="elegantVersionSwitch">切换版本</button>
+              <button type="button" id="knowledgeLogoutButton">退出登录</button>
+            </div>
+          </details>
+          <button class="knowledge-menu-toggle" id="knowledgeMenuToggle" type="button" aria-label="打开导航菜单" aria-expanded="false">☰</button>
         </div>
-
-        <button class="elegant-menu-toggle" id="elegantMenuToggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="elegantNavMenu">☰</button>
       </nav>
     </header>
 
-    <main class="elegant-main" id="elegantHome" aria-label="高雅人士版内容">
-      <section class="portal-hero" id="portalHome">
-        <div class="portal-hero-copy">
-          <span class="portal-eyebrow">PERSONAL DIGITAL SPACE</span>
-          <h1>你好，我是 <span id="portalHeroUserName">用户</span></h1>
-          <p class="portal-hero-intro">这里是个人内容、技术记录与数字项目的统一入口。</p>
-          <p class="portal-hero-status"><span aria-hidden="true"></span> 页面框架建设中，内容将在后续逐步接入</p>
-          <div class="portal-hero-actions">
-            <button class="portal-button is-primary" type="button" data-portal-action="desktop">进入 Web OS</button>
-            <a class="portal-button" href="blog.html">浏览博客</a>
-            <button class="portal-text-button" type="button" data-portal-scroll="portalProjects">查看项目</button>
+    <main class="knowledge-main">
+      <section class="knowledge-home-view" id="knowledgeHomeView">
+        <section class="knowledge-intro" aria-labelledby="knowledgeSiteTitle">
+          <div class="knowledge-intro-copy">
+            <span class="knowledge-kicker">PERSONAL KNOWLEDGE BASE</span>
+            <h1 id="knowledgeSiteTitle">Lee Ethan 的知识发布站</h1>
+            <p>用于整理技术、算法、学习笔记、项目记录与思考的内容空间。当前文字与美术均为框架占位。</p>
+            <form class="knowledge-global-search" id="knowledgeHeroSearch">
+              <label>
+                <span aria-hidden="true">⌕</span>
+                <input name="keyword" type="search" placeholder="搜索文章、题解、标签或专题" autocomplete="off" />
+              </label>
+              <button type="submit">搜索</button>
+            </form>
+            <div class="knowledge-type-links" id="knowledgeTypeLinks" aria-label="内容类型快捷入口"></div>
           </div>
-          <div class="portal-social-placeholder" aria-label="社交链接占位">
-            <a href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">GitHub</a>
-            <span>其他社交链接待补充</span>
-          </div>
-        </div>
-
-        <div class="portal-hero-visual" data-character-art aria-label="角色立绘占位">
-          <div class="portal-character-placeholder">
+          <div class="knowledge-art-placeholder" data-character-art aria-label="角色插画占位">
             <span>CHARACTER ART</span>
-            <small>后续替换角色立绘</small>
+            <small>正式美术资源待替换</small>
           </div>
-          <div class="portal-hero-avatar" data-avatar aria-label="头像占位">U</div>
+        </section>
+
+        <div class="knowledge-layout">
+          <aside class="knowledge-sidebar knowledge-left-sidebar" aria-label="作者和知识导航">
+            <section class="knowledge-panel knowledge-author-card">
+              <div class="knowledge-author-avatar" data-author-avatar aria-label="Lee Ethan 头像占位">LE</div>
+              <h2>Lee Ethan</h2>
+              <p>个人简介内容待正式补充。</p>
+              <div class="knowledge-author-meta"><span>文章</span><strong>--</strong></div>
+              <a href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">GitHub</a>
+            </section>
+
+            <nav class="knowledge-panel" aria-label="内容分类">
+              <div class="knowledge-panel-heading"><h2>内容分类</h2><button type="button" data-knowledge-route="categories">全部</button></div>
+              <div class="knowledge-category-list" id="knowledgeCategoryList"></div>
+            </nav>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>知识领域</h2></div>
+              <div class="knowledge-domain-list" id="knowledgeDomainList"></div>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>外部平台</h2></div>
+              <div class="knowledge-platform-list" id="knowledgePlatformList"></div>
+            </section>
+          </aside>
+
+          <div class="knowledge-feed">
+            <section class="knowledge-feed-section" aria-labelledby="knowledgeFeaturedTitle">
+              <div class="knowledge-section-heading">
+                <div><span>FEATURED</span><h2 id="knowledgeFeaturedTitle">精选内容</h2></div>
+              </div>
+              <div class="knowledge-featured-grid" id="knowledgeFeaturedList"></div>
+            </section>
+
+            <section class="knowledge-feed-section" aria-labelledby="knowledgeLatestTitle">
+              <div class="knowledge-section-heading">
+                <div><span>LATEST</span><h2 id="knowledgeLatestTitle">最新发布</h2></div>
+                <div class="knowledge-view-toggle" aria-label="文章展示模式">
+                  <button class="is-active" id="knowledgeListView" type="button" data-view-mode="list">列表</button>
+                  <button id="knowledgeGridView" type="button" data-view-mode="grid">网格</button>
+                </div>
+              </div>
+              <div class="knowledge-post-list" id="knowledgeLatestList"></div>
+              <button class="knowledge-load-more" type="button" disabled>加载更多（待接入）</button>
+            </section>
+
+            <section class="knowledge-feed-section" aria-labelledby="knowledgeSolutionsTitle">
+              <div class="knowledge-section-heading">
+                <div><span>SOLUTIONS</span><h2 id="knowledgeSolutionsTitle">算法题解</h2></div>
+                <button type="button" data-knowledge-route="solutions">查看全部</button>
+              </div>
+              <div class="knowledge-solution-list" id="knowledgeSolutionList"></div>
+            </section>
+
+            <section class="knowledge-feed-section" aria-labelledby="knowledgeUpdatesTitle">
+              <div class="knowledge-section-heading">
+                <div><span>UPDATED</span><h2 id="knowledgeUpdatesTitle">最近更新</h2></div>
+              </div>
+              <ol class="knowledge-update-list" id="knowledgeUpdateList"></ol>
+            </section>
+          </div>
+
+          <aside class="knowledge-sidebar knowledge-right-sidebar" aria-label="搜索和站点信息">
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>站内搜索</h2></div>
+              <form class="knowledge-side-search" id="knowledgeSideSearch">
+                <input name="keyword" type="search" placeholder="输入关键词" autocomplete="off" />
+                <button type="submit">搜索</button>
+              </form>
+              <small>搜索建议区域待接入</small>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>热门专题</h2></div>
+              <div class="knowledge-topic-list" id="knowledgeTopicList"></div>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>标签云</h2><button type="button" data-knowledge-route="tags">全部</button></div>
+              <div class="knowledge-tag-cloud" id="knowledgeTagCloud"></div>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>最新归档</h2><button type="button" data-knowledge-route="archives">全部</button></div>
+              <div class="knowledge-archive-list" id="knowledgeArchivePreview"></div>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>站点统计</h2></div>
+              <dl class="knowledge-stats" id="knowledgeStats"></dl>
+            </section>
+
+            <section class="knowledge-panel">
+              <div class="knowledge-panel-heading"><h2>公告</h2></div>
+              <p>公告内容尚未接入，当前仅展示前端框架。</p>
+              <small>最后更新：--</small>
+            </section>
+          </aside>
         </div>
       </section>
 
-      <section class="portal-section portal-quick-section" aria-labelledby="portalQuickTitle">
-        <div class="portal-section-heading">
-          <div><span>QUICK ACCESS</span><h2 id="portalQuickTitle">快捷入口</h2></div>
-          <p>前往当前站点中已经存在的主要模块</p>
-        </div>
-        <div class="portal-quick-grid" id="portalQuickLinks"></div>
-      </section>
-
-      <div class="portal-layout">
-        <aside class="portal-sidebar portal-left-sidebar" aria-label="个人信息">
-          <section class="portal-card portal-profile-card" id="portalAbout">
-            <div class="portal-profile-avatar" data-avatar aria-label="头像占位">U</div>
-            <h2 id="portalProfileUserName">用户</h2>
-            <p>个人简介将在后续内容阶段补充。</p>
-            <dl class="portal-profile-details">
-              <div><dt>地区</dt><dd>待补充</dd></div>
-              <div><dt>状态</dt><dd>持续学习中</dd></div>
-            </dl>
-            <a href="https://github.com/dfsjiv" target="_blank" rel="noreferrer">访问 GitHub</a>
-          </section>
-
-          <section class="portal-card">
-            <div class="portal-card-heading"><span aria-hidden="true">!</span><h2>公告</h2></div>
-            <p>此处为公告内容占位，正式说明将在后续补充。</p>
-            <small>更新时间：待定</small>
-            <button class="portal-inline-button" type="button" disabled>了解更多</button>
-          </section>
-
-          <nav class="portal-card portal-category-card" aria-label="内容分类">
-            <div class="portal-card-heading"><span aria-hidden="true">#</span><h2>内容分类</h2></div>
-            <div id="portalCategories"></div>
-          </nav>
-
-          <section class="portal-card">
-            <div class="portal-card-heading"><span aria-hidden="true">@</span><h2>社交链接</h2></div>
-            <a class="portal-social-row" href="https://github.com/dfsjiv" target="_blank" rel="noreferrer"><span>GitHub</span><small>dfsjiv</small></a>
-            <div class="portal-social-row is-placeholder"><span>其他平台</span><small>待补充</small></div>
-          </section>
-        </aside>
-
-        <div class="portal-content">
-          <section class="portal-section portal-content-section" aria-labelledby="portalRecentTitle">
-            <div class="portal-section-heading">
-              <div><span>RECENT</span><h2 id="portalRecentTitle">最近更新</h2></div>
-              <button type="button" data-portal-action="blog">进入博客</button>
-            </div>
-            <div class="portal-post-list" id="portalPostList"></div>
-          </section>
-
-          <section class="portal-feature" aria-labelledby="portalFeatureTitle">
-            <div class="portal-feature-cover" aria-label="推荐内容封面占位"><span>FEATURE COVER</span></div>
-            <div>
-              <span class="portal-placeholder-label">占位内容</span>
-              <h2 id="portalFeatureTitle">推荐内容区域</h2>
-              <p>这里将用于展示置顶文章、专题或当前最值得关注的内容。</p>
-              <button class="portal-button" type="button" disabled>内容待接入</button>
-            </div>
-          </section>
-
-          <section class="portal-section portal-content-section" id="portalProjects" aria-labelledby="portalProjectsTitle">
-            <div class="portal-section-heading">
-              <div><span>PROJECTS</span><h2 id="portalProjectsTitle">项目展示</h2></div>
-            </div>
-            <div class="portal-project-grid" id="portalProjectList"></div>
-          </section>
-
-          <section class="portal-section portal-content-section" id="portalActivities" aria-labelledby="portalActivitiesTitle">
-            <div class="portal-section-heading">
-              <div><span>ACTIVITY</span><h2 id="portalActivitiesTitle">最新动态</h2></div>
-            </div>
-            <ol class="portal-timeline" id="portalActivityList"></ol>
-          </section>
-        </div>
-
-        <aside class="portal-sidebar portal-right-sidebar" aria-label="站点辅助信息">
-          <section class="portal-card portal-status-card">
-            <div class="portal-card-heading"><span aria-hidden="true">●</span><h2>当前状态</h2></div>
-            <dl>
-              <div><dt>在线状态</dt><dd>在线</dd></div>
-              <div><dt>正在进行</dt><dd>完善 Portal 框架</dd></div>
-              <div><dt>主要项目</dt><dd>个人 Web OS</dd></div>
-              <div><dt>最近更新</dt><dd>待接入</dd></div>
-            </dl>
-          </section>
-
-          <section class="portal-card portal-music-card">
-            <div class="portal-card-heading"><span aria-hidden="true">♪</span><h2>音乐播放器</h2></div>
-            <div class="portal-music-content">
-              <div class="portal-music-cover" aria-label="音乐封面占位">♪</div>
-              <div><strong>歌曲标题待接入</strong><small>作者信息待接入</small></div>
-            </div>
-            <div class="portal-progress" aria-label="播放进度占位"><span></span></div>
-            <div class="portal-music-controls">
-              <button type="button" disabled aria-label="播放（待接入）">▶</button>
-              <button type="button" disabled aria-label="音量（待接入）">◖</button>
-              <span>待接入</span>
-            </div>
-          </section>
-
-          <section class="portal-card">
-            <div class="portal-card-heading"><span aria-hidden="true">▥</span><h2>站点统计</h2></div>
-            <div class="portal-stats" id="portalStats"></div>
-          </section>
-
-          <section class="portal-card portal-calendar-card">
-            <div class="portal-calendar-heading"><h2 id="portalCalendarMonth">当前月份</h2><span>日历</span></div>
-            <div class="portal-calendar-week" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
-            <div class="portal-calendar-grid" id="portalCalendar"></div>
-          </section>
-
-          <section class="portal-card">
-            <div class="portal-card-heading"><span aria-hidden="true">#</span><h2>标签云</h2></div>
-            <div class="portal-tag-cloud" id="portalTagCloud"></div>
-          </section>
-        </aside>
-      </div>
+      <section class="knowledge-route-view" id="knowledgeRouteView" hidden aria-live="polite"></section>
     </main>
 
-    <footer class="portal-footer">
-      <strong>dfsjiv</strong>
-      <span>Personal Digital Space · Portal framework</span>
-      <button type="button" data-portal-scroll="portalHome">返回顶部</button>
+    <footer class="knowledge-footer">
+      <strong>Lee Ethan</strong>
+      <span>Personal Knowledge Publishing Site</span>
+      <button type="button" data-knowledge-action="top">返回顶部</button>
     </footer>
+
   </section>
 
   <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面" aria-hidden="true">
@@ -683,8 +667,9 @@ Camera: --, --, --</pre>
   <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
   <script src="auth.js"></script>
-  <script src="portal-data.js"></script>
-  <script src="elegant-shell.js"></script>
+  <script src="knowledge-data.js"></script>
+  <script src="knowledge-repository.js"></script>
+  <script src="knowledge-site.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
   <script src="contest-center.js"></script>
