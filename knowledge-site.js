@@ -1,25 +1,34 @@
 (function () {
   const THEME_KEY = 'knowledge-site-theme';
   const VIEW_MODE_KEY = 'knowledge-site-view-mode';
+  const LANGUAGE_KEY = 'knowledge-site-language';
+  const staticTextSources = new WeakMap();
+  const staticAttributeSources = new WeakMap();
   const shell = document.getElementById('elegantShell');
   const homeView = document.getElementById('knowledgeHomeView');
   const routeView = document.getElementById('knowledgeRouteView');
   const navLinks = document.getElementById('knowledgeNavLinks');
   const menuToggle = document.getElementById('knowledgeMenuToggle');
   const themeButton = document.getElementById('knowledgeThemeButton');
+  const languageButton = document.getElementById('knowledgeLanguageButton');
   const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const repository = window.KnowledgeRepository;
   const data = window.KnowledgeMockData;
-  if (!shell || !homeView || !routeView || !repository || !data) return;
+  const i18n = window.KnowledgeI18n;
+  if (!shell || !homeView || !routeView || !repository || !data || !i18n || !languageButton) return;
 
   const savedTheme = readStorage(THEME_KEY);
+  const savedLanguage = readStorage(LANGUAGE_KEY);
   const state = {
     route: 'home',
+    routePayload: {},
     viewMode: readStorage(VIEW_MODE_KEY) === 'grid' ? 'grid' : 'list',
     theme: ['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'system',
+    language: savedLanguage === 'zh' ? 'zh' : 'en',
   };
+  shell.dataset.language = state.language;
 
   function readStorage(key) {
     try {
@@ -40,8 +49,12 @@
   function element(tagName, className, text) {
     const node = document.createElement(tagName);
     if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
+    if (text !== undefined) node.textContent = t(text);
     return node;
+  }
+
+  function t(value) {
+    return i18n.translate(value, state.language);
   }
 
   function button(text, className) {
@@ -60,13 +73,13 @@
     const item = data.contentTypes.find(function (contentType) {
       return contentType.id === type;
     });
-    return item ? item.label : '内容';
+    return t(item ? item.label : '内容');
   }
 
   function setNavOpen(open) {
     navLinks.classList.toggle('is-open', Boolean(open));
     menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    menuToggle.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+    menuToggle.setAttribute('aria-label', t(open ? '关闭导航菜单' : '打开导航菜单'));
   }
 
   function closeNavigation() {
@@ -80,7 +93,7 @@
     const currentUser = user || (window.authManager && window.authManager.getCurrentUser
       ? window.authManager.getCurrentUser()
       : null);
-    const username = currentUser && currentUser.username ? currentUser.username : '当前用户';
+    const username = currentUser && currentUser.username ? currentUser.username : t('当前用户');
     const initial = username.slice(0, 1).toUpperCase() || 'U';
     const accountName = document.getElementById('knowledgeAccountName');
     const accountInitial = document.getElementById('knowledgeAccountInitial');
@@ -103,7 +116,7 @@
       dark: '主题：深色',
     };
     themeButton.textContent = state.theme === 'dark' ? '☾' : (state.theme === 'light' ? '☀' : '◐');
-    themeButton.setAttribute('aria-label', labels[state.theme] + '，点击切换');
+    themeButton.setAttribute('aria-label', t(labels[state.theme] + '，点击切换'));
     themeButton.title = themeButton.getAttribute('aria-label');
   }
 
@@ -111,6 +124,54 @@
     state.theme = state.theme === 'system' ? 'light' : (state.theme === 'light' ? 'dark' : 'system');
     writeStorage(THEME_KEY, state.theme);
     applyTheme();
+  }
+
+  function translateStaticTree() {
+    const walker = document.createTreeWalker(shell, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      const value = node.nodeValue;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      const source = staticTextSources.get(node) || trimmed;
+      if (!staticTextSources.has(node)) staticTextSources.set(node, source);
+      node.nodeValue = value.replace(trimmed, t(source));
+    });
+
+    [shell].concat(Array.from(shell.querySelectorAll('[placeholder], [aria-label], [title]'))).forEach(function (node) {
+      const sources = staticAttributeSources.get(node) || {};
+      ['placeholder', 'aria-label', 'title'].forEach(function (attribute) {
+        if (node.hasAttribute(attribute)) {
+          if (!Object.prototype.hasOwnProperty.call(sources, attribute)) {
+            sources[attribute] = node.getAttribute(attribute);
+          }
+          node.setAttribute(attribute, t(sources[attribute]));
+        }
+      });
+      staticAttributeSources.set(node, sources);
+    });
+  }
+
+  function updateLanguageButton() {
+    languageButton.textContent = state.language === 'en' ? '中文' : 'EN';
+    languageButton.setAttribute('aria-label', state.language === 'en'
+      ? 'Switch to Chinese'
+      : '切换到英文');
+    languageButton.title = state.language === 'en' ? 'Switch to Chinese' : '切换到英文';
+  }
+
+  async function toggleLanguage() {
+    state.language = state.language === 'en' ? 'zh' : 'en';
+    writeStorage(LANGUAGE_KEY, state.language);
+    shell.dataset.language = state.language;
+    translateStaticTree();
+    updateLanguageButton();
+    applyTheme();
+    refreshIdentity();
+    renderHomeStatic();
+    await renderHomeContent();
+    if (state.route !== 'home') await openRoute(state.route, state.routePayload);
   }
 
   function routeHeader(kicker, title, description) {
@@ -127,10 +188,10 @@
     const card = button('', 'knowledge-content-card');
     card.dataset.postSlug = post.slug;
     card.dataset.placeholder = String(Boolean(post.placeholder));
-    card.setAttribute('aria-label', '打开演示内容：' + post.title);
+    card.setAttribute('aria-label', t('打开演示内容：' + post.title));
 
     const cover = element('div', 'knowledge-cover-placeholder', 'COVER PLACEHOLDER');
-    cover.setAttribute('aria-label', '封面占位');
+    cover.setAttribute('aria-label', t('封面占位'));
     const body = element('div', 'knowledge-content-body');
     const top = element('div', 'knowledge-card-tags');
     top.append(
@@ -183,7 +244,7 @@
     const card = button('', 'knowledge-solution-card');
     card.dataset.postSlug = post.slug;
     card.dataset.placeholder = 'true';
-    card.setAttribute('aria-label', '打开演示题解：' + post.title);
+    card.setAttribute('aria-label', t('打开演示题解：' + post.title));
 
     const identity = element('div', 'knowledge-solution-identity');
     identity.append(
@@ -222,6 +283,10 @@
     const archives = document.getElementById('knowledgeArchivePreview');
     const stats = document.getElementById('knowledgeStats');
     const updates = document.getElementById('knowledgeUpdateList');
+    [typeLinks, categories, domains, platforms, topics, tags, archives, stats, updates]
+      .forEach(function (container) {
+        if (container) container.replaceChildren();
+      });
 
     data.contentTypes.forEach(function (contentType) {
       const item = button(contentType.label);
@@ -386,20 +451,23 @@
     const controls = element('div', 'knowledge-search-controls');
     const keyword = element('input');
     keyword.type = 'search';
-    keyword.placeholder = '关键词';
+    keyword.placeholder = t('关键词');
     keyword.value = initialFilters.keyword || '';
 
     function selectControl(label, values, initialValue) {
       const select = element('select');
-      select.appendChild(new Option(label, ''));
+      select.appendChild(new Option(t(label), ''));
       values.forEach(function (value) {
-        select.appendChild(new Option(value, value));
+        const option = typeof value === 'object' ? value : { label: value, value };
+        select.appendChild(new Option(t(option.label), option.value));
       });
       select.value = initialValue || '';
       return select;
     }
 
-    const type = selectControl('内容类型', data.contentTypes.map(function (item) { return item.id; }), initialFilters.type);
+    const type = selectControl('内容类型', data.contentTypes.map(function (item) {
+      return { label: item.label, value: item.id };
+    }), initialFilters.type);
     const category = selectControl('分类', data.categories.map(function (item) { return item.label; }), initialFilters.category);
     const tag = selectControl('标签', data.tags, initialFilters.tag);
     const platform = selectControl('OJ 平台', ['平台占位', 'Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'AcWing', '其他'], initialFilters.platform);
@@ -646,7 +714,7 @@
     body.appendChild(table);
 
     const inlineParagraph = element('p');
-    inlineParagraph.append('行内代码示例：', element('code', '', 'const value = true;'));
+    inlineParagraph.append(t('行内代码示例：'), element('code', '', 'const value = true;'));
     body.appendChild(inlineParagraph);
     const pre = element('pre');
     pre.appendChild(element('code', '', 'int main() {\n    return 0;\n}'));
@@ -719,6 +787,7 @@
   async function openRoute(route, payload) {
     const details = payload || {};
     state.route = route;
+    state.routePayload = Object.assign({}, details);
     closeNavigation();
     updateActiveNav(route);
     shell.scrollTo({ top: 0, behavior: 'smooth' });
@@ -818,6 +887,7 @@
     setNavOpen(!navLinks.classList.contains('is-open'));
   });
   themeButton.addEventListener('click', cycleTheme);
+  languageButton.addEventListener('click', toggleLanguage);
   searchButton.addEventListener('click', function () { openRoute('search', {}); });
   logoutButton.addEventListener('click', function () {
     closeNavigation();
@@ -827,6 +897,8 @@
     if (window.innerWidth > 1040) setNavOpen(false);
   });
 
+  translateStaticTree();
+  updateLanguageButton();
   renderHomeStatic();
   renderHomeContent();
   applyTheme();

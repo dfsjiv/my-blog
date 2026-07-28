@@ -177,6 +177,7 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-nav-links button,
 .knowledge-icon-button,
+.knowledge-language-button,
 .knowledge-menu-toggle,
 .knowledge-author-tools summary,
 .knowledge-author-tools div button,
@@ -224,6 +225,23 @@ body.auth-elegant .knowledge-site {
   height: 38px;
   padding: 0;
   font-size: 17px;
+}
+
+.knowledge-language-button {
+  min-width: 44px;
+  height: 34px;
+  padding: 0 8px;
+  color: var(--knowledge-primary);
+  background: var(--knowledge-primary-soft);
+  border: 0;
+  border-radius: var(--knowledge-radius-small);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.knowledge-language-button:hover,
+.knowledge-language-button:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--knowledge-primary) 55%, transparent);
 }
 
 .knowledge-menu-toggle {

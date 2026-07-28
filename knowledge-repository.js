@@ -1,5 +1,6 @@
 (function () {
   const source = window.KnowledgeMockData;
+  const i18n = window.KnowledgeI18n;
   if (!source) return;
 
   function clone(value) {
@@ -39,7 +40,12 @@
         solution.problemTitle,
         solution.difficulty,
         solution.language,
-      ].map(normalize).join(' ');
+      ].flatMap(function (value) {
+        return [
+          normalize(value),
+          normalize(i18n ? i18n.translate(value, 'en') : value),
+        ];
+      }).join(' ');
 
       if (keyword && !haystack.includes(keyword)) return false;
       if (options.type && post.type !== options.type) return false;

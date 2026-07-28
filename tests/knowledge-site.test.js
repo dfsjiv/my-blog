@@ -8,6 +8,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'knowledge-site.css'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'knowledge-site.js'), 'utf8');
 const dataSource = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
+const i18nSource = fs.readFileSync(path.join(root, 'knowledge-i18n.js'), 'utf8');
 const repositorySource = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
@@ -16,7 +17,9 @@ assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
+assert.match(html, /id="knowledgeLanguageButton"/);
 assert.match(html, /<script src="knowledge-data\.js"><\/script>/);
+assert.match(html, /<script src="knowledge-i18n\.js"><\/script>/);
 assert.match(html, /<script src="knowledge-repository\.js"><\/script>/);
 assert.match(html, /<script src="knowledge-site\.js"><\/script>/);
 assert.doesNotMatch(html, /<script src="portal-data\.js"><\/script>/);
@@ -29,6 +32,8 @@ assert.match(css, /grid-template-columns:\s*240px minmax\(0,\s*1fr\) 270px/);
 
 assert.match(script, /knowledge-site-theme/);
 assert.match(script, /knowledge-site-view-mode/);
+assert.match(script, /knowledge-site-language/);
+assert.match(script, /savedLanguage === 'zh' \? 'zh' : 'en'/);
 assert.match(script, /currentUser\.role === 'admin'/);
 assert.match(script, /Future write APIs must verify owner\/admin permission on the server/);
 assert.match(script, /debounce\(updateResults,\s*260\)/);
@@ -41,6 +46,7 @@ assert.doesNotMatch(script, /new Function/);
 const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(dataSource, context);
+vm.runInContext(i18nSource, context);
 vm.runInContext(repositorySource, context);
 
 const data = context.window.KnowledgeMockData;
@@ -57,8 +63,11 @@ assert.ok(data.posts.filter((post) => post.type === 'solution').every((post) => 
 (async function () {
   const solutions = await repository.getPosts({ type: 'solution' });
   const search = await repository.searchPosts({ keyword: 'C++' });
+  const englishSearch = await repository.searchPosts({ keyword: 'Binary Search' });
   assert.equal(solutions.length, 2);
   assert.ok(search.length >= 2);
+  assert.ok(englishSearch.length >= 1);
+  assert.equal(context.window.KnowledgeI18n.translate('首页', 'en'), 'Home');
   console.log('knowledge site tests passed');
 }()).catch((error) => {
   console.error(error);
