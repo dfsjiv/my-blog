@@ -97,13 +97,17 @@
           <span>dfsjiv</span>
         </div>
 
-        <button class="elegant-menu-toggle" id="elegantMenuToggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="elegantNavMenu">☰</button>
-
         <div class="elegant-nav-menu" id="elegantNavMenu">
-          <button class="elegant-nav-link is-active" type="button" aria-current="page">首页</button>
+          <button class="elegant-nav-link is-active" type="button" aria-current="page">
+            <span class="elegant-nav-icon" aria-hidden="true">⌂</span>
+            <span>主页</span>
+          </button>
 
           <details class="elegant-nav-group">
-            <summary>文章</summary>
+            <summary>
+              <span class="elegant-nav-icon" aria-hidden="true">▤</span>
+              <span>文章</span>
+            </summary>
             <div class="elegant-nav-submenu">
               <button type="button">归档</button>
               <button type="button">分类</button>
@@ -112,23 +116,63 @@
           </details>
 
           <details class="elegant-nav-group">
-            <summary>生活</summary>
+            <summary>
+              <span class="elegant-nav-icon" aria-hidden="true">♣</span>
+              <span>社交</span>
+            </summary>
             <div class="elegant-nav-submenu">
               <button type="button">动态</button>
+              <button type="button">朋友</button>
+            </div>
+          </details>
+
+          <details class="elegant-nav-group">
+            <summary>
+              <span class="elegant-nav-icon" aria-hidden="true">●</span>
+              <span>我的</span>
+            </summary>
+            <div class="elegant-nav-submenu">
+              <button type="button">关于我</button>
               <button type="button">相册</button>
             </div>
           </details>
 
           <details class="elegant-nav-group">
-            <summary>关于</summary>
+            <summary>
+              <span class="elegant-nav-icon" aria-hidden="true">ⓘ</span>
+              <span>关于</span>
+            </summary>
             <div class="elegant-nav-submenu">
-              <button type="button">关于我</button>
+              <button type="button">本站</button>
+              <button type="button">留言</button>
+            </div>
+          </details>
+
+          <details class="elegant-nav-group">
+            <summary>
+              <span class="elegant-nav-icon" aria-hidden="true">↗</span>
+              <span>链接</span>
+            </summary>
+            <div class="elegant-nav-submenu">
               <button type="button">友链</button>
+              <button type="button">收藏</button>
             </div>
           </details>
         </div>
 
-        <button class="elegant-version-switch" id="elegantVersionSwitch" type="button">切换版本</button>
+        <div class="elegant-nav-tools">
+          <label class="elegant-search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="搜索" aria-label="搜索" />
+          </label>
+          <button class="elegant-tool-button" type="button" aria-label="音乐" title="音乐">♪</button>
+          <button class="elegant-tool-button" type="button" aria-label="播放" title="播放">▶</button>
+          <button class="elegant-tool-button" type="button" aria-label="外观" title="外观">◉</button>
+          <button class="elegant-tool-button" type="button" aria-label="夜间模式" title="夜间模式">☾</button>
+          <button class="elegant-version-switch" id="elegantVersionSwitch" type="button">切换版本</button>
+        </div>
+
+        <button class="elegant-menu-toggle" id="elegantMenuToggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="elegantNavMenu">☰</button>
       </nav>
     </header>
     <main class="elegant-main" id="elegantHome" aria-label="高雅人士版内容"></main>

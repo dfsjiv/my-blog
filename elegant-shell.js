@@ -15,7 +15,7 @@
   });
 
   window.addEventListener('resize', function () {
-    if (window.innerWidth > 820) setMenuOpen(false);
+    if (window.innerWidth > 900) setMenuOpen(false);
   });
 
   window.elegantShell = {
