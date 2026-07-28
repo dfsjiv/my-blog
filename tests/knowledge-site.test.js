@@ -1,75 +1,88 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'knowledge-site.css'), 'utf8');
-const script = fs.readFileSync(path.join(root, 'knowledge-site.js'), 'utf8');
-const dataSource = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
-const i18nSource = fs.readFileSync(path.join(root, 'knowledge-i18n.js'), 'utf8');
-const repositorySource = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
+const site = fs.readFileSync(path.join(root, 'knowledge-site.js'), 'utf8');
+const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
+const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
+const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
-assert.match(html, /Lee Ethan 的知识发布站/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
-assert.match(html, /id="knowledgeLanguageButton"/);
-assert.match(html, /<script src="knowledge-data\.js"><\/script>/);
-assert.match(html, /<script src="knowledge-i18n\.js"><\/script>/);
-assert.match(html, /<script src="knowledge-repository\.js"><\/script>/);
-assert.match(html, /<script src="knowledge-site\.js"><\/script>/);
-assert.doesNotMatch(html, /<script src="portal-data\.js"><\/script>/);
+assert.match(html, /assets\/vendor\/knowledge\/marked\.umd\.js/);
+assert.match(html, /assets\/vendor\/knowledge\/purify\.min\.js/);
+assert.match(html, /knowledge-markdown\.js/);
+assert.ok(
+  html.indexOf('marked.umd.js') < html.indexOf('knowledge-markdown.js')
+  && html.indexOf('purify.min.js') < html.indexOf('knowledge-markdown.js')
+);
 
 assert.match(css, /--knowledge-bg:/);
-assert.match(css, /--knowledge-content-width:/);
+assert.match(css, /knowledge-loading-state/);
+assert.match(css, /knowledge-pagination/);
+assert.match(css, /knowledge-code-toolbar/);
+assert.match(css, /knowledge-toc button\.is-active/);
+assert.match(css, /max-width:\s*920px/);
+assert.match(css, /overflow-x:\s*auto/);
 assert.match(css, /prefers-color-scheme:\s*dark/);
 assert.match(css, /prefers-reduced-motion:\s*reduce/);
-assert.match(css, /grid-template-columns:\s*240px minmax\(0,\s*1fr\) 270px/);
 
-assert.match(script, /knowledge-site-theme/);
-assert.match(script, /knowledge-site-view-mode/);
-assert.match(script, /knowledge-site-language/);
-assert.match(script, /savedLanguage === 'zh' \? 'zh' : 'en'/);
-assert.match(script, /currentUser\.role === 'admin'/);
-assert.match(script, /Future write APIs must verify owner\/admin permission on the server/);
-assert.match(script, /debounce\(updateResults,\s*260\)/);
-assert.match(script, /window\.authUi\.logoutToLogin\(''\)/);
-assert.doesNotMatch(script, /innerHTML/);
-assert.doesNotMatch(script, /fetch\(/);
-assert.doesNotMatch(script, /\beval\(/);
-assert.doesNotMatch(script, /new Function/);
+assert.match(data, /placeholder:\s*true/);
+assert.doesNotMatch(html, /knowledge-data\.js/);
+assert.doesNotMatch(repository, /KnowledgeMockData/);
+assert.doesNotMatch(repository, /source\.posts/);
+assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
+assert.match(repository, /REQUEST_TIMEOUT_MS = 12000/);
+assert.match(repository, /AbortController/);
+assert.match(repository, /getPosts/);
+assert.match(repository, /getPostBySlug/);
+assert.match(repository, /getFacets/);
+assert.match(repository, /getRelatedPosts/);
+assert.match(repository, /getPostContext/);
 
-const context = { window: {} };
-vm.createContext(context);
-vm.runInContext(dataSource, context);
-vm.runInContext(i18nSource, context);
-vm.runInContext(repositorySource, context);
+assert.match(site, /knowledge-site-theme/);
+assert.match(site, /knowledge-site-language/);
+assert.match(site, /window\.history\[method\]/);
+assert.match(site, /window\.addEventListener\('popstate'/);
+assert.match(site, /URLSearchParams\(window\.location\.search\)/);
+assert.match(site, /knowledge', 'post'/);
+assert.match(site, /repository\.getPosts/);
+assert.match(site, /repository\.getFacets/);
+assert.match(site, /repository\.getPostBySlug/);
+assert.match(site, /repository\.getRelatedPosts/);
+assert.match(site, /repository\.getPostContext/);
+assert.match(site, /currentUser\(\)\.role === 'admin'/);
+assert.match(site, /debounce\(function \(\) \{[\s\S]*\}, 380\)/);
+assert.doesNotMatch(site, /data\.posts/);
+assert.doesNotMatch(site, /演示内容/);
+assert.doesNotMatch(site, /innerHTML/);
+assert.doesNotMatch(site, /\beval\(/);
+assert.doesNotMatch(site, /new Function/);
 
-const data = context.window.KnowledgeMockData;
-const repository = context.window.KnowledgeRepository;
-assert.equal(data.author.name, 'Lee Ethan');
-assert.equal(data.posts.length, 6);
-assert.deepEqual(
-  Array.from(data.posts, (post) => post.type),
-  ['article', 'article', 'solution', 'solution', 'note', 'project']
-);
-assert.ok(data.posts.every((post) => post.placeholder === true));
-assert.ok(data.posts.filter((post) => post.type === 'solution').every((post) => post.solution));
+assert.match(markdown, /markedApi\.parse/);
+assert.match(markdown, /purifier\.sanitize/);
+assert.match(markdown, /RETURN_DOM_FRAGMENT:\s*true/);
+assert.match(markdown, /FORBID_TAGS:[\s\S]*'script'[\s\S]*'iframe'[\s\S]*'object'[\s\S]*'embed'/);
+assert.match(markdown, /FORBID_ATTR:\s*\['style'\]/);
+assert.match(markdown, /noopener noreferrer/);
+assert.match(markdown, /loading = 'lazy'/);
+assert.match(markdown, /navigator\.clipboard\.writeText/);
+assert.match(markdown, /querySelectorAll\('h2, h3, h4'\)/);
+assert.doesNotMatch(markdown, /\beval\(/);
+assert.doesNotMatch(markdown, /new Function/);
 
-(async function () {
-  const solutions = await repository.getPosts({ type: 'solution' });
-  const search = await repository.searchPosts({ keyword: 'C++' });
-  const englishSearch = await repository.searchPosts({ keyword: 'Binary Search' });
-  assert.equal(solutions.length, 2);
-  assert.ok(search.length >= 2);
-  assert.ok(englishSearch.length >= 1);
-  assert.equal(context.window.KnowledgeI18n.translate('首页', 'en'), 'Home');
-  console.log('knowledge site tests passed');
-}()).catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
+  assert.equal(
+    fs.existsSync(path.join(root, 'assets', 'vendor', 'knowledge', file)),
+    true,
+    `${file} should be vendored locally`
+  );
 });
+
+console.log('knowledge site tests passed');

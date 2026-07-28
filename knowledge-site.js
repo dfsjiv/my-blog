@@ -2,6 +2,11 @@
   const THEME_KEY = 'knowledge-site-theme';
   const VIEW_MODE_KEY = 'knowledge-site-view-mode';
   const LANGUAGE_KEY = 'knowledge-site-language';
+  const PAGE_SIZE = 10;
+  const URL_KEYS = [
+    'knowledge', 'slug', 'q', 'type', 'category', 'tag', 'sort',
+    'featured', 'pinned', 'page', 'archive',
+  ];
   const staticTextSources = new WeakMap();
   const staticAttributeSources = new WeakMap();
   const shell = document.getElementById('elegantShell');
@@ -15,9 +20,10 @@
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const repository = window.KnowledgeRepository;
+  const markdown = window.KnowledgeMarkdown;
   const data = window.KnowledgeMockData;
   const i18n = window.KnowledgeI18n;
-  if (!shell || !homeView || !routeView || !repository || !data || !i18n || !languageButton) return;
+  if (!shell || !homeView || !routeView || !repository || !markdown || !data || !i18n) return;
 
   const savedTheme = readStorage(THEME_KEY);
   const savedLanguage = readStorage(LANGUAGE_KEY);
@@ -27,6 +33,10 @@
     viewMode: readStorage(VIEW_MODE_KEY) === 'grid' ? 'grid' : 'list',
     theme: ['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'system',
     language: savedLanguage === 'zh' ? 'zh' : 'en',
+    routeController: null,
+    homeController: null,
+    sectionObserver: null,
+    facets: null,
   };
   shell.dataset.language = state.language;
 
@@ -42,19 +52,26 @@
     try {
       window.localStorage.setItem(key, value);
     } catch (error) {
-      // The current page still works when storage is unavailable.
+      // Storage is an enhancement; the page remains usable without it.
     }
+  }
+
+  function t(value) {
+    return i18n.translate(value, state.language);
   }
 
   function element(tagName, className, text) {
     const node = document.createElement(tagName);
     if (className) node.className = className;
-    if (text !== undefined) node.textContent = t(text);
+    if (text !== undefined && text !== null) node.textContent = t(text);
     return node;
   }
 
-  function t(value) {
-    return i18n.translate(value, state.language);
+  function contentElement(tagName, className, text) {
+    const node = document.createElement(tagName);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
   }
 
   function button(text, className) {
@@ -63,17 +80,45 @@
     return node;
   }
 
-  function appendTags(container, tags) {
-    tags.forEach(function (tag) {
-      container.appendChild(element('span', 'knowledge-tag', tag));
-    });
+  function contentButton(text, className) {
+    const node = contentElement('button', className, text);
+    node.type = 'button';
+    return node;
   }
 
   function typeLabel(type) {
-    const item = data.contentTypes.find(function (contentType) {
-      return contentType.id === type;
+    const labels = {
+      article: '技术文章',
+      solution: '算法题解',
+      note: '学习笔记',
+      project: '项目记录',
+      essay: '思考随笔',
+    };
+    return t(labels[type] || '内容');
+  }
+
+  function tagName(tag) {
+    return typeof tag === 'string' ? tag : (tag && tag.name) || '';
+  }
+
+  function appendTags(container, tags) {
+    (tags || []).forEach(function (tag) {
+      const name = tagName(tag);
+      if (name) container.appendChild(contentElement('span', 'knowledge-tag', name));
     });
-    return t(item ? item.label : '内容');
+  }
+
+  function formatDate(value, includeTime) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat(state.language === 'zh' ? 'zh-CN' : 'en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: includeTime ? '2-digit' : undefined,
+      minute: includeTime ? '2-digit' : undefined,
+    }).format(date);
   }
 
   function setNavOpen(open) {
@@ -84,32 +129,33 @@
 
   function closeNavigation() {
     setNavOpen(false);
-    shell.querySelectorAll('.knowledge-author-tools[open], .knowledge-account-menu[open]').forEach(function (details) {
-      details.removeAttribute('open');
-    });
+    shell.querySelectorAll('.knowledge-author-tools[open], .knowledge-account-menu[open]')
+      .forEach(function (details) { details.removeAttribute('open'); });
+  }
+
+  function currentUser() {
+    return window.authManager && window.authManager.getCurrentUser
+      ? window.authManager.getCurrentUser()
+      : null;
+  }
+
+  function isAuthor() {
+    return Boolean(currentUser() && currentUser().role === 'admin');
   }
 
   function refreshIdentity(user) {
-    const currentUser = user || (window.authManager && window.authManager.getCurrentUser
-      ? window.authManager.getCurrentUser()
-      : null);
-    const username = currentUser && currentUser.username ? currentUser.username : t('当前用户');
-    const initial = username.slice(0, 1).toUpperCase() || 'U';
+    const activeUser = user || currentUser();
+    const username = activeUser && activeUser.username ? activeUser.username : t('当前用户');
     const accountName = document.getElementById('knowledgeAccountName');
     const accountInitial = document.getElementById('knowledgeAccountInitial');
     if (accountName) accountName.textContent = username;
-    if (accountInitial) accountInitial.textContent = initial;
-
-    // This only controls visibility. Future write APIs must verify owner/admin permission on the server.
-    authorTools.hidden = !(currentUser && currentUser.role === 'admin');
+    if (accountInitial) accountInitial.textContent = username.slice(0, 1).toUpperCase() || 'U';
+    authorTools.hidden = !(activeUser && activeUser.role === 'admin');
   }
 
   function applyTheme() {
-    if (state.theme === 'system') {
-      shell.removeAttribute('data-theme');
-    } else {
-      shell.dataset.theme = state.theme;
-    }
+    if (state.theme === 'system') shell.removeAttribute('data-theme');
+    else shell.dataset.theme = state.theme;
     const labels = {
       system: '主题：跟随系统',
       light: '主题：浅色',
@@ -138,27 +184,27 @@
       if (!staticTextSources.has(node)) staticTextSources.set(node, source);
       node.nodeValue = value.replace(trimmed, t(source));
     });
-
-    [shell].concat(Array.from(shell.querySelectorAll('[placeholder], [aria-label], [title]'))).forEach(function (node) {
-      const sources = staticAttributeSources.get(node) || {};
-      ['placeholder', 'aria-label', 'title'].forEach(function (attribute) {
-        if (node.hasAttribute(attribute)) {
+    [shell].concat(Array.from(shell.querySelectorAll('[placeholder], [aria-label], [title]')))
+      .forEach(function (node) {
+        const sources = staticAttributeSources.get(node) || {};
+        ['placeholder', 'aria-label', 'title'].forEach(function (attribute) {
+          if (!node.hasAttribute(attribute)) return;
           if (!Object.prototype.hasOwnProperty.call(sources, attribute)) {
             sources[attribute] = node.getAttribute(attribute);
           }
           node.setAttribute(attribute, t(sources[attribute]));
-        }
+        });
+        staticAttributeSources.set(node, sources);
       });
-      staticAttributeSources.set(node, sources);
-    });
   }
 
   function updateLanguageButton() {
     languageButton.textContent = state.language === 'en' ? '中文' : 'EN';
-    languageButton.setAttribute('aria-label', state.language === 'en'
-      ? 'Switch to Chinese'
-      : '切换到英文');
-    languageButton.title = state.language === 'en' ? 'Switch to Chinese' : '切换到英文';
+    languageButton.setAttribute(
+      'aria-label',
+      state.language === 'en' ? 'Switch to Chinese' : '切换到英文'
+    );
+    languageButton.title = languageButton.getAttribute('aria-label');
   }
 
   async function toggleLanguage() {
@@ -169,9 +215,331 @@
     updateLanguageButton();
     applyTheme();
     refreshIdentity();
-    renderHomeStatic();
-    await renderHomeContent();
-    if (state.route !== 'home') await openRoute(state.route, state.routePayload);
+    await renderCurrentRoute({ replace: true, preserveScroll: true });
+  }
+
+  function safeExternalUrl(value) {
+    const safe = markdown.safeUrl(value, false);
+    if (!safe) return null;
+    const parsed = new URL(safe, window.location.href);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? safe : null;
+  }
+
+  function coverNode(post) {
+    const cover = element('div', 'knowledge-cover-placeholder');
+    const safe = safeExternalUrl(post.coverUrl);
+    if (!safe) {
+      cover.textContent = t('暂无封面');
+      return cover;
+    }
+    const image = document.createElement('img');
+    image.src = safe;
+    image.alt = post.title;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.addEventListener('error', function () {
+      cover.replaceChildren(document.createTextNode(t('封面加载失败')));
+    }, { once: true });
+    cover.appendChild(image);
+    return cover;
+  }
+
+  function appendIf(container, label, value) {
+    if (value === null || value === undefined || value === '') return;
+    container.appendChild(contentElement('span', '', label + value));
+  }
+
+  function makeContentCard(post) {
+    const card = element('article', 'knowledge-content-card');
+    card.dataset.postSlug = post.slug;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', t('打开文章：') + post.title);
+    const body = element('div', 'knowledge-content-body');
+    const top = element('div', 'knowledge-card-tags');
+    top.appendChild(element('span', 'knowledge-type-badge', typeLabel(post.type)));
+    const tags = element('div', 'knowledge-card-tags');
+    appendTags(tags, post.tags);
+    const meta = element('div', 'knowledge-card-meta');
+    appendIf(meta, '', post.category);
+    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
+    appendIf(meta, t('更新：'), formatDate(post.updatedAt));
+    appendIf(meta, '', post.readingTimeMinutes ? post.readingTimeMinutes + ' ' + t('分钟') : '');
+    appendIf(meta, '', post.wordCount ? post.wordCount + ' ' + t('字') : '');
+    const flags = element('span', 'knowledge-card-flags');
+    if (post.isPinned) flags.appendChild(element('span', 'knowledge-state-badge', '置顶'));
+    if (post.isFeatured) flags.appendChild(element('span', 'knowledge-state-badge', '精选'));
+    meta.appendChild(flags);
+    body.append(top, contentElement('h3', '', post.title), contentElement('p', '', post.summary), tags, meta);
+    card.append(coverNode(post), body);
+    return card;
+  }
+
+  function makeFeaturedCard(post) {
+    const card = element('article', 'knowledge-featured-card');
+    card.dataset.postSlug = post.slug;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    const tags = element('div', 'knowledge-card-tags');
+    appendTags(tags, post.tags);
+    card.append(
+      element('span', 'knowledge-type-badge', typeLabel(post.type)),
+      contentElement('h3', '', post.title),
+      contentElement('p', '', post.summary),
+      tags
+    );
+    return card;
+  }
+
+  function makeSolutionCard(post) {
+    const solution = post.solution || {};
+    const card = element('article', 'knowledge-solution-card');
+    card.dataset.postSlug = post.slug;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', t('打开题解：') + post.title);
+    const identity = element('div', 'knowledge-solution-identity');
+    appendIf(identity, '', solution.platform);
+    appendIf(identity, '', solution.problemId);
+    appendIf(identity, '', solution.difficulty);
+    const body = element('div', 'knowledge-solution-body');
+    const tags = element('div', 'knowledge-card-tags');
+    appendTags(tags, solution.algorithms);
+    const meta = element('div', 'knowledge-solution-meta');
+    appendIf(meta, t('语言：'), solution.language);
+    appendIf(meta, t('时间：'), solution.timeComplexity);
+    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
+    body.append(
+      element('span', 'knowledge-type-badge', typeLabel(post.type)),
+      contentElement('h3', '', solution.problemTitle || post.title),
+      contentElement('p', '', post.summary),
+      tags,
+      meta
+    );
+    const problemUrl = safeExternalUrl(solution.problemUrl);
+    if (problemUrl) {
+      const link = element('a', 'knowledge-problem-link', '查看原题');
+      link.href = problemUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      body.appendChild(link);
+    }
+    card.append(identity, body);
+    return card;
+  }
+
+  function makeEmptyState(title, description, authorAction) {
+    const empty = element('div', 'knowledge-empty-state');
+    empty.append(element('strong', '', title), element('span', '', description));
+    if (authorAction && isAuthor()) {
+      const action = button('发布第一篇文章', 'knowledge-route-button');
+      action.dataset.knowledgeRoute = 'writer';
+      empty.appendChild(action);
+    }
+    return empty;
+  }
+
+  function makeLoadingState(label) {
+    const loading = element('div', 'knowledge-loading-state');
+    loading.setAttribute('role', 'status');
+    loading.append(
+      element('span', 'knowledge-loading-line'),
+      element('span', 'knowledge-loading-line'),
+      element('small', '', label || '正在加载…')
+    );
+    return loading;
+  }
+
+  function makeErrorState(retry) {
+    const error = element('div', 'knowledge-error-state');
+    error.appendChild(element('strong', '', '内容暂时无法加载。'));
+    const retryButton = button('重新加载', 'knowledge-route-button');
+    retryButton.addEventListener('click', retry);
+    error.appendChild(retryButton);
+    return error;
+  }
+
+  function renderCollection(container, posts, factory, emptyTitle) {
+    container.replaceChildren();
+    if (!posts.length) {
+      container.appendChild(makeEmptyState(
+        emptyTitle || '这里暂时还没有发布内容。',
+        '发布后的内容会显示在这里。',
+        true
+      ));
+      return;
+    }
+    posts.forEach(function (post) { container.appendChild(factory(post)); });
+  }
+
+  function renderHomeTypeLinks() {
+    const typeLinks = document.getElementById('knowledgeTypeLinks');
+    typeLinks.replaceChildren();
+    data.contentTypes.forEach(function (contentType) {
+      const item = button(contentType.label);
+      item.dataset.knowledgeRoute = 'all';
+      item.dataset.contentType = contentType.id;
+      typeLinks.appendChild(item);
+    });
+  }
+
+  function renderExternalPlatforms() {
+    const platforms = document.getElementById('knowledgePlatformList');
+    platforms.replaceChildren();
+    data.platforms.forEach(function (platform) {
+      if (!platform.href) return;
+      const link = element('a', '', platform.label);
+      link.href = platform.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      platforms.appendChild(link);
+    });
+  }
+
+  function renderFacets(facets) {
+    state.facets = facets;
+    const categories = document.getElementById('knowledgeCategoryList');
+    const domains = document.getElementById('knowledgeDomainList');
+    const topics = document.getElementById('knowledgeTopicList');
+    const tags = document.getElementById('knowledgeTagCloud');
+    const archives = document.getElementById('knowledgeArchivePreview');
+    const stats = document.getElementById('knowledgeStats');
+    [categories, domains, topics, tags, archives, stats].forEach(function (node) {
+      node.replaceChildren();
+    });
+
+    facets.categories.forEach(function (category) {
+      const item = button('');
+      item.dataset.knowledgeRoute = 'all';
+      item.dataset.category = category.slug;
+      item.append(contentElement('span', '', category.name), contentElement('span', '', String(category.count)));
+      categories.appendChild(item);
+    });
+    facets.tags.slice(0, 12).forEach(function (tag, index) {
+      const domain = contentButton(tag.name);
+      domain.dataset.knowledgeRoute = 'all';
+      domain.dataset.tag = tag.slug;
+      domains.appendChild(domain);
+      const cloudTag = contentButton(tag.name);
+      cloudTag.dataset.knowledgeRoute = 'all';
+      cloudTag.dataset.tag = tag.slug;
+      tags.appendChild(cloudTag);
+      if (index < 5) {
+        const topic = button('');
+        topic.dataset.knowledgeRoute = 'all';
+        topic.dataset.tag = tag.slug;
+        topic.append(contentElement('span', '', tag.name), element('span', '', '›'));
+        topics.appendChild(topic);
+      }
+    });
+    facets.archives.slice(0, 8).forEach(function (archive) {
+      const item = button('');
+      item.dataset.knowledgeRoute = 'all';
+      item.dataset.archive = archive.year + '-' + String(archive.month).padStart(2, '0');
+      item.append(
+        element('span', '', archive.year + ' · ' + String(archive.month).padStart(2, '0')),
+        element('span', '', String(archive.count))
+      );
+      archives.appendChild(item);
+    });
+    const statItems = [
+      ['文章数量', facets.stats.posts],
+      ['题解数量', facets.stats.solutions],
+      ['分类数量', facets.categories.length],
+      ['标签数量', facets.tags.length],
+      ['总字数', facets.stats.words],
+      ['最后更新', formatDate(facets.stats.lastUpdatedAt)],
+    ];
+    statItems.forEach(function (entry) {
+      const item = element('div');
+      item.append(element('dt', '', entry[0]), element('dd', '', entry[1] === '' ? '0' : String(entry[1] ?? 0)));
+      stats.appendChild(item);
+    });
+    const authorCount = shell.querySelector('.knowledge-author-meta strong');
+    if (authorCount) authorCount.textContent = String(facets.stats.posts || 0);
+  }
+
+  function renderFacetError() {
+    ['knowledgeCategoryList', 'knowledgeDomainList', 'knowledgeTopicList',
+      'knowledgeTagCloud', 'knowledgeArchivePreview', 'knowledgeStats']
+      .forEach(function (id) {
+        const node = document.getElementById(id);
+        node.replaceChildren(element('span', 'knowledge-data-unavailable', '--'));
+      });
+  }
+
+  function renderRecentUpdates(posts) {
+    const updates = document.getElementById('knowledgeUpdateList');
+    updates.replaceChildren();
+    if (!posts.length) {
+      updates.appendChild(element('li', '', '这里暂时还没有发布内容。'));
+      return;
+    }
+    posts.forEach(function (post) {
+      const item = element('li');
+      item.dataset.postSlug = post.slug;
+      item.tabIndex = 0;
+      item.append(
+        element('time', '', formatDate(post.updatedAt, true)),
+        contentElement('strong', '', post.title),
+        element('small', '', typeLabel(post.type))
+      );
+      updates.appendChild(item);
+    });
+  }
+
+  async function loadHome(options) {
+    if (state.homeController) state.homeController.abort();
+    const controller = new AbortController();
+    state.homeController = controller;
+    renderHomeTypeLinks();
+    renderExternalPlatforms();
+    const featured = document.getElementById('knowledgeFeaturedList');
+    const latest = document.getElementById('knowledgeLatestList');
+    const solutions = document.getElementById('knowledgeSolutionList');
+    const updates = document.getElementById('knowledgeUpdateList');
+    [featured, latest, solutions, updates].forEach(function (container) {
+      container.replaceChildren(makeLoadingState('正在加载…'));
+    });
+
+    const settings = { signal: controller.signal, refresh: Boolean(options && options.refresh) };
+    const jobs = [
+      repository.getFacets(settings),
+      repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
+      repository.getPosts({ page: 1, pageSize: 5, sort: 'latest' }, settings),
+      repository.getPosts({ page: 1, pageSize: 4, type: 'solution', sort: 'latest' }, settings),
+      repository.getPosts({ page: 1, pageSize: 5, sort: 'updated' }, settings),
+    ];
+    const results = await Promise.allSettled(jobs);
+    if (controller.signal.aborted) return;
+    if (results[0].status === 'fulfilled') renderFacets(results[0].value);
+    else renderFacetError();
+    if (results[1].status === 'fulfilled') {
+      renderCollection(featured, results[1].value.items, makeFeaturedCard);
+    } else featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    if (results[2].status === 'fulfilled') {
+      renderCollection(latest, results[2].value.items, makeContentCard);
+      applyViewMode();
+    } else latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    if (results[3].status === 'fulfilled') {
+      renderCollection(solutions, results[3].value.items, makeSolutionCard);
+    } else solutions.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    if (results[4].status === 'fulfilled') renderRecentUpdates(results[4].value.items);
+    else updates.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+  }
+
+  function applyViewMode() {
+    const list = document.getElementById('knowledgeLatestList');
+    if (!list) return;
+    list.classList.toggle('is-grid', state.viewMode === 'grid');
+    document.getElementById('knowledgeListView')?.classList.toggle('is-active', state.viewMode === 'list');
+    document.getElementById('knowledgeGridView')?.classList.toggle('is-active', state.viewMode === 'grid');
+  }
+
+  function setViewMode(mode) {
+    state.viewMode = mode === 'grid' ? 'grid' : 'list';
+    writeStorage(VIEW_MODE_KEY, state.viewMode);
+    applyViewMode();
   }
 
   function routeHeader(kicker, title, description) {
@@ -184,388 +552,366 @@
     return header;
   }
 
-  function makeContentCard(post) {
-    const card = button('', 'knowledge-content-card');
-    card.dataset.postSlug = post.slug;
-    card.dataset.placeholder = String(Boolean(post.placeholder));
-    card.setAttribute('aria-label', t('打开演示内容：' + post.title));
-
-    const cover = element('div', 'knowledge-cover-placeholder', 'COVER PLACEHOLDER');
-    cover.setAttribute('aria-label', t('封面占位'));
-    const body = element('div', 'knowledge-content-body');
-    const top = element('div', 'knowledge-card-tags');
-    top.append(
-      element('span', 'knowledge-demo-badge', '演示内容'),
-      element('span', 'knowledge-type-badge', typeLabel(post.type))
-    );
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, post.tags);
-    const meta = element('div', 'knowledge-card-meta');
-    meta.append(
-      element('span', '', post.category),
-      element('span', '', '发布：' + post.publishedAt),
-      element('span', '', '更新：' + post.updatedAt),
-      element('span', '', post.readingTime),
-      element('span', '', post.wordCount + ' 字')
-    );
-    const flags = element('span', 'knowledge-card-flags');
-    if (post.isPinned) flags.appendChild(element('span', 'knowledge-state-badge', '置顶'));
-    if (post.isFeatured) flags.appendChild(element('span', 'knowledge-state-badge', '精选'));
-    meta.appendChild(flags);
-
-    body.append(
-      top,
-      element('h3', '', post.title),
-      element('p', '', post.summary),
-      tags,
-      meta
-    );
-    card.append(cover, body);
-    return card;
-  }
-
-  function makeFeaturedCard(post) {
-    const card = button('', 'knowledge-featured-card');
-    card.dataset.postSlug = post.slug;
-    card.dataset.placeholder = 'true';
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, post.tags);
-    card.append(
-      element('span', 'knowledge-demo-badge', '精选 · 演示内容'),
-      element('h3', '', post.title),
-      element('p', '', post.summary),
-      tags
-    );
-    return card;
-  }
-
-  function makeSolutionCard(post) {
-    const solution = post.solution;
-    const card = button('', 'knowledge-solution-card');
-    card.dataset.postSlug = post.slug;
-    card.dataset.placeholder = 'true';
-    card.setAttribute('aria-label', t('打开演示题解：' + post.title));
-
-    const identity = element('div', 'knowledge-solution-identity');
-    identity.append(
-      element('strong', '', solution.platform),
-      element('span', '', solution.problemId),
-      element('span', '', solution.difficulty)
-    );
-    const body = element('div', 'knowledge-solution-body');
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, solution.algorithms);
-    const meta = element('div', 'knowledge-solution-meta');
-    meta.append(
-      element('span', '', '语言：' + solution.language),
-      element('span', '', '时间：' + solution.timeComplexity),
-      element('span', '', '空间：' + solution.spaceComplexity),
-      element('span', '', '发布：' + post.publishedAt)
-    );
-    body.append(
-      element('span', 'knowledge-demo-badge', '演示题解'),
-      element('h3', '', solution.problemTitle),
-      element('p', '', post.summary),
-      tags,
-      meta
-    );
-    card.append(identity, body);
-    return card;
-  }
-
-  function renderHomeStatic() {
-    const typeLinks = document.getElementById('knowledgeTypeLinks');
-    const categories = document.getElementById('knowledgeCategoryList');
-    const domains = document.getElementById('knowledgeDomainList');
-    const platforms = document.getElementById('knowledgePlatformList');
-    const topics = document.getElementById('knowledgeTopicList');
-    const tags = document.getElementById('knowledgeTagCloud');
-    const archives = document.getElementById('knowledgeArchivePreview');
-    const stats = document.getElementById('knowledgeStats');
-    const updates = document.getElementById('knowledgeUpdateList');
-    [typeLinks, categories, domains, platforms, topics, tags, archives, stats, updates]
-      .forEach(function (container) {
-        if (container) container.replaceChildren();
-      });
-
-    data.contentTypes.forEach(function (contentType) {
-      const item = button(contentType.label);
-      item.dataset.knowledgeRoute = contentType.id === 'solution' ? 'solutions' : 'all';
-      item.dataset.contentType = contentType.id;
-      typeLinks.appendChild(item);
-    });
-
-    data.categories.forEach(function (category) {
-      const item = button('');
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.category = category.label;
-      item.append(element('span', '', category.label), element('span', '', category.count));
-      categories.appendChild(item);
-    });
-
-    data.domains.forEach(function (domain) {
-      const item = button(domain);
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.tag = domain;
-      domains.appendChild(item);
-    });
-
-    data.platforms.forEach(function (platform) {
-      if (platform.href) {
-        const link = element('a', '', platform.label);
-        link.href = platform.href;
-        link.target = '_blank';
-        link.rel = 'noreferrer';
-        platforms.appendChild(link);
-      } else {
-        const item = element('span', 'is-placeholder');
-        item.append(element('span', '', platform.label), element('small', '', '待接入'));
-        platforms.appendChild(item);
-      }
-    });
-
-    data.topics.forEach(function (topic) {
-      const item = button('');
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.keyword = topic;
-      item.append(element('span', '', topic), element('span', '', '›'));
-      topics.appendChild(item);
-    });
-
-    data.tags.forEach(function (tag) {
-      const item = button(tag);
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.tag = tag;
-      tags.appendChild(item);
-    });
-
-    data.archives.forEach(function (archive) {
-      const item = button('');
-      item.dataset.knowledgeRoute = 'archives';
-      item.append(
-        element('span', '', archive.year + ' · ' + archive.month),
-        element('span', '', archive.count)
-      );
-      archives.appendChild(item);
-    });
-
-    data.stats.forEach(function (stat) {
-      const item = element('div');
-      item.append(element('dt', '', stat.label), element('dd', '', stat.value));
-      stats.appendChild(item);
-    });
-
-    data.updates.forEach(function (update) {
-      const item = element('li');
-      item.dataset.placeholder = 'true';
-      item.append(
-        element('time', '', update.time),
-        element('strong', '', update.type),
-        element('small', '', update.text)
-      );
-      updates.appendChild(item);
-    });
-  }
-
-  async function renderHomeContent() {
-    const posts = await repository.getPosts();
-    const featured = document.getElementById('knowledgeFeaturedList');
-    const latest = document.getElementById('knowledgeLatestList');
-    const solutions = document.getElementById('knowledgeSolutionList');
-    featured.replaceChildren();
-    latest.replaceChildren();
-    solutions.replaceChildren();
-
-    posts.filter(function (post) { return post.isFeatured; }).slice(0, 3).forEach(function (post) {
-      featured.appendChild(makeFeaturedCard(post));
-    });
-    posts.slice(0, 5).forEach(function (post) {
-      latest.appendChild(makeContentCard(post));
-    });
-    posts.filter(function (post) { return post.type === 'solution'; }).forEach(function (post) {
-      solutions.appendChild(makeSolutionCard(post));
-    });
-    applyViewMode();
-  }
-
-  function applyViewMode() {
-    const list = document.getElementById('knowledgeLatestList');
-    const listButton = document.getElementById('knowledgeListView');
-    const gridButton = document.getElementById('knowledgeGridView');
-    list.classList.toggle('is-grid', state.viewMode === 'grid');
-    listButton.classList.toggle('is-active', state.viewMode === 'list');
-    gridButton.classList.toggle('is-active', state.viewMode === 'grid');
-  }
-
-  function setViewMode(mode) {
-    state.viewMode = mode === 'grid' ? 'grid' : 'list';
-    writeStorage(VIEW_MODE_KEY, state.viewMode);
-    applyViewMode();
-  }
-
   function showRouteShell(kicker, title, description) {
     homeView.hidden = true;
     routeView.hidden = false;
     routeView.replaceChildren();
-    const shellNode = element('div', 'knowledge-route-shell');
-    shellNode.appendChild(routeHeader(kicker, title, description));
-    routeView.appendChild(shellNode);
-    return shellNode;
+    const node = element('div', 'knowledge-route-shell');
+    node.appendChild(routeHeader(kicker, title, description));
+    routeView.appendChild(node);
+    return node;
   }
 
-  function showHome() {
-    state.route = 'home';
-    routeView.hidden = true;
-    homeView.hidden = false;
+  function updateActiveNav(route, payload) {
+    shell.querySelectorAll('[data-knowledge-route]').forEach(function (item) {
+      const target = item.dataset.knowledgeRoute;
+      const active = target === route
+        || (route === 'all' && target === 'solutions' && payload.type === 'solution')
+        || (route === 'all' && target === 'notes' && payload.type === 'note')
+        || (route === 'all' && target === 'projects' && payload.type === 'project');
+      item.classList.toggle('is-active', active);
+    });
+  }
+
+  function parsePage(value) {
+    const page = Number.parseInt(value || '1', 10);
+    return Number.isInteger(page) && page > 0 ? page : 1;
+  }
+
+  function routeFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const routeName = params.get('knowledge') || 'home';
+    if (routeName === 'post') {
+      return { route: 'detail', payload: { slug: params.get('slug') || '' } };
+    }
+    const route = ['home', 'all', 'categories', 'tags', 'archives', 'about',
+      'writer', 'drafts', 'manage'].includes(routeName) ? routeName : 'home';
+    return {
+      route,
+      payload: {
+        q: params.get('q') || '',
+        type: params.get('type') || '',
+        category: params.get('category') || '',
+        tag: params.get('tag') || '',
+        sort: params.get('sort') || 'latest',
+        featured: params.get('featured') || '',
+        pinned: params.get('pinned') || '',
+        page: parsePage(params.get('page')),
+        archive: params.get('archive') || '',
+      },
+    };
+  }
+
+  function writeRouteUrl(route, payload, replace) {
+    const url = new URL(window.location.href);
+    URL_KEYS.forEach(function (key) { url.searchParams.delete(key); });
+    if (route === 'detail') {
+      url.searchParams.set('knowledge', 'post');
+      url.searchParams.set('slug', payload.slug);
+    } else if (route !== 'home') {
+      url.searchParams.set('knowledge', route);
+      ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive']
+        .forEach(function (key) {
+          if (payload[key]) url.searchParams.set(key, payload[key]);
+        });
+      if (payload.page && payload.page > 1) url.searchParams.set('page', String(payload.page));
+    }
+    const method = replace ? 'replaceState' : 'pushState';
+    window.history[method]({ knowledgeRoute: route }, '', url.pathname + url.search + url.hash);
+  }
+
+  function abortRouteWork() {
+    if (state.routeController) state.routeController.abort();
+    if (state.route !== 'home' && state.homeController) state.homeController.abort();
+    if (state.sectionObserver) {
+      state.sectionObserver.disconnect();
+      state.sectionObserver = null;
+    }
+    state.routeController = new AbortController();
+    return state.routeController;
+  }
+
+  async function navigate(route, payload, options) {
+    const settings = options || {};
+    const details = Object.assign({}, payload || {});
+    state.route = route;
+    state.routePayload = details;
+    if (!settings.fromHistory) writeRouteUrl(route, details, Boolean(settings.replace));
     closeNavigation();
-    updateActiveNav('home');
-    shell.scrollTo({ top: 0, behavior: 'smooth' });
+    updateActiveNav(route, details);
+    if (!settings.preserveScroll) shell.scrollTo({ top: 0, behavior: 'smooth' });
+    return renderCurrentRoute(settings);
   }
 
-  function updateActiveNav(route) {
-    document.querySelectorAll('[data-knowledge-route]').forEach(function (item) {
-      item.classList.toggle('is-active', item.dataset.knowledgeRoute === route);
+  async function renderCurrentRoute(options) {
+    const controller = abortRouteWork();
+    const route = state.route;
+    const details = state.routePayload;
+    if (route === 'home') {
+      homeView.hidden = false;
+      routeView.hidden = true;
+      await loadHome(options);
+      return;
+    }
+    if (route === 'all') return renderPostIndex(details, controller);
+    if (route === 'categories') return renderFacetIndex('categories', controller);
+    if (route === 'tags') return renderFacetIndex('tags', controller);
+    if (route === 'archives') return renderFacetIndex('archives', controller);
+    if (route === 'about') return renderAbout();
+    if (route === 'detail') return renderDetail(details.slug, controller);
+    if (route === 'writer' || route === 'drafts' || route === 'manage') {
+      return renderWriterPlaceholder(route);
+    }
+    return navigate('home', {}, { replace: true });
+  }
+
+  function selectControl(label, values, selected) {
+    const select = element('select');
+    select.setAttribute('aria-label', t(label));
+    select.appendChild(new Option(t(label), ''));
+    values.forEach(function (entry) {
+      const option = typeof entry === 'object' ? entry : { label: entry, value: entry };
+      select.appendChild(new Option(t(option.label), option.value));
     });
+    select.value = selected || '';
+    return select;
   }
 
-  async function renderPostIndex(route, options) {
-    const config = options || {};
-    const posts = await repository.getPosts(config.filters);
-    const shellNode = showRouteShell(config.kicker || 'CONTENT', config.title, config.description);
-    const list = element('div', route === 'solutions' ? 'knowledge-solution-list' : 'knowledge-post-list');
-    posts.forEach(function (post) {
-      list.appendChild(post.type === 'solution' ? makeSolutionCard(post) : makeContentCard(post));
-    });
-    if (!posts.length) list.appendChild(makeEmptyState('没有匹配的演示内容', '真实内容接入后将在这里显示。'));
-    shellNode.appendChild(list);
+  function listTitle(filters) {
+    if (filters.archive) return filters.archive + ' ' + t('文章归档');
+    if (filters.type) return typeLabel(filters.type);
+    if (filters.q) return t('搜索结果');
+    return t('全部文章');
   }
 
-  function makeEmptyState(title, description) {
-    const empty = element('div', 'knowledge-empty-state');
-    empty.append(element('strong', '', title), element('span', '', description));
-    return empty;
-  }
-
-  async function renderSearch(initialFilters) {
-    const shellNode = showRouteShell('SEARCH', '搜索与筛选', '当前使用本地演示数据验证筛选结构，不请求后端。');
+  async function renderPostIndex(initialFilters, controller) {
+    const filters = Object.assign({
+      q: '',
+      type: '',
+      category: '',
+      tag: '',
+      sort: 'latest',
+      featured: '',
+      pinned: '',
+      page: 1,
+      archive: '',
+    }, initialFilters || {});
+    const shellNode = showRouteShell(
+      'CONTENT',
+      listTitle(filters),
+      '浏览已发布的文章、题解、笔记、项目记录和随笔。'
+    );
     const controls = element('div', 'knowledge-search-controls');
     const keyword = element('input');
     keyword.type = 'search';
     keyword.placeholder = t('关键词');
-    keyword.value = initialFilters.keyword || '';
+    keyword.value = filters.q;
+    controls.appendChild(keyword);
+    const results = element('div', 'knowledge-search-results');
+    const summary = element('div', 'knowledge-result-summary');
+    const pagination = element('nav', 'knowledge-pagination');
+    shellNode.append(controls, summary, results, pagination);
+    results.appendChild(makeLoadingState('正在加载文章…'));
 
-    function selectControl(label, values, initialValue) {
-      const select = element('select');
-      select.appendChild(new Option(t(label), ''));
-      values.forEach(function (value) {
-        const option = typeof value === 'object' ? value : { label: value, value };
-        select.appendChild(new Option(t(option.label), option.value));
-      });
-      select.value = initialValue || '';
-      return select;
+    let facets = state.facets;
+    try {
+      facets = facets || await repository.getFacets({ signal: controller.signal });
+      state.facets = facets;
+    } catch (error) {
+      facets = { categories: [], tags: [] };
     }
-
+    if (controller.signal.aborted) return;
     const type = selectControl('内容类型', data.contentTypes.map(function (item) {
       return { label: item.label, value: item.id };
-    }), initialFilters.type);
-    const category = selectControl('分类', data.categories.map(function (item) { return item.label; }), initialFilters.category);
-    const tag = selectControl('标签', data.tags, initialFilters.tag);
-    const platform = selectControl('OJ 平台', ['平台占位', 'Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'AcWing', '其他'], initialFilters.platform);
-    const difficulty = selectControl('难度', ['难度待接入', '入门', '简单', '中等', '困难'], initialFilters.difficulty);
-    const language = selectControl('编程语言', ['C++', 'Java', 'Python', 'JavaScript'], initialFilters.language);
-    const date = selectControl('发布时间', ['最近一月', '最近一年'], initialFilters.date);
-    controls.append(keyword, type, category, tag, platform, difficulty, language, date);
-    const results = element('div', 'knowledge-search-results');
-    shellNode.append(controls, results);
+    }), filters.type);
+    const category = selectControl('分类', facets.categories.map(function (item) {
+      return { label: item.name, value: item.slug };
+    }), filters.category);
+    const tag = selectControl('标签', facets.tags.map(function (item) {
+      return { label: item.name, value: item.slug };
+    }), filters.tag);
+    const sort = selectControl('排序', [
+      { label: '最新发布', value: 'latest' },
+      { label: '最近更新', value: 'updated' },
+      { label: '最早发布', value: 'oldest' },
+    ], filters.sort);
+    const featuredLabel = element('label', 'knowledge-check-filter');
+    const featured = document.createElement('input');
+    featured.type = 'checkbox';
+    featured.checked = filters.featured === 'true';
+    featuredLabel.append(featured, document.createTextNode(t('仅看精选')));
+    const pinnedLabel = element('label', 'knowledge-check-filter');
+    const pinned = document.createElement('input');
+    pinned.type = 'checkbox';
+    pinned.checked = filters.pinned === 'true';
+    pinnedLabel.append(pinned, document.createTextNode(t('仅看置顶')));
+    controls.append(type, category, tag, sort, featuredLabel, pinnedLabel);
 
-    async function updateResults() {
-      const filters = {
-        keyword: keyword.value,
+    function nextFilters(page) {
+      return {
+        q: keyword.value.trim(),
         type: type.value,
         category: category.value,
         tag: tag.value,
-        platform: platform.value,
-        difficulty: difficulty.value,
-        language: language.value,
-        date: date.value,
+        sort: sort.value || 'latest',
+        featured: featured.checked ? 'true' : '',
+        pinned: pinned.checked ? 'true' : '',
+        page: page || 1,
+        archive: filters.archive,
       };
-      const posts = await repository.searchPosts(filters);
-      results.replaceChildren();
-      if (!posts.length) {
-        results.appendChild(makeEmptyState('没有找到匹配内容', '请修改关键词或筛选条件。'));
-        return;
-      }
-      posts.forEach(function (post) {
-        results.appendChild(post.type === 'solution' ? makeSolutionCard(post) : makeContentCard(post));
-      });
     }
 
-    const debouncedUpdate = debounce(updateResults, 260);
-    controls.addEventListener('input', debouncedUpdate);
-    controls.addEventListener('change', updateResults);
-    updateResults();
-    window.setTimeout(function () { keyword.focus(); }, 0);
+    const updateKeyword = debounce(function () {
+      navigate('all', nextFilters(1), { replace: true });
+    }, 380);
+    keyword.addEventListener('input', updateKeyword);
+    [type, category, tag, sort, featured, pinned].forEach(function (control) {
+      control.addEventListener('change', function () {
+        navigate('all', nextFilters(1));
+      });
+    });
+
+    try {
+      let response;
+      if (filters.archive) {
+        const parts = filters.archive.split('-').map(Number);
+        const allArchivePosts = await repository.getArchivePosts(parts[0], parts[1], {
+          signal: controller.signal,
+        });
+        const start = (filters.page - 1) * PAGE_SIZE;
+        response = {
+          items: allArchivePosts.slice(start, start + PAGE_SIZE),
+          pagination: {
+            page: filters.page,
+            pageSize: PAGE_SIZE,
+            total: allArchivePosts.length,
+            totalPages: Math.ceil(allArchivePosts.length / PAGE_SIZE),
+            hasPrevious: filters.page > 1,
+            hasNext: start + PAGE_SIZE < allArchivePosts.length,
+          },
+        };
+      } else {
+        response = await repository.getPosts({
+          page: filters.page,
+          pageSize: PAGE_SIZE,
+          q: filters.q,
+          type: filters.type,
+          category: filters.category,
+          tag: filters.tag,
+          sort: filters.sort,
+          featured: filters.featured,
+          pinned: filters.pinned,
+        }, { signal: controller.signal });
+      }
+      if (controller.signal.aborted) return;
+      results.replaceChildren();
+      response.items.forEach(function (post) {
+        results.appendChild(post.type === 'solution' ? makeSolutionCard(post) : makeContentCard(post));
+      });
+      if (!response.items.length) {
+        results.appendChild(makeEmptyState(
+          filters.q ? '没有找到匹配内容。' : '这里暂时还没有发布内容。',
+          filters.q ? '请修改关键词或筛选条件。' : '发布后的内容会显示在这里。',
+          !filters.q
+        ));
+      }
+      summary.textContent = t('当前结果') + ' ' + response.items.length
+        + ' / ' + t('总文章') + ' ' + response.pagination.total;
+      renderPagination(pagination, response.pagination, function (page) {
+        navigate('all', Object.assign({}, nextFilters(page), { page }));
+      });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error('Knowledge posts request failed:', error.message);
+      results.replaceChildren(makeErrorState(function () {
+        navigate('all', filters, { replace: true });
+      }));
+      summary.textContent = '--';
+    }
   }
 
-  function debounce(callback, delay) {
-    let timer = 0;
-    return function () {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(callback, delay);
+  function renderPagination(container, pagination, onPage) {
+    container.replaceChildren();
+    if (!pagination.totalPages || pagination.totalPages <= 1) return;
+    const previous = button('上一页');
+    previous.disabled = !pagination.hasPrevious;
+    previous.addEventListener('click', function () { onPage(pagination.page - 1); });
+    container.appendChild(previous);
+    const start = Math.max(1, pagination.page - 2);
+    const end = Math.min(pagination.totalPages, pagination.page + 2);
+    for (let page = start; page <= end; page += 1) {
+      const item = button(String(page));
+      item.classList.toggle('is-active', page === pagination.page);
+      item.setAttribute('aria-current', page === pagination.page ? 'page' : 'false');
+      item.addEventListener('click', function () { onPage(page); });
+      container.appendChild(item);
+    }
+    const next = button('下一页');
+    next.disabled = !pagination.hasNext;
+    next.addEventListener('click', function () { onPage(pagination.page + 1); });
+    container.appendChild(next);
+    container.appendChild(element(
+      'span',
+      'knowledge-page-status',
+      t('第') + ' ' + pagination.page + ' / ' + pagination.totalPages + ' ' + t('页')
+    ));
+  }
+
+  async function renderFacetIndex(kind, controller) {
+    const titles = {
+      categories: ['CATEGORIES', '内容分类', '按分类浏览已发布文章。'],
+      tags: ['TAGS', '标签索引', '按标签浏览已发布文章。'],
+      archives: ['ARCHIVES', '文章归档', '按年份和月份浏览已发布文章。'],
     };
-  }
-
-  async function renderCategories() {
-    const categories = await repository.getCategories();
-    const shellNode = showRouteShell('CATEGORIES', '内容分类', '分类数量将在真实数据接入后更新。');
+    const title = titles[kind];
+    const shellNode = showRouteShell(title[0], title[1], title[2]);
     const grid = element('div', 'knowledge-index-grid');
-    categories.forEach(function (category) {
-      const item = button('', 'knowledge-index-item');
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.category = category.label;
-      item.append(element('strong', '', category.label), element('span', '', '文章数量：' + category.count));
-      grid.appendChild(item);
-    });
+    grid.appendChild(makeLoadingState('正在加载…'));
     shellNode.appendChild(grid);
-  }
-
-  async function renderTags() {
-    const tags = await repository.getTags();
-    const shellNode = showRouteShell('TAGS', '标签索引', '点击标签查看对应的演示内容。');
-    const grid = element('div', 'knowledge-index-grid');
-    tags.forEach(function (tag) {
-      const item = button('', 'knowledge-index-item');
-      item.dataset.knowledgeRoute = 'search';
-      item.dataset.tag = tag;
-      item.append(element('strong', '', '# ' + tag), element('span', '', '文章数量：--'));
-      grid.appendChild(item);
-    });
-    shellNode.appendChild(grid);
-  }
-
-  async function renderArchives() {
-    const archives = await repository.getArchives();
-    const shellNode = showRouteShell('ARCHIVES', '文章归档', '按年份和月份组织文章的前端框架。');
-    const year = element('section', 'knowledge-archive-year');
-    year.appendChild(element('h2', '', '年份待接入'));
-    archives.forEach(function (archive) {
-      const month = element('div', 'knowledge-archive-month');
-      month.append(element('span', '', archive.month), element('span', '', archive.count + ' 篇'));
-      year.appendChild(month);
-    });
-    shellNode.appendChild(year);
+    try {
+      const facets = await repository.getFacets({ signal: controller.signal });
+      if (controller.signal.aborted) return;
+      state.facets = facets;
+      grid.replaceChildren();
+      const items = facets[kind] || [];
+      items.forEach(function (entry) {
+        const item = button('', 'knowledge-index-item');
+        item.dataset.knowledgeRoute = 'all';
+        if (kind === 'categories') {
+          item.dataset.category = entry.slug;
+          item.append(contentElement('strong', '', entry.name), element('span', '', entry.count + ' ' + t('篇')));
+        } else if (kind === 'tags') {
+          item.dataset.tag = entry.slug;
+          item.append(contentElement('strong', '', '# ' + entry.name), element('span', '', entry.count + ' ' + t('篇')));
+        } else {
+          item.dataset.archive = entry.year + '-' + String(entry.month).padStart(2, '0');
+          item.append(
+            element('strong', '', entry.year + ' / ' + String(entry.month).padStart(2, '0')),
+            element('span', '', entry.count + ' ' + t('篇'))
+          );
+        }
+        grid.appendChild(item);
+      });
+      if (!items.length) grid.appendChild(makeEmptyState('这里暂时还没有发布内容。', '发布后的内容会显示在这里。'));
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        grid.replaceChildren(makeErrorState(function () {
+          navigate(kind, {}, { replace: true });
+        }));
+      }
+    }
   }
 
   function renderAbout() {
-    const shellNode = showRouteShell('ABOUT', '关于 Lee Ethan', '作者介绍与知识站说明将在后续内容阶段正式补充。');
+    const shellNode = showRouteShell('ABOUT', '关于 Lee Ethan', '作者介绍与知识站说明。');
     const content = element('div', 'knowledge-detail-body');
     content.append(
       element('h2', '', '网站定位'),
-      element('p', '', '这里将集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'),
+      element('p', '', '这里集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'),
       element('h2', '', '作者信息'),
-      element('p', '', '作者名称：Lee Ethan。头像、简介和其他资料均为待替换内容。'),
+      element('p', '', '作者：Lee Ethan。'),
       element('h2', '', '内容声明'),
-      element('p', '', '当前所有文章与统计均为演示占位，不代表已经正式发布。')
+      element('p', '', '页面只展示已经发布且未删除的知识文章。')
     );
     shellNode.appendChild(content);
   }
@@ -573,75 +919,95 @@
   function renderWriterPlaceholder(route) {
     const labels = {
       writer: ['写文章', 'Markdown 编辑器将在后续接入。'],
-      drafts: ['草稿箱', '草稿数据和发布状态将在后续接入。'],
-      manage: ['文章管理', '新增、编辑和删除功能将在后续接入。'],
+      drafts: ['草稿箱', '草稿管理将在后续接入。'],
+      manage: ['文章管理', '文章管理后台将在后续接入。'],
     };
-    const currentUser = window.authManager && window.authManager.getCurrentUser
-      ? window.authManager.getCurrentUser()
-      : null;
-    if (!currentUser || currentUser.role !== 'admin') {
-      showHome();
-      return;
-    }
+    if (!isAuthor()) return navigate('home', {}, { replace: true });
     const label = labels[route];
-    const shellNode = showRouteShell('AUTHOR', label[0], label[1]);
-    const placeholder = element('div', 'knowledge-writer-placeholder');
-    placeholder.append(
-      element('strong', '', label[0] + '功能待接入'),
-      element('p', '', '本轮仅保留作者工作区入口，不实现真实写入。'),
-      element('div', 'knowledge-permission-note', '安全说明：未来所有新增、编辑、删除和发布请求都必须由后端再次验证所有者权限。')
-    );
-    shellNode.appendChild(placeholder);
+    const node = showRouteShell('AUTHOR', label[0], label[1]);
+    node.appendChild(makeEmptyState(label[0] + '功能待接入', '本轮不实现写入和管理功能。'));
   }
 
-  async function renderDetail(slug) {
-    const post = await repository.getPostBySlug(slug);
-    if (!post) {
-      const shellNode = showRouteShell('NOT FOUND', '内容不存在', '没有找到对应的演示内容。');
-      shellNode.appendChild(makeEmptyState('内容不存在', '返回首页继续浏览。'));
-      return;
-    }
-
+  async function renderDetail(slug, controller) {
     homeView.hidden = true;
     routeView.hidden = false;
+    routeView.replaceChildren(makeLoadingState('正在加载正文…'));
+    let post;
+    try {
+      post = await repository.getPostBySlug(slug, { signal: controller.signal });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error.status === 404) {
+        const notFound = showRouteShell('404', '文章不存在或尚未发布。', '请检查链接或返回首页。');
+        notFound.appendChild(makeBackToTopPanel());
+      } else {
+        const failed = showRouteShell('ERROR', '内容暂时无法加载。', '文章请求失败，请稍后重试。');
+        failed.appendChild(makeErrorState(function () {
+          repository.getPostBySlug(slug, { refresh: true }).catch(function () {});
+          navigate('detail', { slug }, { replace: true });
+        }));
+      }
+      return;
+    }
+    if (controller.signal.aborted) return;
+
     routeView.replaceChildren();
     const layout = element('div', 'knowledge-detail-layout');
-    const main = element('article');
+    const main = element('article', 'knowledge-article');
     const header = element('header', 'knowledge-detail-header');
     const badges = element('div', 'knowledge-card-tags');
-    badges.append(
-      element('span', 'knowledge-demo-badge', '演示内容'),
-      element('span', 'knowledge-type-badge', typeLabel(post.type))
-    );
+    badges.appendChild(element('span', 'knowledge-type-badge', typeLabel(post.type)));
+    if (post.isPinned) badges.appendChild(element('span', 'knowledge-state-badge', '置顶'));
+    if (post.isFeatured) badges.appendChild(element('span', 'knowledge-state-badge', '精选'));
     const tags = element('div', 'knowledge-card-tags');
     appendTags(tags, post.tags);
     const meta = element('div', 'knowledge-detail-meta');
-    meta.append(
-      element('span', '', '作者：Lee Ethan'),
-      element('span', '', '发布：' + post.publishedAt),
-      element('span', '', '更新：' + post.updatedAt),
-      element('span', '', '分类：' + post.category),
-      element('span', '', post.readingTime),
-      element('span', '', post.wordCount + ' 字')
-    );
-    header.append(badges, element('h1', '', post.title), element('p', '', post.summary), tags, meta);
+    appendIf(meta, t('作者：'), 'Lee Ethan');
+    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
+    appendIf(meta, t('更新：'), formatDate(post.updatedAt));
+    appendIf(meta, t('分类：'), post.category);
+    appendIf(meta, '', post.readingTimeMinutes + ' ' + t('分钟'));
+    appendIf(meta, '', post.wordCount + ' ' + t('字'));
+    header.append(badges, contentElement('h1', '', post.title), contentElement('p', '', post.summary), tags, meta);
+    const sourceUrl = safeExternalUrl(post.sourceUrl);
+    if (sourceUrl) {
+      const sourceLink = element('a', 'knowledge-source-link', '查看来源');
+      sourceLink.href = sourceUrl;
+      sourceLink.target = '_blank';
+      sourceLink.rel = 'noopener noreferrer';
+      header.appendChild(sourceLink);
+    }
     main.appendChild(header);
-
     if (post.type === 'solution') main.appendChild(makeSolutionInfo(post));
-    const body = makeDetailBody(post.type === 'solution');
-    main.appendChild(body);
-    main.appendChild(makeDetailNavigation(post));
-    main.appendChild(makeRelatedSection(post));
-
-    const aside = element('aside', 'knowledge-detail-aside');
-    aside.append(makeToc(body), makeBackToTopPanel());
-    layout.append(main, aside);
+    const body = element('div', 'knowledge-detail-body');
+    let renderedHeadings = [];
+    let detailAside = null;
+    if (post.contentMarkdown.trim()) {
+      const rendered = markdown.render(post.contentMarkdown, body);
+      renderedHeadings = rendered.headings;
+      main.appendChild(body);
+      const aside = element('aside', 'knowledge-detail-aside');
+      aside.append(makeToc(rendered.headings), makeBackToTopPanel());
+      detailAside = aside;
+      layout.append(main, aside);
+    } else {
+      body.appendChild(makeEmptyState('正文暂时为空。', '作者尚未补充正文。'));
+      main.appendChild(body);
+      layout.append(main, makeBackToTopPanel());
+    }
+    const navigation = element('nav', 'knowledge-detail-navigation');
+    navigation.appendChild(makeLoadingState('正在加载相邻文章…'));
+    main.appendChild(navigation);
+    const related = element('section', 'knowledge-related-section');
+    related.append(element('h2', '', '相关文章'), makeLoadingState('正在加载相关文章…'));
+    main.appendChild(related);
     routeView.appendChild(layout);
-    shell.scrollTo({ top: 0, behavior: 'smooth' });
+    if (detailAside) setupSectionObserver(renderedHeadings, detailAside);
+    loadDetailExtras(post, navigation, related, controller);
   }
 
   function makeSolutionInfo(post) {
-    const solution = post.solution;
+    const solution = post.solution || {};
     const section = element('section', 'knowledge-solution-info');
     section.appendChild(element('h2', '', '题目信息'));
     const details = element('dl');
@@ -653,96 +1019,62 @@
       ['使用语言', solution.language],
       ['时间复杂度', solution.timeComplexity],
       ['空间复杂度', solution.spaceComplexity],
-      ['是否 AC', solution.accepted === true ? '已通过' : '状态待接入'],
-      ['原题链接', solution.problemUrl || '待接入'],
+      ['是否 AC', solution.accepted === true ? t('已通过') : (solution.accepted === false ? t('未通过') : '')],
     ].forEach(function (entry) {
+      if (entry[1] === '' || entry[1] === null || entry[1] === undefined) return;
       const item = element('div');
-      item.append(element('dt', '', entry[0]), element('dd', '', entry[1]));
+      item.append(element('dt', '', entry[0]), contentElement('dd', '', entry[1]));
       details.appendChild(item);
     });
-    section.append(details);
+    section.appendChild(details);
     const algorithms = element('div', 'knowledge-card-tags');
     appendTags(algorithms, solution.algorithms);
-    section.appendChild(algorithms);
+    if (algorithms.childElementCount) section.appendChild(algorithms);
+    const problemUrl = safeExternalUrl(solution.problemUrl);
+    if (problemUrl) {
+      const link = element('a', 'knowledge-problem-link', '查看原题');
+      link.href = problemUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      section.appendChild(link);
+    }
     return section;
   }
 
-  function makeDetailBody(isSolution) {
-    const body = element('div', 'knowledge-detail-body');
-    const sections = isSolution
-      ? [
-        ['题意', '题目描述与输入输出要求将在真实内容中呈现。'],
-        ['思路', '这里展示算法思路、观察过程与关键结论。'],
-        ['推导', '数学推导和状态转移过程将在这里展开。'],
-        ['算法步骤', '使用有序列表组织完整算法步骤。'],
-        ['正确性说明', '用于说明算法为何能够得到正确答案。'],
-        ['复杂度分析', '用于分析时间复杂度和空间复杂度。'],
-        ['参考代码', '代码块样式框架如下。'],
-        ['易错点', '使用提示框记录边界、溢出和实现细节。'],
-        ['扩展思考', '用于整理相似问题和可推广结论。'],
-      ]
-      : [
-        ['章节标题示例', '正文段落、链接、图片和列表将在 Markdown 渲染后进入这个稳定阅读容器。'],
-        ['结构化内容', '表格、引用、提示框和折叠内容都已经预留样式。'],
-        ['代码与公式', '代码、数学公式和 Mermaid 目前只展示框架占位。'],
-      ];
-
-    sections.forEach(function (section, index) {
-      const heading = element('h2', '', section[0]);
-      heading.id = 'knowledge-section-' + (index + 1);
-      body.append(heading, element('p', '', section[1]));
-
-      if (index === 0) {
-        const quote = element('blockquote');
-        quote.appendChild(element('p', '', '引用内容占位：真实文章将在这里展示引用信息。'));
-        const list = element('ul');
-        list.append(element('li', '', '无序列表项目 A'), element('li', '', '无序列表项目 B'));
-        body.append(quote, list);
-      }
-    });
-
-    const table = element('table');
-    const thead = element('thead');
-    const headerRow = element('tr');
-    headerRow.append(element('th', '', '字段'), element('th', '', '说明'));
-    thead.appendChild(headerRow);
-    const tbody = element('tbody');
-    const row = element('tr');
-    row.append(element('td', '', '表格占位'), element('td', '', 'Markdown 表格渲染位置'));
-    tbody.appendChild(row);
-    table.append(thead, tbody);
-    body.appendChild(table);
-
-    const inlineParagraph = element('p');
-    inlineParagraph.append(t('行内代码示例：'), element('code', '', 'const value = true;'));
-    body.appendChild(inlineParagraph);
-    const pre = element('pre');
-    pre.appendChild(element('code', '', 'int main() {\n    return 0;\n}'));
-    body.appendChild(pre);
-    body.append(
-      element('div', 'knowledge-media-placeholder', 'IMAGE PLACEHOLDER · 图片与 alt 文本区域'),
-      element('div', 'knowledge-formula-placeholder', 'FORMULA PLACEHOLDER · 数学公式区域'),
-      element('div', 'knowledge-mermaid-placeholder', 'MERMAID PLACEHOLDER · 图表区域')
-    );
-    const callout = element('aside', 'knowledge-callout', '提示框占位：用于展示注意、警告或补充说明。');
-    const details = element('details');
-    details.append(element('summary', '', '折叠内容占位'), element('p', '', '展开后显示补充内容。'));
-    body.append(callout, details);
-    return body;
-  }
-
-  function makeToc(body) {
+  function makeToc(headings) {
     const toc = element('details', 'knowledge-toc');
-    toc.open = true;
+    toc.open = window.innerWidth > 780;
     toc.appendChild(element('summary', '', '文章目录'));
     const nav = element('nav');
-    body.querySelectorAll('h2').forEach(function (heading) {
-      const item = button(heading.textContent);
+    headings.forEach(function (heading) {
+      const item = contentButton(heading.text);
       item.dataset.knowledgeHeading = heading.id;
+      item.dataset.level = String(heading.level);
       nav.appendChild(item);
     });
+    if (!headings.length) nav.appendChild(element('span', 'knowledge-toc-empty', '本文暂无目录'));
     toc.appendChild(nav);
     return toc;
+  }
+
+  function setupSectionObserver(headings, aside) {
+    if (!headings.length || !('IntersectionObserver' in window)) return;
+    const links = new Map(Array.from(aside.querySelectorAll('[data-knowledge-heading]')).map(function (item) {
+      return [item.dataset.knowledgeHeading, item];
+    }));
+    state.sectionObserver = new IntersectionObserver(function (entries) {
+      const visible = entries
+        .filter(function (entry) { return entry.isIntersecting; })
+        .sort(function (a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+      if (!visible.length) return;
+      links.forEach(function (item) { item.classList.remove('is-active'); });
+      links.get(visible[0].target.id)?.classList.add('is-active');
+    }, {
+      root: shell,
+      rootMargin: '-18% 0px -68% 0px',
+      threshold: [0, 1],
+    });
+    headings.forEach(function (heading) { state.sectionObserver.observe(heading.element); });
   }
 
   function makeBackToTopPanel() {
@@ -755,122 +1087,124 @@
     return panel;
   }
 
-  function makeDetailNavigation(post) {
-    const currentIndex = data.posts.findIndex(function (item) { return item.slug === post.slug; });
-    const previous = data.posts[currentIndex - 1];
-    const next = data.posts[currentIndex + 1];
-    const nav = element('nav', 'knowledge-detail-navigation');
-    const previousButton = button(previous ? '上一篇\n' + previous.title : '上一篇\n暂无');
-    const nextButton = button(next ? '下一篇\n' + next.title : '下一篇\n暂无');
-    previousButton.disabled = !previous;
-    nextButton.disabled = !next;
-    if (previous) previousButton.dataset.postSlug = previous.slug;
-    if (next) nextButton.dataset.postSlug = next.slug;
-    nav.append(previousButton, nextButton);
-    return nav;
+  async function loadDetailExtras(post, navigation, related, controller) {
+    const [contextResult, relatedResult] = await Promise.allSettled([
+      repository.getPostContext(post, { signal: controller.signal }),
+      repository.getRelatedPosts(post, { signal: controller.signal }),
+    ]);
+    if (controller.signal.aborted) return;
+    navigation.replaceChildren();
+    if (contextResult.status === 'fulfilled') {
+      const context = contextResult.value;
+      if (context.previous) {
+        const previous = contentButton(t('上一篇') + '\n' + context.previous.title);
+        previous.dataset.postSlug = context.previous.slug;
+        navigation.appendChild(previous);
+      }
+      if (context.next) {
+        const next = contentButton(t('下一篇') + '\n' + context.next.title);
+        next.dataset.postSlug = context.next.slug;
+        navigation.appendChild(next);
+      }
+    }
+    if (!navigation.childElementCount) navigation.hidden = true;
+    related.querySelectorAll(':scope > :not(h2)').forEach(function (node) { node.remove(); });
+    if (relatedResult.status === 'fulfilled' && relatedResult.value.length) {
+      const grid = element('div', 'knowledge-related-grid');
+      relatedResult.value.forEach(function (item) {
+        const card = button('', 'knowledge-related-card');
+        card.dataset.postSlug = item.slug;
+        card.append(
+          element('span', 'knowledge-type-badge', typeLabel(item.type)),
+          contentElement('h3', '', item.title)
+        );
+        grid.appendChild(card);
+      });
+      related.appendChild(grid);
+    } else {
+      related.hidden = true;
+    }
   }
 
-  function makeRelatedSection(post) {
-    const section = element('section', 'knowledge-related-section');
-    section.appendChild(element('h2', '', '相关文章'));
-    const grid = element('div', 'knowledge-related-grid');
-    data.posts.filter(function (item) { return item.slug !== post.slug; }).slice(0, 3).forEach(function (item) {
-      const card = button('', 'knowledge-related-card');
-      card.dataset.postSlug = item.slug;
-      card.append(element('span', 'knowledge-type-badge', typeLabel(item.type)), element('h3', '', item.title));
-      grid.appendChild(card);
-    });
-    section.appendChild(grid);
-    return section;
+  function debounce(callback, delay) {
+    let timer = 0;
+    return function () {
+      window.clearTimeout(timer);
+      const args = arguments;
+      timer = window.setTimeout(function () { callback.apply(null, args); }, delay);
+    };
   }
 
-  async function openRoute(route, payload) {
-    const details = payload || {};
-    state.route = route;
-    state.routePayload = Object.assign({}, details);
-    closeNavigation();
-    updateActiveNav(route);
-    shell.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (route === 'home') return showHome();
-    if (route === 'all') return renderPostIndex(route, {
-      kicker: 'ALL CONTENT',
-      title: '全部文章',
-      description: '统一浏览文章、题解、笔记、项目记录和随笔。',
-      filters: details.type ? { type: details.type } : {},
-    });
-    if (route === 'solutions') return renderPostIndex(route, {
-      kicker: 'SOLUTIONS',
-      title: '算法题解',
-      description: '题解使用独立元数据和专用卡片展示。',
-      filters: { type: 'solution' },
-    });
-    if (route === 'notes') return renderPostIndex(route, {
-      kicker: 'NOTES',
-      title: '学习笔记',
-      description: '用于整理 408、数学和其他学习内容。',
-      filters: { type: 'note' },
-    });
-    if (route === 'projects') return renderPostIndex(route, {
-      kicker: 'PROJECTS',
-      title: '项目记录',
-      description: '记录项目设计、开发过程和阶段更新。',
-      filters: { type: 'project' },
-    });
-    if (route === 'search') return renderSearch(details);
-    if (route === 'categories') return renderCategories();
-    if (route === 'tags') return renderTags();
-    if (route === 'archives') return renderArchives();
-    if (route === 'about') return renderAbout();
-    if (route === 'detail') return renderDetail(details.slug);
-    if (route === 'writer' || route === 'drafts' || route === 'manage') return renderWriterPlaceholder(route);
-    return showHome();
+  function routePayloadFromTarget(target) {
+    const routeType = {
+      solutions: 'solution',
+      notes: 'note',
+      projects: 'project',
+    }[target.dataset.knowledgeRoute] || '';
+    return {
+      q: target.dataset.keyword || '',
+      type: target.dataset.contentType || routeType,
+      category: target.dataset.category || '',
+      tag: target.dataset.tag || '',
+      sort: 'latest',
+      featured: '',
+      pinned: '',
+      page: 1,
+      archive: target.dataset.archive || '',
+    };
   }
 
   function handleSearchSubmit(form) {
     const input = form.elements.keyword;
-    openRoute('search', { keyword: input ? input.value.trim() : '' });
+    navigate('all', {
+      q: input ? input.value.trim() : '',
+      page: 1,
+      sort: 'latest',
+    });
   }
 
   shell.addEventListener('click', function (event) {
-    const routeTarget = event.target.closest('[data-knowledge-route]');
+    if (event.target.closest('a[href]')) return;
     const postTarget = event.target.closest('[data-post-slug]');
+    const routeTarget = event.target.closest('[data-knowledge-route]');
     const actionTarget = event.target.closest('[data-knowledge-action]');
     const headingTarget = event.target.closest('[data-knowledge-heading]');
     const viewModeTarget = event.target.closest('[data-view-mode]');
-
     if (postTarget && !postTarget.disabled) {
-      openRoute('detail', { slug: postTarget.dataset.postSlug });
+      navigate('detail', { slug: postTarget.dataset.postSlug });
       return;
     }
     if (routeTarget && !routeTarget.disabled) {
-      openRoute(routeTarget.dataset.knowledgeRoute, {
-        type: routeTarget.dataset.contentType || '',
-        category: routeTarget.dataset.category || '',
-        tag: routeTarget.dataset.tag || '',
-        keyword: routeTarget.dataset.keyword || '',
-      });
+      const targetRoute = routeTarget.dataset.knowledgeRoute;
+      navigate(
+        ['solutions', 'notes', 'projects', 'search'].includes(targetRoute) ? 'all' : targetRoute,
+        routePayloadFromTarget(routeTarget)
+      );
       return;
     }
     if (headingTarget) {
-      const heading = document.getElementById(headingTarget.dataset.knowledgeHeading);
-      if (heading) heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(headingTarget.dataset.knowledgeHeading)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     if (viewModeTarget) {
       setViewMode(viewModeTarget.dataset.viewMode);
       return;
     }
-    if (actionTarget) {
-      if (actionTarget.dataset.knowledgeAction === 'top') {
-        shell.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      if (actionTarget.dataset.knowledgeAction === 'desktop') {
-        const user = window.authManager && window.authManager.getCurrentUser
-          ? window.authManager.getCurrentUser()
-          : null;
-        if (user && window.authUi) window.authUi.showDesktop(user);
-      }
+    if (actionTarget?.dataset.knowledgeAction === 'top') {
+      shell.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (actionTarget?.dataset.knowledgeAction === 'desktop') {
+      const user = currentUser();
+      if (user && window.authUi) window.authUi.showDesktop(user);
+    }
+  });
+
+  shell.addEventListener('keydown', function (event) {
+    const target = event.target.closest('[data-post-slug][role="button"]');
+    if (target && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      navigate('detail', { slug: target.dataset.postSlug });
     }
   });
 
@@ -882,13 +1216,14 @@
     event.preventDefault();
     handleSearchSubmit(event.currentTarget);
   });
-
   menuToggle.addEventListener('click', function () {
     setNavOpen(!navLinks.classList.contains('is-open'));
   });
   themeButton.addEventListener('click', cycleTheme);
   languageButton.addEventListener('click', toggleLanguage);
-  searchButton.addEventListener('click', function () { openRoute('search', {}); });
+  searchButton.addEventListener('click', function () {
+    navigate('all', { q: '', page: 1, sort: 'latest' });
+  });
   logoutButton.addEventListener('click', function () {
     closeNavigation();
     if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
@@ -896,16 +1231,28 @@
   window.addEventListener('resize', function () {
     if (window.innerWidth > 1040) setNavOpen(false);
   });
+  window.addEventListener('popstate', function () {
+    const parsed = routeFromUrl();
+    navigate(parsed.route, parsed.payload, { fromHistory: true });
+  });
 
   translateStaticTree();
   updateLanguageButton();
-  renderHomeStatic();
-  renderHomeContent();
   applyTheme();
   refreshIdentity();
+  const initialRoute = routeFromUrl();
+  state.route = initialRoute.route;
+  state.routePayload = initialRoute.payload;
+  updateActiveNav(state.route, state.routePayload);
+  renderCurrentRoute({ replace: true });
 
   window.elegantShell = {
     closeNavigation,
     refreshIdentity,
+    navigate,
+    refresh: function () {
+      repository.clearCache();
+      return renderCurrentRoute({ replace: true, refresh: true });
+    },
   };
 }());
