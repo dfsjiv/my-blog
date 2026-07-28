@@ -1,4 +1,5 @@
 import { getContestsResponse } from "../lib/contests/index.mjs";
+import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
 
 const ALLOWED_ORIGIN = "https://lilinzheng.bbroot.com";
 
@@ -120,6 +121,17 @@ export async function onRequest(context) {
                 waitUntil: context.waitUntil
                     ? context.waitUntil.bind(context)
                     : null
+            });
+        }
+
+        else if (url.pathname.startsWith("/api/knowledge/")) {
+            response = await handleKnowledgeRequest({
+                request,
+                env,
+                url,
+                jsonResponse,
+                getBearerToken,
+                getAuthenticatedUser
             });
         }
 
@@ -1972,7 +1984,7 @@ function addCorsHeaders(
 
     headers.set(
         "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS"
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     );
 
 
