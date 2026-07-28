@@ -263,13 +263,16 @@
       loginButton: document.getElementById('loginButton'),
       guestButton: document.getElementById('guestButton'),
       loginMessage: document.getElementById('loginMessage'),
+      versionSelector: document.getElementById('versionSelector'),
+      osVersionButton: document.getElementById('osVersionButton'),
       desktopShell: document.getElementById('desktopShell'),
       blogFrame: document.getElementById('blogFrame'),
       startUserName: document.getElementById('startUserName'),
       startUserRole: document.getElementById('startUserRole'),
       logoutButton: document.getElementById('logoutButton'),
     };
-    if (!elements.loginForm || !elements.desktopShell) return;
+    if (!elements.loginForm || !elements.versionSelector
+      || !elements.osVersionButton || !elements.desktopShell) return;
 
     const auth = createAuthManager();
     let loginPending = false;
@@ -319,10 +322,11 @@
     }
 
     function showLoginScreen(message) {
-      document.body.classList.remove('auth-pending', 'auth-desktop');
+      document.body.classList.remove('auth-pending', 'auth-version', 'auth-desktop');
       document.body.classList.add('auth-login');
       elements.desktopShell.setAttribute('aria-hidden', 'true');
       elements.loginScreen.removeAttribute('aria-hidden');
+      elements.versionSelector.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
       setLoginPending(false, '');
       setMessage(message || '', false);
@@ -331,12 +335,27 @@
       if (window.aiChat) window.aiChat.refreshAccess();
     }
 
+    function showVersionSelector(user) {
+      updateUserIdentityUI(user);
+      document.body.classList.remove('auth-pending', 'auth-login', 'auth-desktop');
+      document.body.classList.add('auth-version');
+      elements.desktopShell.setAttribute('aria-hidden', 'true');
+      elements.loginScreen.setAttribute('aria-hidden', 'true');
+      elements.versionSelector.setAttribute('aria-hidden', 'false');
+      elements.password.value = '';
+      setLoginPending(false, '');
+      elements.osVersionButton.focus();
+      notifyBlogAuthChanged();
+      if (window.aiChat) window.aiChat.refreshAccess();
+    }
+
     function showDesktop(user) {
       updateUserIdentityUI(user);
-      document.body.classList.remove('auth-pending', 'auth-login');
+      document.body.classList.remove('auth-pending', 'auth-login', 'auth-version');
       document.body.classList.add('auth-desktop');
       elements.desktopShell.setAttribute('aria-hidden', 'false');
       elements.loginScreen.setAttribute('aria-hidden', 'true');
+      elements.versionSelector.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
       setLoginPending(false, '');
       notifyBlogAuthChanged();
@@ -374,7 +393,7 @@
       setLoginPending(true, '');
       try {
         const user = await auth.login(username, password);
-        showDesktop(user);
+        showVersionSelector(user);
       } catch (error) {
         showLoginScreen(error && error.message ? error.message : '无法连接服务器，请稍后重试');
       }
@@ -382,7 +401,12 @@
 
     elements.guestButton.addEventListener('click', function () {
       if (loginPending) return;
-      showDesktop(auth.enterAsGuest());
+      showVersionSelector(auth.enterAsGuest());
+    });
+
+    elements.osVersionButton.addEventListener('click', function () {
+      const user = auth.getCurrentUser();
+      if (user) showDesktop(user);
     });
 
     elements.logoutButton.addEventListener('click', async function () {
@@ -399,7 +423,7 @@
       setLoginPending(true, '正在验证登录状态...');
       const result = await auth.restoreSession();
       if (result.success) {
-        showDesktop(result.user);
+        showVersionSelector(result.user);
       } else {
         showLoginScreen(result.reason === 'expired'
           ? '登录状态已失效，请重新登录'
@@ -409,6 +433,7 @@
 
     window.authUi = {
       showLoginScreen,
+      showVersionSelector,
       showDesktop,
       updateUserIdentityUI,
       logoutToLogin,

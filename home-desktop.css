@@ -61,6 +61,75 @@ body.is-desktop.auth-desktop .desktop-shell {
   display: none;
 }
 
+.version-selector {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #ffffff;
+  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
+    linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.12) 42% 44%, transparent 44% 100%),
+    linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
+}
+
+body.auth-version .login-screen {
+  display: none;
+}
+
+body.auth-version .version-selector {
+  display: flex;
+}
+
+.version-selector-content {
+  width: min(420px, calc(100vw - 40px));
+  text-align: center;
+}
+
+.version-selector-content h1 {
+  margin: 0 0 28px;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.version-selector-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.version-selector-button {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: rgba(18, 43, 62, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 0;
+  font: 16px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  text-align: left;
+}
+
+.version-selector-button:hover:not(:disabled),
+.version-selector-button:focus-visible {
+  background: #0067b8;
+  border-color: #72b9e8;
+  outline: none;
+}
+
+.version-selector-button:active:not(:disabled) {
+  background: #005a9e;
+}
+
+.version-selector-button:disabled {
+  color: rgba(255, 255, 255, 0.48);
+  background: rgba(18, 43, 62, 0.58);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .login-panel {
   position: relative;
   z-index: 1;
