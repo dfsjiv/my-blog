@@ -94,9 +94,24 @@ function createDatabase() {
         );
         INSERT INTO users (id, username, role)
         VALUES (1, 'Lee Ethan', 'admin'), (2, 'reader', 'user');
+        CREATE TABLE articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            summary TEXT,
+            content TEXT NOT NULL,
+            category TEXT NOT NULL CHECK(category IN ('algorithm','computer','essay')),
+            author_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(author_id) REFERENCES users(id)
+        );
     `);
     sqlite.exec(fs.readFileSync(
         path.join(rootDir, "migrations", "0002_add_knowledge_content.sql"),
+        "utf8"
+    ));
+    sqlite.exec(fs.readFileSync(
+        path.join(rootDir, "migrations", "0003_add_knowledge_migration_map.sql"),
         "utf8"
     ));
     return { sqlite, DB: new D1Database(sqlite) };
@@ -199,6 +214,7 @@ test("knowledge migration creates isolated tables and constraints", () => {
         ORDER BY name
     `).all().map((row) => row.name);
     assert.deepEqual(tables, [
+        "knowledge_migration_map",
         "knowledge_post_tags",
         "knowledge_posts",
         "knowledge_solution_meta",
@@ -470,5 +486,89 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     const finalFacets = await api("/api/knowledge/facets");
     assert.equal(finalFacets.body.data.stats.posts, 1);
     assert.equal(finalFacets.body.data.stats.notes, 1);
+    sqlite.close();
+});
+
+test("knowledge API adapts legacy articles and keeps migration checks read-only", async () => {
+    const { sqlite, DB } = createDatabase();
+    sqlite.prepare(`
+        INSERT INTO articles (
+            title, summary, content, category, author_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        "Legacy Algorithm",
+        "Original summary",
+        "# Heading\n\nOriginal **Markdown** body.",
+        "algorithm",
+        1,
+        "2026-07-14 12:54:10",
+        "2026-07-14 12:54:10"
+    );
+    const api = createApi({ DB });
+
+    const list = await api("/api/knowledge/posts?type=article");
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.pagination.total, 1);
+    assert.equal(list.body.data.items[0].source, "legacy-blog");
+    assert.equal(list.body.data.items[0].slug, "legacy-article-1");
+    assert.equal(list.body.data.items[0].legacyId, 1);
+
+    const detail = await api("/api/knowledge/posts/legacy-article-1");
+    assert.equal(detail.status, 200);
+    assert.equal(detail.body.data.post.contentFormat, "markdown");
+    assert.equal(detail.body.data.post.originalContent, "# Heading\n\nOriginal **Markdown** body.");
+    const facets = await api("/api/knowledge/facets");
+    assert.equal(facets.status, 200);
+    assert.equal(facets.body.data.stats.posts, 1);
+    assert.equal(facets.body.data.categories[0].slug, "algorithm");
+
+    const emptyChannel = await api("/api/knowledge/posts?channel=games");
+    assert.equal(emptyChannel.status, 200);
+    assert.equal(emptyChannel.body.data.pagination.total, 0);
+
+    const unauthorizedAudit = await api("/api/knowledge/admin/migration/audit");
+    assert.equal(unauthorizedAudit.status, 401);
+    const beforeMapCount = sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM knowledge_migration_map"
+    ).get().count;
+    const audit = await api("/api/knowledge/admin/migration/audit", {
+        token: "admin-token"
+    });
+    assert.equal(audit.status, 200);
+    assert.equal(audit.body.data.audit.legacyTotal, 1);
+    const dryRun = await api("/api/knowledge/admin/migration/dry-run", {
+        method: "POST",
+        token: "admin-token"
+    });
+    assert.equal(dryRun.status, 200);
+    assert.equal(dryRun.body.data.dryRun.summary.writesPerformed, 0);
+    assert.match(dryRun.body.data.dryRun.plans[0].sourceChecksum, /^[a-f0-9]{64}$/);
+    assert.equal(
+        sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_migration_map").get().count,
+        beforeMapCount
+    );
+    sqlite.close();
+});
+
+test("public knowledge API works before knowledge tables are deployed", async () => {
+    const { sqlite, DB } = createDatabase();
+    sqlite.exec(`
+        DROP TABLE knowledge_migration_map;
+        DROP TABLE knowledge_solution_meta;
+        DROP TABLE knowledge_post_tags;
+        DROP TABLE knowledge_tags;
+        DROP TABLE knowledge_posts;
+    `);
+    sqlite.prepare(`
+        INSERT INTO articles (title, content, category, author_id)
+        VALUES ('Legacy Only', 'Body', 'essay', 1)
+    `).run();
+    const api = createApi({ DB });
+    const list = await api("/api/knowledge/posts");
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.items[0].title, "Legacy Only");
+    const facets = await api("/api/knowledge/facets");
+    assert.equal(facets.status, 200);
+    assert.equal(facets.body.data.stats.posts, 1);
     sqlite.close();
 });

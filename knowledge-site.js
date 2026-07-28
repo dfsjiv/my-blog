@@ -5,8 +5,22 @@
   const PAGE_SIZE = 10;
   const URL_KEYS = [
     'knowledge', 'slug', 'q', 'type', 'category', 'tag', 'sort',
-    'featured', 'pinned', 'page', 'archive',
+    'featured', 'pinned', 'page', 'archive', 'channel',
   ];
+  const navigationLinks = Object.freeze({
+    socialLinks: Object.freeze({
+      bilibili: 'https://space.bilibili.com/3546789605018414',
+      github: 'https://github.com/dfsjiv',
+      zhihu: 'https://www.zhihu.com/people/study-32-31',
+      nowcoder: 'https://www.nowcoder.com/users/412412995',
+    }),
+    aboutLinks: Object.freeze({
+      games: 'games',
+      anime: 'anime',
+      manga: 'manga',
+      novels: 'novels',
+    }),
+  });
   const staticTextSources = new WeakMap();
   const staticAttributeSources = new WeakMap();
   const shell = document.getElementById('elegantShell');
@@ -19,6 +33,7 @@
   const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
+  const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
   const data = window.KnowledgeMockData;
@@ -125,10 +140,104 @@
     navLinks.classList.toggle('is-open', Boolean(open));
     menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     menuToggle.setAttribute('aria-label', t(open ? '关闭导航菜单' : '打开导航菜单'));
+    if (!open) closeNavMenus();
+  }
+
+  function closeNavMenus(exceptName) {
+    navMenus.forEach(function (menu) {
+      if (exceptName && menu.dataset.knowledgeNavMenu === exceptName) return;
+      menu.classList.remove('is-open');
+      const trigger = menu.querySelector('.knowledge-nav-menu-trigger');
+      const submenu = menu.querySelector('.knowledge-nav-submenu');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      if (submenu) submenu.hidden = true;
+    });
+  }
+
+  function setNavMenuOpen(menu, open) {
+    if (!menu) return;
+    const name = menu.dataset.knowledgeNavMenu;
+    const trigger = menu.querySelector('.knowledge-nav-menu-trigger');
+    const submenu = menu.querySelector('.knowledge-nav-submenu');
+    if (!trigger || !submenu) return;
+    if (open) closeNavMenus(name);
+    menu.classList.toggle('is-open', Boolean(open));
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    submenu.hidden = !open;
+  }
+
+  function configureNavigationLinks() {
+    navLinks.querySelectorAll('[data-social-link]').forEach(function (link) {
+      const url = safeExternalUrl(navigationLinks.socialLinks[link.dataset.socialLink]);
+      if (url) {
+        link.href = url;
+        link.removeAttribute('aria-disabled');
+        link.removeAttribute('tabindex');
+        return;
+      }
+      link.removeAttribute('href');
+      link.setAttribute('aria-disabled', 'true');
+      link.setAttribute('tabindex', '-1');
+      link.title = t('链接待补充');
+    });
+    navLinks.querySelectorAll('[data-about-link]').forEach(function (item) {
+      const channel = navigationLinks.aboutLinks[item.dataset.aboutLink];
+      item.disabled = !channel;
+      if (channel) {
+        item.dataset.knowledgeRoute = 'all';
+        item.dataset.channel = channel;
+      } else {
+        delete item.dataset.knowledgeRoute;
+        delete item.dataset.channel;
+      }
+    });
+  }
+
+  function setupNavigationMenus() {
+    navMenus.forEach(function (menu) {
+      const trigger = menu.querySelector('.knowledge-nav-menu-trigger');
+      if (!trigger) return;
+      trigger.addEventListener('click', function () {
+        const isCompact = window.matchMedia('(max-width: 1040px)').matches;
+        setNavMenuOpen(menu, isCompact ? !menu.classList.contains('is-open') : true);
+      });
+      menu.addEventListener('mouseenter', function () {
+        if (!window.matchMedia('(max-width: 1040px)').matches) setNavMenuOpen(menu, true);
+      });
+      menu.addEventListener('mouseleave', function () {
+        if (!window.matchMedia('(max-width: 1040px)').matches
+          && !menu.contains(document.activeElement)) {
+          setNavMenuOpen(menu, false);
+        }
+      });
+      menu.addEventListener('focusin', function () {
+        if (!window.matchMedia('(max-width: 1040px)').matches) {
+          setNavMenuOpen(menu, true);
+        }
+      });
+      menu.addEventListener('focusout', function (event) {
+        if (!window.matchMedia('(max-width: 1040px)').matches
+          && !menu.contains(event.relatedTarget)) {
+          setNavMenuOpen(menu, false);
+        }
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!event.target.closest('[data-knowledge-nav-menu]')) closeNavMenus();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      const openMenu = navMenus.find(function (menu) { return menu.classList.contains('is-open'); });
+      if (!openMenu) return;
+      openMenu.querySelector('.knowledge-nav-menu-trigger')?.focus();
+      setNavMenuOpen(openMenu, false);
+    });
   }
 
   function closeNavigation() {
     setNavOpen(false);
+    closeNavMenus();
     shell.querySelectorAll('.knowledge-author-tools[open], .knowledge-account-menu[open]')
       .forEach(function (details) { details.removeAttribute('open'); });
   }
@@ -529,11 +638,12 @@
   }
 
   function applyViewMode() {
-    const list = document.getElementById('knowledgeLatestList');
-    if (!list) return;
-    list.classList.toggle('is-grid', state.viewMode === 'grid');
-    document.getElementById('knowledgeListView')?.classList.toggle('is-active', state.viewMode === 'list');
-    document.getElementById('knowledgeGridView')?.classList.toggle('is-active', state.viewMode === 'grid');
+    shell.querySelectorAll('.knowledge-post-list, .knowledge-search-results').forEach(function (list) {
+      list.classList.toggle('is-grid', state.viewMode === 'grid');
+    });
+    shell.querySelectorAll('[data-view-mode]').forEach(function (control) {
+      control.classList.toggle('is-active', control.dataset.viewMode === state.viewMode);
+    });
   }
 
   function setViewMode(mode) {
@@ -565,10 +675,22 @@
   function updateActiveNav(route, payload) {
     shell.querySelectorAll('[data-knowledge-route]').forEach(function (item) {
       const target = item.dataset.knowledgeRoute;
-      const active = target === route
-        || (route === 'all' && target === 'solutions' && payload.type === 'solution')
-        || (route === 'all' && target === 'notes' && payload.type === 'note')
-        || (route === 'all' && target === 'projects' && payload.type === 'project');
+      let active = target === route;
+      if (route === 'all') {
+        if (item.dataset.channel) {
+          active = item.dataset.channel === payload.channel;
+        } else if (target === 'articles') {
+          active = payload.type === 'article';
+        } else if (target === 'solutions') {
+          active = payload.type === 'solution';
+        } else if (target === 'notes') {
+          active = payload.type === 'note';
+        } else if (target === 'projects') {
+          active = payload.type === 'project';
+        } else if (target === 'all') {
+          active = !payload.type && !payload.channel;
+        }
+      }
       item.classList.toggle('is-active', active);
     });
   }
@@ -598,6 +720,7 @@
         pinned: params.get('pinned') || '',
         page: parsePage(params.get('page')),
         archive: params.get('archive') || '',
+        channel: params.get('channel') || '',
       },
     };
   }
@@ -610,7 +733,7 @@
       url.searchParams.set('slug', payload.slug);
     } else if (route !== 'home') {
       url.searchParams.set('knowledge', route);
-      ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive']
+      ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive', 'channel']
         .forEach(function (key) {
           if (payload[key]) url.searchParams.set(key, payload[key]);
         });
@@ -678,10 +801,38 @@
   }
 
   function listTitle(filters) {
+    const channelTitles = {
+      games: '游戏',
+      anime: '动漫',
+      manga: '漫画',
+      novels: '小说',
+    };
+    if (filters.channel && channelTitles[filters.channel]) return t(channelTitles[filters.channel]);
     if (filters.archive) return filters.archive + ' ' + t('文章归档');
     if (filters.type) return typeLabel(filters.type);
     if (filters.q) return t('搜索结果');
     return t('全部文章');
+  }
+
+  function channelDescription(channel) {
+    const descriptions = {
+      games: '游戏记录与相关内容。',
+      anime: '动漫记录与相关内容。',
+      manga: '漫画记录与相关内容。',
+      novels: '小说记录与相关内容。',
+    };
+    return t(descriptions[channel]
+      || '浏览已发布的文章、题解、笔记、项目记录和随笔。');
+  }
+
+  function channelEmptyTitle(channel) {
+    const labels = {
+      games: '这里暂时还没有发布游戏内容。',
+      anime: '这里暂时还没有发布动漫内容。',
+      manga: '这里暂时还没有发布漫画内容。',
+      novels: '这里暂时还没有发布小说内容。',
+    };
+    return labels[channel] || '这里暂时还没有发布内容。';
   }
 
   async function renderPostIndex(initialFilters, controller) {
@@ -695,11 +846,12 @@
       pinned: '',
       page: 1,
       archive: '',
+      channel: '',
     }, initialFilters || {});
     const shellNode = showRouteShell(
       'CONTENT',
       listTitle(filters),
-      '浏览已发布的文章、题解、笔记、项目记录和随笔。'
+      channelDescription(filters.channel)
     );
     const controls = element('div', 'knowledge-search-controls');
     const keyword = element('input');
@@ -745,7 +897,14 @@
     pinned.type = 'checkbox';
     pinned.checked = filters.pinned === 'true';
     pinnedLabel.append(pinned, document.createTextNode(t('仅看置顶')));
-    controls.append(type, category, tag, sort, featuredLabel, pinnedLabel);
+    const viewToggle = element('div', 'knowledge-view-toggle');
+    const listView = button('列表');
+    listView.dataset.viewMode = 'list';
+    const gridView = button('网格');
+    gridView.dataset.viewMode = 'grid';
+    viewToggle.append(listView, gridView);
+    controls.append(type, category, tag, sort, featuredLabel, pinnedLabel, viewToggle);
+    applyViewMode();
 
     function nextFilters(page) {
       return {
@@ -758,6 +917,7 @@
         pinned: pinned.checked ? 'true' : '',
         page: page || 1,
         archive: filters.archive,
+        channel: filters.channel,
       };
     }
 
@@ -801,6 +961,7 @@
           sort: filters.sort,
           featured: filters.featured,
           pinned: filters.pinned,
+          channel: filters.channel,
         }, { signal: controller.signal });
       }
       if (controller.signal.aborted) return;
@@ -808,9 +969,10 @@
       response.items.forEach(function (post) {
         results.appendChild(post.type === 'solution' ? makeSolutionCard(post) : makeContentCard(post));
       });
+      applyViewMode();
       if (!response.items.length) {
         results.appendChild(makeEmptyState(
-          filters.q ? '没有找到匹配内容。' : '这里暂时还没有发布内容。',
+          filters.q ? '没有找到匹配内容。' : channelEmptyTitle(filters.channel),
           filters.q ? '请修改关键词或筛选条件。' : '发布后的内容会显示在这里。',
           !filters.q
         ));
@@ -982,8 +1144,11 @@
     const body = element('div', 'knowledge-detail-body');
     let renderedHeadings = [];
     let detailAside = null;
-    if (post.contentMarkdown.trim()) {
-      const rendered = markdown.render(post.contentMarkdown, body);
+    const originalContent = post.originalContent || post.content || post.contentMarkdown;
+    if (originalContent.trim()) {
+      const rendered = post.contentFormat === 'html' && markdown.renderHtml
+        ? markdown.renderHtml(originalContent, body)
+        : markdown.render(post.contentMarkdown || originalContent, body);
       renderedHeadings = rendered.headings;
       main.appendChild(body);
       const aside = element('aside', 'knowledge-detail-aside');
@@ -1137,6 +1302,7 @@
 
   function routePayloadFromTarget(target) {
     const routeType = {
+      articles: 'article',
       solutions: 'solution',
       notes: 'note',
       projects: 'project',
@@ -1151,6 +1317,7 @@
       pinned: '',
       page: 1,
       archive: target.dataset.archive || '',
+      channel: target.dataset.channel || '',
     };
   }
 
@@ -1177,7 +1344,7 @@
     if (routeTarget && !routeTarget.disabled) {
       const targetRoute = routeTarget.dataset.knowledgeRoute;
       navigate(
-        ['solutions', 'notes', 'projects', 'search'].includes(targetRoute) ? 'all' : targetRoute,
+        ['articles', 'solutions', 'notes', 'projects', 'search'].includes(targetRoute) ? 'all' : targetRoute,
         routePayloadFromTarget(routeTarget)
       );
       return;
@@ -1229,6 +1396,7 @@
     if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
   });
   window.addEventListener('resize', function () {
+    closeNavMenus();
     if (window.innerWidth > 1040) setNavOpen(false);
   });
   window.addEventListener('popstate', function () {
@@ -1236,6 +1404,8 @@
     navigate(parsed.route, parsed.payload, { fromHistory: true });
   });
 
+  configureNavigationLinks();
+  setupNavigationMenus();
   translateStaticTree();
   updateLanguageButton();
   applyTheme();

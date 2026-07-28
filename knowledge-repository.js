@@ -89,6 +89,7 @@
       'sort',
       'featured',
       'pinned',
+      'channel',
     ].forEach(function (key) {
       appendParam(params, key, source[key]);
     });
@@ -124,11 +125,19 @@
     const source = post && typeof post === 'object' ? post : {};
     return {
       id: Number(source.id) || 0,
+      source: typeof source.source === 'string' ? source.source : 'knowledge',
+      sourceId: source.sourceId ?? source.id ?? null,
+      legacyId: source.legacyId ?? null,
+      legacySlug: source.legacySlug ?? null,
+      legacyUrl: source.legacyUrl ?? null,
       slug: typeof source.slug === 'string' ? source.slug : '',
       type: typeof source.type === 'string' ? source.type : 'article',
       title: typeof source.title === 'string' ? source.title : '',
       summary: typeof source.summary === 'string' ? source.summary : '',
       contentMarkdown: typeof source.contentMarkdown === 'string' ? source.contentMarkdown : '',
+      content: typeof source.content === 'string' ? source.content : '',
+      originalContent: typeof source.originalContent === 'string' ? source.originalContent : '',
+      contentFormat: typeof source.contentFormat === 'string' ? source.contentFormat : 'markdown',
       coverUrl: source.coverUrl || null,
       category: source.category || null,
       categorySlug: source.categorySlug || null,

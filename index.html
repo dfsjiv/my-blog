@@ -102,11 +102,67 @@
         <div class="knowledge-nav-links" id="knowledgeNavLinks">
           <button class="is-active" type="button" data-knowledge-route="home">首页</button>
           <button type="button" data-knowledge-route="all">全部文章</button>
+          <button type="button" data-knowledge-route="articles">技术文章</button>
           <button type="button" data-knowledge-route="solutions">算法题解</button>
           <button type="button" data-knowledge-route="notes">学习笔记</button>
           <button type="button" data-knowledge-route="projects">项目记录</button>
           <button type="button" data-knowledge-route="archives">归档</button>
-          <button type="button" data-knowledge-route="about">关于</button>
+          <div class="knowledge-nav-menu" data-knowledge-nav-menu="links">
+            <button class="knowledge-nav-menu-trigger" type="button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeLinkMenu">
+              Link <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="knowledge-nav-submenu" id="knowledgeLinkMenu" role="menu" hidden>
+              <a data-social-link="bilibili" role="menuitem" target="_blank" rel="noopener noreferrer">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">B</span>
+                <span>B站</span>
+                <span class="knowledge-nav-external" aria-hidden="true">↗</span>
+              </a>
+              <a data-social-link="github" role="menuitem" target="_blank" rel="noopener noreferrer">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">GH</span>
+                <span>GitHub</span>
+                <span class="knowledge-nav-external" aria-hidden="true">↗</span>
+              </a>
+              <a data-social-link="zhihu" role="menuitem" target="_blank" rel="noopener noreferrer">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">知</span>
+                <span>知乎</span>
+                <span class="knowledge-nav-external" aria-hidden="true">↗</span>
+              </a>
+              <a data-social-link="nowcoder" role="menuitem" target="_blank" rel="noopener noreferrer">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">牛</span>
+                <span>牛客</span>
+                <span class="knowledge-nav-external" aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+          <div class="knowledge-nav-menu" data-knowledge-nav-menu="about">
+            <button class="knowledge-nav-menu-trigger" type="button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeAboutMenu">
+              关于我 <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="knowledge-nav-submenu" id="knowledgeAboutMenu" role="menu" hidden>
+              <button type="button" data-about-link="games" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">游</span>
+                <span>游戏</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-about-link="anime" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">动</span>
+                <span>动漫</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-about-link="manga" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">漫</span>
+                <span>漫画</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-about-link="novels" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">文</span>
+                <span>小说</span>
+                <small>内容频道</small>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="knowledge-nav-actions">

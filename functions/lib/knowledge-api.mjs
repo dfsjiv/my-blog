@@ -1,4 +1,18 @@
+import {
+    buildLegacyMigrationAudit,
+    buildLegacyMigrationDryRun,
+    fetchLegacyPostBySlug,
+    fetchLegacyPosts,
+    getLegacyFacets,
+    getMigratedLegacyIds,
+    tableExists
+} from "./legacy-knowledge-adapter.mjs";
+
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
+const CONTENT_CHANNELS = new Set([
+    "all", "article", "solution", "note", "project",
+    "games", "anime", "manga", "novels"
+]);
 const POST_STATUSES = new Set(["draft", "published", "archived", "deleted"]);
 const MAX_PAGE_SIZE = 50;
 const MAX_TAGS = 15;
@@ -37,6 +51,28 @@ export async function handleKnowledgeRequest(context) {
         }
         if (url.pathname === "/api/knowledge/facets" && request.method === "GET") {
             return await getPublicFacets(env, jsonResponse);
+        }
+        if (
+            url.pathname === "/api/knowledge/admin/migration/audit"
+            && request.method === "GET"
+        ) {
+            const auth = await requireAuthor(context);
+            if (auth.response) return auth.response;
+            return jsonResponse({
+                success: true,
+                data: { audit: await buildLegacyMigrationAudit(env) }
+            });
+        }
+        if (
+            url.pathname === "/api/knowledge/admin/migration/dry-run"
+            && request.method === "POST"
+        ) {
+            const auth = await requireAuthor(context);
+            if (auth.response) return auth.response;
+            return jsonResponse({
+                success: true,
+                data: { dryRun: await buildLegacyMigrationDryRun(env) }
+            });
         }
 
         if (url.pathname === "/api/knowledge/admin/posts" && request.method === "GET") {
@@ -88,6 +124,8 @@ export async function handleKnowledgeRequest(context) {
         const knownPath = url.pathname === "/api/knowledge/posts"
             || Boolean(publicPostMatch)
             || url.pathname === "/api/knowledge/facets"
+            || url.pathname === "/api/knowledge/admin/migration/audit"
+            || url.pathname === "/api/knowledge/admin/migration/dry-run"
             || url.pathname === "/api/knowledge/admin/posts"
             || Boolean(adminPostMatch)
             || Boolean(adminActionMatch);
@@ -157,8 +195,25 @@ async function requireAuthor(context) {
 async function getPublicPosts(request, env, jsonResponse) {
     const filters = parseListFilters(request, false);
     if (filters.error) return validationResponse(jsonResponse, filters.error);
-
-    const result = await queryPostList(env, filters, true);
+    const fetchLimit = filters.page * filters.pageSize;
+    const knowledgeAvailable = await tableExists(env, "knowledge_posts");
+    const migratedIds = await getMigratedLegacyIds(env);
+    const [knowledgeResult, legacyResult] = await Promise.all([
+        knowledgeAvailable
+            ? queryPostList(env, { ...filters, page: 1, pageSize: fetchLimit }, true)
+                .catch((error) => {
+                    console.error("Knowledge list fallback:", safeErrorMessage(error));
+                    return { items: [], total: 0 };
+                })
+            : Promise.resolve({ items: [], total: 0 }),
+        fetchLegacyPosts(env, { ...filters, excludeSourceIds: migratedIds }, fetchLimit)
+    ]);
+    const merged = [...knowledgeResult.items, ...legacyResult.items].sort(postComparator(filters.sort));
+    const offset = (filters.page - 1) * filters.pageSize;
+    const result = {
+        items: merged.slice(offset, offset + filters.pageSize),
+        total: knowledgeResult.total + legacyResult.total
+    };
     return jsonResponse({
         success: true,
         data: {
@@ -169,17 +224,43 @@ async function getPublicPosts(request, env, jsonResponse) {
 }
 
 async function getPublicPost(slug, env, jsonResponse) {
-    const post = await getPostBySlug(env, slug, true);
-    if (!post) {
+    const knowledgeAvailable = await tableExists(env, "knowledge_posts");
+    let post = null;
+    if (knowledgeAvailable) {
+        try {
+            post = await getPostBySlug(env, slug, true);
+        }
+        catch (error) {
+            console.error("Knowledge detail fallback:", safeErrorMessage(error));
+        }
+    }
+    const resolved = post || await fetchLegacyPostBySlug(env, slug);
+    if (!resolved) {
         return errorResponse(jsonResponse, 404, "NOT_FOUND", "文章不存在");
     }
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(post, false) }
+        data: { post: toDetailPost(resolved, false) }
     });
 }
 
 async function getPublicFacets(env, jsonResponse) {
+    const knowledgeAvailable = await tableExists(env, "knowledge_posts");
+    const migratedIds = await getMigratedLegacyIds(env);
+    const [knowledge, legacy] = await Promise.all([
+        knowledgeAvailable
+            ? getKnowledgeFacets(env).catch((error) => {
+                console.error("Knowledge facets fallback:", safeErrorMessage(error));
+                return emptyFacets();
+            })
+            : Promise.resolve(emptyFacets()),
+        getLegacyFacets(env, migratedIds)
+    ]);
+    const data = mergeFacets(knowledge, legacy);
+    return jsonResponse({ success: true, data });
+}
+
+async function getKnowledgeFacets(env) {
     const publishedWhere = "status = 'published' AND deleted_at IS NULL";
     const results = await env.DB.batch([
         env.DB.prepare(`
@@ -230,9 +311,7 @@ async function getPublicFacets(env, jsonResponse) {
     ]);
 
     const stats = firstResult(results[4]) || {};
-    return jsonResponse({
-        success: true,
-        data: {
+    return {
             types: resultRows(results[0]).map((row) => ({
                 type: row.name,
                 count: Number(row.count) || 0
@@ -261,8 +340,7 @@ async function getPublicFacets(env, jsonResponse) {
                 words: Number(stats.words) || 0,
                 lastUpdatedAt: stats.last_updated_at || null
             }
-        }
-    });
+        };
 }
 
 async function getAdminPosts(request, env, jsonResponse) {
@@ -579,8 +657,12 @@ function parseListFilters(request, admin) {
     const category = cleanOptional(url.searchParams.get("category"));
     const tag = cleanOptional(url.searchParams.get("tag"));
     const q = cleanOptional(url.searchParams.get("q"));
+    const channel = cleanOptional(url.searchParams.get("channel"));
 
     if (type && !CONTENT_TYPES.has(type)) return { error: { type: "内容类型无效" } };
+    if (channel && !CONTENT_CHANNELS.has(channel)) {
+        return { error: { channel: "内容频道无效" } };
+    }
     if (admin && status && !POST_STATUSES.has(status)) {
         return { error: { status: "文章状态无效" } };
     }
@@ -605,6 +687,7 @@ function parseListFilters(request, admin) {
         category,
         tag,
         q,
+        channel,
         sort,
         featured: featured.value,
         pinned: pinned.value,
@@ -625,6 +708,16 @@ async function queryPostList(env, filters, publicOnly) {
     if (filters.type) {
         where.push("p.type = ?");
         bindings.push(filters.type);
+    }
+    if (filters.channel && filters.channel !== "all") {
+        if (CONTENT_TYPES.has(filters.channel)) {
+            where.push("p.type = ?");
+            bindings.push(filters.channel);
+        }
+        else {
+            where.push("p.category_slug = ?");
+            bindings.push(filters.channel);
+        }
     }
     if (filters.category) {
         where.push("p.category_slug = ?");
@@ -1070,12 +1163,21 @@ function solutionBindings(meta) {
 function mapPost(row, tags, solutionMeta) {
     return {
         id: Number(row.id),
+        source: "knowledge",
+        sourceId: Number(row.id),
+        legacyId: null,
+        legacySlug: null,
+        legacyUrl: null,
         authorUserId: Number(row.author_user_id),
         slug: row.slug,
         type: row.type,
         title: row.title,
         summary: row.summary,
+        content: row.content_markdown,
+        originalContent: row.content_markdown,
+        renderedContent: null,
         contentMarkdown: row.content_markdown,
+        contentFormat: "markdown",
         coverUrl: row.cover_url || null,
         category: row.category || null,
         categorySlug: row.category_slug || null,
@@ -1123,6 +1225,11 @@ function mapSolution(row) {
 function toListPost(post, admin = false) {
     const result = {
         id: post.id,
+        source: post.source || "knowledge",
+        sourceId: post.sourceId ?? post.id,
+        legacyId: post.legacyId ?? null,
+        legacySlug: post.legacySlug ?? null,
+        legacyUrl: post.legacyUrl ?? null,
         slug: post.slug,
         type: post.type,
         title: post.title,
@@ -1152,9 +1259,103 @@ function toListPost(post, admin = false) {
 function toDetailPost(post, admin) {
     return {
         ...toListPost(post, admin),
+        content: post.content ?? post.contentMarkdown,
+        originalContent: post.originalContent ?? post.contentMarkdown,
+        renderedContent: post.renderedContent ?? null,
         contentMarkdown: post.contentMarkdown,
+        contentFormat: post.contentFormat || "markdown",
         authorUserId: admin ? post.authorUserId : undefined
     };
+}
+
+function postComparator(sort) {
+    const direction = sort === "oldest" ? 1 : -1;
+    const field = sort === "updated" ? "updatedAt" : "publishedAt";
+    return (left, right) => {
+        if (left.isPinned !== right.isPinned && sort !== "oldest") {
+            return left.isPinned ? -1 : 1;
+        }
+        const leftTime = Date.parse(left[field] || left.createdAt || "") || 0;
+        const rightTime = Date.parse(right[field] || right.createdAt || "") || 0;
+        if (leftTime !== rightTime) return (leftTime - rightTime) * direction;
+        return (Number(left.sourceId) - Number(right.sourceId)) * direction;
+    };
+}
+
+function emptyFacets() {
+    return {
+        types: [],
+        categories: [],
+        tags: [],
+        archives: [],
+        stats: {
+            posts: 0,
+            solutions: 0,
+            notes: 0,
+            projects: 0,
+            essays: 0,
+            words: 0,
+            lastUpdatedAt: null
+        }
+    };
+}
+
+function mergeFacets(left, right) {
+    return {
+        types: mergeCounted(left.types, right.types, "type"),
+        categories: mergeCounted(left.categories, right.categories, "slug", "name"),
+        tags: mergeCounted(left.tags, right.tags, "slug", "name"),
+        archives: mergeArchives(left.archives, right.archives),
+        stats: {
+            posts: number(left.stats.posts) + number(right.stats.posts),
+            solutions: number(left.stats.solutions) + number(right.stats.solutions),
+            notes: number(left.stats.notes) + number(right.stats.notes),
+            projects: number(left.stats.projects) + number(right.stats.projects),
+            essays: number(left.stats.essays) + number(right.stats.essays),
+            words: number(left.stats.words) + number(right.stats.words),
+            lastUpdatedAt: latestDate(left.stats.lastUpdatedAt, right.stats.lastUpdatedAt)
+        }
+    };
+}
+
+function mergeCounted(left, right, key, labelKey) {
+    const values = new Map();
+    [...(left || []), ...(right || [])].forEach((item) => {
+        const id = item[key];
+        if (!id) return;
+        const current = values.get(id) || { [key]: id, count: 0 };
+        if (labelKey && item[labelKey]) current[labelKey] = item[labelKey];
+        current.count += number(item.count);
+        values.set(id, current);
+    });
+    return Array.from(values.values()).sort((a, b) => b.count - a.count);
+}
+
+function mergeArchives(left, right) {
+    const values = new Map();
+    [...(left || []), ...(right || [])].forEach((item) => {
+        const key = `${item.year}-${item.month}`;
+        const current = values.get(key) || {
+            year: Number(item.year),
+            month: Number(item.month),
+            count: 0
+        };
+        current.count += number(item.count);
+        values.set(key, current);
+    });
+    return Array.from(values.values()).sort((a, b) => (
+        b.year - a.year || b.month - a.month
+    ));
+}
+
+function latestDate(left, right) {
+    if (!left) return right || null;
+    if (!right) return left;
+    return (Date.parse(left) || 0) >= (Date.parse(right) || 0) ? left : right;
+}
+
+function number(value) {
+    return Number(value) || 0;
 }
 
 function normalizeTags(value) {

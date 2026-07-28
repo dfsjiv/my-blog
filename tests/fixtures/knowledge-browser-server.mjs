@@ -10,6 +10,11 @@ const now = "2026-07-28T08:00:00.000Z";
 const posts = [
     {
         id: 2,
+        source: "legacy-blog",
+        sourceId: 2,
+        legacyId: 2,
+        legacySlug: null,
+        legacyUrl: null,
         slug: "safe-markdown",
         type: "article",
         title: "安全 Markdown 测试",
@@ -40,6 +45,7 @@ const posts = [
             "<img src=\"x\" onerror=\"window.__knowledgeXss = 2\">",
             "[危险链接](javascript:window.__knowledgeXss=3)",
         ].join("\n"),
+        contentFormat: "markdown",
         coverUrl: null,
         category: "技术文章",
         categorySlug: "技术文章",
@@ -101,6 +107,7 @@ function listPosts(url) {
     const category = url.searchParams.get("category");
     const tag = url.searchParams.get("tag");
     const q = (url.searchParams.get("q") || "").toLocaleLowerCase();
+    const channel = url.searchParams.get("channel");
     if (type) items = items.filter((post) => post.type === type);
     if (category) items = items.filter((post) => post.categorySlug === category);
     if (tag) items = items.filter((post) => post.tags.some((item) => item.slug === tag));
@@ -111,6 +118,12 @@ function listPosts(url) {
             post.contentMarkdown,
             post.tags.map((item) => item.name).join(" "),
         ].join(" ").toLocaleLowerCase().includes(q));
+    }
+    if (channel && ["article", "solution", "note", "project"].includes(channel)) {
+        items = items.filter((post) => post.type === channel);
+    }
+    if (channel && ["games", "anime", "manga", "novels"].includes(channel)) {
+        items = [];
     }
     if (url.searchParams.get("featured") === "true") {
         items = items.filter((post) => post.isFeatured);

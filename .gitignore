@@ -1,4 +1,6 @@
 node_modules/
 .wrangler/
+.playwright-cli/
 assets/models/source/
+output/knowledge-audit/
 output/vendor-tmp/

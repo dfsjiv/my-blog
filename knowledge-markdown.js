@@ -147,6 +147,23 @@
     };
   }
 
+  function renderHtml(html, container) {
+    const fragment = purifier.sanitize(String(html || ''), {
+      RETURN_DOM_FRAGMENT: true,
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'style', 'svg', 'math'],
+      FORBID_ATTR: ['style'],
+      ALLOW_DATA_ATTR: false,
+    });
+    container.replaceChildren(fragment);
+    secureLinks(container);
+    secureImages(container);
+    enhanceCodeBlocks(container);
+    return {
+      headings: addHeadingAnchors(container),
+    };
+  }
+
   document.addEventListener('click', function (event) {
     const button = event.target.closest('[data-copy-code]');
     if (button) copyCode(button);
@@ -154,6 +171,7 @@
 
   window.KnowledgeMarkdown = {
     render,
+    renderHtml,
     copyCode,
     headingSlug,
     safeUrl,
