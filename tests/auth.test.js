@@ -198,11 +198,15 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="guestButton"/);
   assert.match(indexHtml, /id="versionSelector"/);
   assert.match(indexHtml, /id="osVersionButton"/);
+  assert.match(indexHtml, /id="elegantVersionButton"/);
+  assert.match(indexHtml, /id="elegantShell"/);
+  assert.match(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /<script src="auth\.js"><\/script>/);
   assert.match(source, /showVersionSelector\(user\)/);
   assert.match(source, /showVersionSelector\(auth\.enterAsGuest\(\)\)/);
   assert.match(source, /showVersionSelector\(result\.user\)/);
+  assert.match(source, /showElegantVersion\(user\)/);
   assert.doesNotMatch(source, /localStorage/);
   assert.doesNotMatch(source, /console\.(log|debug).*password/i);
 

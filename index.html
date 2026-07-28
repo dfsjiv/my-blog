@@ -38,6 +38,7 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css" />
+  <link rel="stylesheet" href="elegant-shell.css" />
   <link rel="stylesheet" href="contest-center.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
   <script type="importmap">
@@ -82,11 +83,56 @@
       <h1>选择版本</h1>
       <div class="version-selector-actions">
         <button class="version-selector-button" id="osVersionButton" type="button">OS 版本</button>
-        <button class="version-selector-button" type="button" disabled>高雅人士版本</button>
+        <button class="version-selector-button" id="elegantVersionButton" type="button">高雅人士版本</button>
         <button class="version-selector-button" type="button" disabled>正经版本</button>
       </div>
     </div>
   </main>
+
+  <section class="elegant-shell" id="elegantShell" aria-label="高雅人士版本" aria-hidden="true">
+    <header class="elegant-header">
+      <nav class="elegant-navbar" aria-label="高雅人士版主导航">
+        <div class="elegant-brand" aria-label="dfsjiv">
+          <span class="elegant-brand-mark" aria-hidden="true">D</span>
+          <span>dfsjiv</span>
+        </div>
+
+        <button class="elegant-menu-toggle" id="elegantMenuToggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="elegantNavMenu">☰</button>
+
+        <div class="elegant-nav-menu" id="elegantNavMenu">
+          <button class="elegant-nav-link is-active" type="button" aria-current="page">首页</button>
+
+          <details class="elegant-nav-group">
+            <summary>文章</summary>
+            <div class="elegant-nav-submenu">
+              <button type="button">归档</button>
+              <button type="button">分类</button>
+              <button type="button">标签</button>
+            </div>
+          </details>
+
+          <details class="elegant-nav-group">
+            <summary>生活</summary>
+            <div class="elegant-nav-submenu">
+              <button type="button">动态</button>
+              <button type="button">相册</button>
+            </div>
+          </details>
+
+          <details class="elegant-nav-group">
+            <summary>关于</summary>
+            <div class="elegant-nav-submenu">
+              <button type="button">关于我</button>
+              <button type="button">友链</button>
+            </div>
+          </details>
+        </div>
+
+        <button class="elegant-version-switch" id="elegantVersionSwitch" type="button">切换版本</button>
+      </nav>
+    </header>
+    <main class="elegant-main" id="elegantHome" aria-label="高雅人士版内容"></main>
+  </section>
 
   <div class="desktop-shell" id="desktopShell" aria-label="Windows 10 风格桌面" aria-hidden="true">
     <div class="desktop-surface" id="desktopSurface">
@@ -486,6 +532,7 @@ Camera: --, --, --</pre>
   <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
   <script src="auth.js"></script>
+  <script src="elegant-shell.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
   <script src="contest-center.js"></script>
