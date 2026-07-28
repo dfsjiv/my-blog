@@ -381,6 +381,7 @@
       elements.elegantShell.setAttribute('aria-hidden', 'false');
       elements.password.value = '';
       setLoginPending(false, '');
+      if (window.elegantShell) window.elegantShell.refreshIdentity(user);
       notifyBlogAuthChanged();
       if (window.aiChat) window.aiChat.refreshAccess();
     }
