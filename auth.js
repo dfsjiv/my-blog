@@ -349,7 +349,10 @@
       elements.loginScreen.setAttribute('aria-hidden', 'true');
       elements.versionSelector.setAttribute('aria-hidden', 'false');
       elements.elegantShell.setAttribute('aria-hidden', 'true');
-      if (window.elegantShell) window.elegantShell.closeNavigation();
+      if (window.elegantShell
+        && typeof window.elegantShell.closeNavigation === 'function') {
+        window.elegantShell.closeNavigation();
+      }
       elements.password.value = '';
       setLoginPending(false, '');
       elements.osVersionButton.focus();
@@ -381,7 +384,10 @@
       elements.elegantShell.setAttribute('aria-hidden', 'false');
       elements.password.value = '';
       setLoginPending(false, '');
-      if (window.elegantShell) window.elegantShell.refreshIdentity(user);
+      if (window.elegantShell
+        && typeof window.elegantShell.refreshIdentity === 'function') {
+        window.elegantShell.refreshIdentity(user);
+      }
       notifyBlogAuthChanged();
       if (window.aiChat) window.aiChat.refreshAccess();
     }

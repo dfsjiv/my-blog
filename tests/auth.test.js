@@ -206,6 +206,8 @@ function response(status, data, jsonError) {
   assert.match(source, /showVersionSelector\(user\)/);
   assert.match(source, /showVersionSelector\(auth\.enterAsGuest\(\)\)/);
   assert.match(source, /showVersionSelector\(result\.user\)/);
+  assert.match(source, /typeof window\.elegantShell\.closeNavigation === 'function'/);
+  assert.match(source, /typeof window\.elegantShell\.refreshIdentity === 'function'/);
   assert.match(source, /showElegantVersion\(user\)/);
   assert.doesNotMatch(source, /localStorage/);
   assert.doesNotMatch(source, /console\.(log|debug).*password/i);

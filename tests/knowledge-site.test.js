@@ -34,7 +34,8 @@ assert.match(css, /prefers-color-scheme:\s*dark/);
 assert.match(css, /prefers-reduced-motion:\s*reduce/);
 
 assert.match(data, /placeholder:\s*true/);
-assert.doesNotMatch(html, /knowledge-data\.js/);
+assert.match(html, /knowledge-data\.js/);
+assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site.js'));
 assert.doesNotMatch(repository, /KnowledgeMockData/);
 assert.doesNotMatch(repository, /source\.posts/);
 assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
