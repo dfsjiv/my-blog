@@ -50,9 +50,24 @@ const context = {
   DOMException,
   URL,
   URLSearchParams,
+  FormData,
+  Blob,
   console,
   fetch(url, options) {
     requests.push({ url, options });
+    if (url === '/api/knowledge/admin/images' && options.method === 'POST') {
+      return response({
+        success: true,
+        data: {
+          image: {
+            key: 'knowledge/2026/07/example.png',
+            url: 'https://example.test/api/knowledge/images/knowledge/2026/07/example.png',
+            size: 8,
+            mimeType: 'image/png',
+          },
+        },
+      }, 201);
+    }
     if (url === '/api/knowledge/admin/posts/7' && options.method === 'GET') {
       return response({ success: true, data: { post } });
     }
@@ -162,6 +177,17 @@ vm.runInContext(source, context);
     version: 1,
   }, { token: 'admin-token' });
   assert.equal(updated.version, 2);
+  const uploaded = await repository.uploadImage(
+    new Blob(['image'], { type: 'image/png' }),
+    { token: 'admin-token' }
+  );
+  assert.equal(uploaded.mimeType, 'image/png');
+  const uploadRequest = requests.find(
+    (request) => request.url === '/api/knowledge/admin/images'
+  );
+  assert.equal(uploadRequest.options.headers.Authorization, 'Bearer admin-token');
+  assert.equal(uploadRequest.options.headers['Content-Type'], undefined);
+  assert.equal(uploadRequest.options.body instanceof FormData, true);
   const writeRequests = requests.filter((request) => (
     request.url.startsWith('/api/knowledge/admin/posts')
   ));

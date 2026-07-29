@@ -11,6 +11,10 @@ import {
     handleArticleMoverRequest,
     isArticleMoverPath
 } from "./article-mover/index.mjs";
+import {
+    getKnowledgeImage,
+    uploadKnowledgeImage
+} from "./knowledge-images.mjs";
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -46,9 +50,16 @@ export async function handleKnowledgeRequest(context) {
             url.pathname,
             /^\/api\/knowledge\/admin\/posts\/(\d+)\/(publish|unpublish|archive|restore)$/
         );
+        const imageMatch = matchPath(
+            url.pathname,
+            /^\/api\/knowledge\/images\/(.+)$/
+        );
 
         if (url.pathname === "/api/knowledge/posts" && request.method === "GET") {
             return await getPublicPosts(request, env, jsonResponse);
+        }
+        if (imageMatch && request.method === "GET") {
+            return await getKnowledgeImage(context, imageMatch[1]);
         }
         if (publicPostMatch && request.method === "GET") {
             return await getPublicPost(publicPostMatch[1], env, jsonResponse);
@@ -82,6 +93,14 @@ export async function handleKnowledgeRequest(context) {
             const auth = await requireAuthor(context);
             if (auth.response) return auth.response;
             return await handleArticleMoverRequest(context, auth.user, createPost);
+        }
+        if (
+            url.pathname === "/api/knowledge/admin/images"
+            && request.method === "POST"
+        ) {
+            const auth = await requireAuthor(context);
+            if (auth.response) return auth.response;
+            return await uploadKnowledgeImage(context, auth.user);
         }
 
         if (url.pathname === "/api/knowledge/admin/posts" && request.method === "GET") {
@@ -132,10 +151,12 @@ export async function handleKnowledgeRequest(context) {
 
         const knownPath = url.pathname === "/api/knowledge/posts"
             || Boolean(publicPostMatch)
+            || Boolean(imageMatch)
             || url.pathname === "/api/knowledge/facets"
             || url.pathname === "/api/knowledge/admin/migration/audit"
             || url.pathname === "/api/knowledge/admin/migration/dry-run"
             || isArticleMoverPath(url.pathname)
+            || url.pathname === "/api/knowledge/admin/images"
             || url.pathname === "/api/knowledge/admin/posts"
             || Boolean(adminPostMatch)
             || Boolean(adminActionMatch);

@@ -155,7 +155,11 @@ assert.match(writer, /createPost/);
 assert.match(writer, /updatePost/);
 assert.match(writer, /正在保存|正在加载/);
 assert.match(writer, /检测到未保存的本地草稿/);
-assert.match(writer, /图片上传功能将在下一阶段接入/);
+assert.doesNotMatch(writer, /图片上传功能将在下一阶段接入/);
+assert.match(writer, /repository\.uploadImage/);
+assert.match(writer, /\.setImage\(/);
+assert.match(writer, /buildCoverField/);
+assert.match(editorAdapter, /vendor\.Image\.configure/);
 assert.match(editorAdapter, /contentType:\s*'markdown'/);
 assert.match(editorAdapter, /DOMPurify/);
 assert.match(editorAdapter, /transformPastedHTML/);
@@ -171,6 +175,7 @@ assert.match(writerCss, /\.knowledge-writer-page/);
 assert.match(writerCss, /\.knowledge-tiptap-editor/);
 assert.match(writerCss, /\.knowledge-writer-slash-menu/);
 assert.match(writerCss, /\.knowledge-writer-bubble/);
+assert.match(writerCss, /\.knowledge-writer-cover-preview/);
 assert.match(writerCss, /@media \(max-width:\s*768px\)/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {

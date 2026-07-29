@@ -1,6 +1,8 @@
 (function () {
   const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
+  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+  const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
   const TYPE_OPTIONS = [
     ['article', '技术文章'],
     ['solution', '算法题解'],
@@ -65,6 +67,8 @@
       slashIndex: 0,
       destroyed: false,
       settingsOpen: false,
+      bodyImageUploading: false,
+      coverUploading: false,
     };
 
     const page = element('section', 'knowledge-writer-page');
@@ -136,6 +140,10 @@
     const titleError = element('span', 'knowledge-writer-title-error');
     titleWrap.append(titleInput, titleCount, titleError);
     const editorHost = element('div', 'knowledge-writer-editor-host');
+    const bodyImageInput = document.createElement('input');
+    bodyImageInput.type = 'file';
+    bodyImageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    bodyImageInput.hidden = true;
     const bubble = buildBubbleMenu();
     bubble.style.visibility = 'hidden';
     bubble.style.opacity = '0';
@@ -146,7 +154,16 @@
     linkPopover.hidden = true;
     const notice = element('p', 'knowledge-writer-notice');
     notice.hidden = true;
-    paper.append(recovery, titleWrap, editorHost, bubble, slashMenu, linkPopover, notice);
+    paper.append(
+      recovery,
+      titleWrap,
+      editorHost,
+      bodyImageInput,
+      bubble,
+      slashMenu,
+      linkPopover,
+      notice
+    );
     canvas.appendChild(paper);
 
     const sidePanel = buildSidePanel();
@@ -244,6 +261,7 @@
       if (!input) return;
       if (input.type === 'checkbox') input.checked = Boolean(value);
       else input.value = value == null ? '' : String(value);
+      if (name === 'coverUrl') sidePanel.cover.updatePreview(input.value);
     }
 
     function fieldValue(name) {
@@ -546,7 +564,7 @@
       if (commands[action]) commands[action]();
       else if (action === 'link') openLinkPopover();
       else if (action === 'image') {
-        showNotice('图片上传功能将在下一阶段接入。');
+        if (!state.bodyImageUploading) bodyImageInput.click();
       } else if (action === 'callout') {
         showNotice('提示块将在下一阶段接入。');
       } else if (action === 'more') {
@@ -558,6 +576,57 @@
         state.settingsOpen ? closePanel() : openPanel();
       }
       updateEditorUi();
+    }
+
+    async function uploadBodyImage(file) {
+      if (!file || state.bodyImageUploading) return;
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        showNotice(validationError, true);
+        bodyImageInput.value = '';
+        return;
+      }
+      state.bodyImageUploading = true;
+      showNotice('正在上传图片…');
+      try {
+        const image = await repository.uploadImage(file, { token: currentToken() });
+        state.editor.chain().focus().setImage({
+          src: image.url,
+          alt: file.name || '文章图片',
+          title: file.name || null,
+        }).run();
+        markDirty();
+        showNotice('图片已插入正文。');
+      } catch (error) {
+        showNotice(error.message || '图片上传失败，请稍后重试。', true);
+      } finally {
+        state.bodyImageUploading = false;
+        bodyImageInput.value = '';
+      }
+    }
+
+    async function uploadCoverImage(file) {
+      if (!file || state.coverUploading) return;
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        sidePanel.cover.setStatus(validationError, true);
+        sidePanel.cover.fileInput.value = '';
+        return;
+      }
+      state.coverUploading = true;
+      sidePanel.cover.setUploading(true);
+      try {
+        const image = await repository.uploadImage(file, { token: currentToken() });
+        setField('coverUrl', image.url);
+        markDirty();
+        sidePanel.cover.setStatus('封面已上传，保存文章后生效。');
+      } catch (error) {
+        sidePanel.cover.setStatus(error.message || '封面上传失败，请稍后重试。', true);
+      } finally {
+        state.coverUploading = false;
+        sidePanel.cover.setUploading(false);
+        sidePanel.cover.fileInput.value = '';
+      }
     }
 
     function openLinkPopover() {
@@ -814,6 +883,9 @@
     sidePanel.root.addEventListener('input', function (event) {
       if (!event.target.matches('[data-writer-field]')) return;
       if (event.target.dataset.writerField === 'type') updateSolutionFields();
+      if (event.target.dataset.writerField === 'coverUrl') {
+        sidePanel.cover.updatePreview(event.target.value);
+      }
       markDirty();
     });
     sidePanel.root.addEventListener('change', function (event) {
@@ -823,6 +895,20 @@
       const tab = event.target.closest('[data-writer-tab]');
       if (!tab) return;
       sidePanel.selectTab(tab.dataset.writerTab);
+    });
+    bodyImageInput.addEventListener('change', function () {
+      uploadBodyImage(bodyImageInput.files && bodyImageInput.files[0]);
+    });
+    sidePanel.cover.uploadButton.addEventListener('click', function () {
+      if (!state.coverUploading) sidePanel.cover.fileInput.click();
+    });
+    sidePanel.cover.fileInput.addEventListener('change', function () {
+      uploadCoverImage(sidePanel.cover.fileInput.files && sidePanel.cover.fileInput.files[0]);
+    });
+    sidePanel.cover.removeButton.addEventListener('click', function () {
+      setField('coverUrl', '');
+      sidePanel.cover.setStatus('封面已移除，保存文章后生效。');
+      markDirty();
     });
     linkPopover.querySelector('[data-link-apply]').addEventListener('click', applyLink);
     linkPopover.querySelector('[data-link-remove]').addEventListener('click', removeLink);
@@ -873,6 +959,13 @@
     actions.append(restore, discard);
     banner.append(copy, actions);
     return banner;
+  }
+
+  function validateImageFile(file) {
+    if (!IMAGE_TYPES.has(file.type)) return '仅支持 JPEG、PNG、WebP 或 GIF 图片。';
+    if (!Number.isFinite(file.size) || file.size <= 0) return '图片文件不能为空。';
+    if (file.size > MAX_IMAGE_BYTES) return '图片大小不能超过 8 MB。';
+    return '';
   }
 
   function buildBubbleMenu() {
@@ -942,7 +1035,7 @@
     const tags = inputField('标签', 'tags', '多个标签用逗号分隔');
     const summary = textareaField('摘要', 'summary', '用于文章列表和分享摘要');
     const slug = inputField('Slug', 'slug', '留空时根据标题生成');
-    const cover = inputField('封面 URL', 'coverUrl', 'https://');
+    const cover = buildCoverField();
     const source = inputField('来源链接', 'sourceUrl', 'https://');
     const status = selectField('发布状态', 'status', [
       ['draft', '草稿'],
@@ -961,7 +1054,7 @@
     );
     solutionFields.hidden = true;
     settingsPanel.append(
-      type, category, tags, summary, slug, cover,
+      type, category, tags, summary, slug, cover.root,
       pinned, featured, source, status, solutionFields
     );
     const tocPanel = element('div', 'knowledge-writer-toc-panel');
@@ -980,7 +1073,88 @@
         panel.hidden = panel.dataset.writerPanel !== name;
       });
     }
-    return { root, tabBar, settingsPanel, tocPanel, tocList, solutionFields, selectTab };
+    return {
+      root,
+      tabBar,
+      settingsPanel,
+      tocPanel,
+      tocList,
+      solutionFields,
+      cover,
+      selectTab
+    };
+  }
+
+  function buildCoverField() {
+    const root = element('section', 'knowledge-writer-cover-field');
+    root.appendChild(element('span', 'knowledge-writer-cover-label', '文章封面'));
+    const preview = element('div', 'knowledge-writer-cover-preview');
+    const image = document.createElement('img');
+    image.alt = '文章封面预览';
+    image.hidden = true;
+    const empty = element('span', '', '尚未设置封面');
+    preview.append(image, empty);
+
+    const input = document.createElement('input');
+    input.type = 'url';
+    input.placeholder = 'https://';
+    input.dataset.writerField = 'coverUrl';
+    input.setAttribute('aria-label', '封面图片 URL');
+
+    const actions = element('div', 'knowledge-writer-cover-actions');
+    const uploadButton = element('button', '', '上传或替换');
+    uploadButton.type = 'button';
+    const removeButton = element('button', '', '移除');
+    removeButton.type = 'button';
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    fileInput.hidden = true;
+    actions.append(uploadButton, removeButton, fileInput);
+    const status = element('small', 'knowledge-writer-cover-status');
+    root.append(preview, input, actions, status);
+
+    function updatePreview(value) {
+      const url = String(value || '').trim();
+      image.hidden = !url;
+      empty.hidden = Boolean(url);
+      removeButton.disabled = !url;
+      if (url) image.src = url;
+      else image.removeAttribute('src');
+    }
+
+    function setUploading(uploading) {
+      uploadButton.disabled = uploading;
+      uploadButton.textContent = uploading ? '上传中…' : '上传或替换';
+    }
+
+    function setStatus(message, error) {
+      status.textContent = message || '';
+      status.classList.toggle('is-error', Boolean(error));
+    }
+
+    image.addEventListener('error', function () {
+      image.hidden = true;
+      empty.hidden = false;
+      empty.textContent = '封面无法预览，请检查 URL';
+    });
+    image.addEventListener('load', function () {
+      image.hidden = false;
+      empty.hidden = true;
+      empty.textContent = '尚未设置封面';
+    });
+    updatePreview('');
+    return {
+      root,
+      input,
+      preview,
+      uploadButton,
+      removeButton,
+      fileInput,
+      updatePreview,
+      setUploading,
+      setStatus
+    };
   }
 
   function inputField(labelText, name, placeholder) {

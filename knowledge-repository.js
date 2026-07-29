@@ -1,6 +1,7 @@
 (function () {
   const API_ROOT = '/api/knowledge';
   const REQUEST_TIMEOUT_MS = 12000;
+  const UPLOAD_TIMEOUT_MS = 60000;
   const FACETS_CACHE_MS = 30000;
   const DETAIL_CACHE_MS = 30000;
   const facetsCache = { value: null, expiresAt: 0 };
@@ -15,11 +16,11 @@
     }
   }
 
-  function createRequestSignal(externalSignal) {
+  function createRequestSignal(externalSignal, timeoutMs) {
     const controller = new AbortController();
     const timeout = window.setTimeout(function () {
       controller.abort(new DOMException('请求超时', 'TimeoutError'));
-    }, REQUEST_TIMEOUT_MS);
+    }, timeoutMs || REQUEST_TIMEOUT_MS);
     const abortFromExternal = function () {
       controller.abort(externalSignal.reason);
     };
@@ -288,6 +289,51 @@
     return adaptPost(data && data.post);
   }
 
+  async function uploadImage(file, options) {
+    const settings = options || {};
+    const requestSignal = createRequestSignal(settings.signal, UPLOAD_TIMEOUT_MS);
+    const formData = new FormData();
+    formData.append('file', file);
+    let response;
+    try {
+      response = await fetch(API_ROOT + '/admin/images', {
+        method: 'POST',
+        headers: Object.assign(
+          { Accept: 'application/json' },
+          settings.token ? { Authorization: 'Bearer ' + settings.token } : {}
+        ),
+        body: formData,
+        signal: requestSignal.signal,
+        credentials: 'same-origin',
+      });
+    } catch (error) {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
+      throw new KnowledgeApiError('图片上传失败，请稍后重试。', 0, 'NETWORK_ERROR');
+    } finally {
+      requestSignal.cleanup();
+    }
+
+    let payload;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      throw new KnowledgeApiError('服务器返回了无效数据。', response.status, 'INVALID_RESPONSE');
+    }
+    if (!response.ok || !payload || payload.success !== true) {
+      const apiError = payload && payload.error;
+      throw new KnowledgeApiError(
+        apiError && apiError.message ? apiError.message : '图片上传失败，请稍后重试。',
+        response.status,
+        apiError && apiError.code
+      );
+    }
+    const image = payload.data && payload.data.image;
+    if (!image || typeof image.url !== 'string') {
+      throw new KnowledgeApiError('服务器返回了无效的图片地址。', response.status, 'INVALID_RESPONSE');
+    }
+    return image;
+  }
+
   async function getArchivePosts(year, month, options) {
     const settings = options || {};
     const target = Number(year) * 100 + Number(month);
@@ -379,6 +425,7 @@
     updatePost,
     changePostState,
     deletePost,
+    uploadImage,
     searchPosts,
     getArchivePosts,
     getPostContext,

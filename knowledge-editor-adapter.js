@@ -50,6 +50,11 @@
         },
         isAllowedUri: safeLink,
       }),
+      vendor.Image.configure({
+        allowBase64: false,
+        inline: false,
+        HTMLAttributes: { class: 'knowledge-writer-image' },
+      }),
       vendor.TableKit.configure({
         table: {
           resizable: true,

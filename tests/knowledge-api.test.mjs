@@ -269,6 +269,21 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     assert.equal(forbiddenCreate.status, 403);
     assert.equal(forbiddenCreate.body.error.code, "FORBIDDEN");
 
+    const unauthenticatedImageUpload = await api("/api/knowledge/admin/images", {
+        method: "POST"
+    });
+    assert.equal(unauthenticatedImageUpload.status, 401);
+    const forbiddenImageUpload = await api("/api/knowledge/admin/images", {
+        method: "POST",
+        token: "user-token"
+    });
+    assert.equal(forbiddenImageUpload.status, 403);
+    const unconfiguredImageUpload = await api("/api/knowledge/admin/images", {
+        method: "POST",
+        token: "admin-token"
+    });
+    assert.equal(unconfiguredImageUpload.status, 503);
+
     const invalidInput = await api("/api/knowledge/admin/posts", {
         method: "POST",
         token: "admin-token",

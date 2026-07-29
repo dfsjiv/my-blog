@@ -2,6 +2,7 @@ import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from '@tiptap/markdown';
 import { Link } from '@tiptap/extension-link';
+import { Image } from '@tiptap/extension-image';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
@@ -12,6 +13,7 @@ export {
   StarterKit,
   Markdown,
   Link,
+  Image,
   TableKit,
   TaskItem,
   TaskList,
