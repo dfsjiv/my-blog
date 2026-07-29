@@ -2297,15 +2297,7 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-intro::after {
-  content: "";
-  position: absolute;
-  right: -2%;
-  bottom: -1px;
-  left: -2%;
-  z-index: -1;
-  height: 125px;
-  background: var(--knowledge-bg);
-  clip-path: polygon(0 52%, 18% 66%, 37% 49%, 58% 70%, 78% 53%, 100% 67%, 100% 100%, 0 100%);
+  display: none;
 }
 
 .knowledge-intro-copy {
@@ -2375,6 +2367,7 @@ body.auth-elegant .knowledge-site {
   position: absolute;
   right: 28px;
   bottom: 115px;
+  z-index: 3;
   width: auto;
   height: auto;
   padding: 7px 10px;
@@ -2384,6 +2377,64 @@ body.auth-elegant .knowledge-site {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 6px;
   backdrop-filter: blur(10px);
+}
+
+.knowledge-hero-waves {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  z-index: 1;
+  height: 142px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.knowledge-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: var(--knowledge-bg);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 140' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 60C180 20 360 100 540 60S900 100 1080 60S1350 80 1440 60V140H0Z'/%3E%3C/svg%3E");
+  -webkit-mask-position: left bottom;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-size: 50% 100%;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 140' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 60C180 20 360 100 540 60S900 100 1080 60S1350 80 1440 60V140H0Z'/%3E%3C/svg%3E");
+  mask-position: left bottom;
+  mask-repeat: repeat-x;
+  mask-size: 50% 100%;
+  will-change: transform;
+}
+
+.knowledge-wave-back {
+  bottom: 24px;
+  background: rgba(8, 16, 24, 0.34);
+  opacity: 0.72;
+  animation: knowledge-wave-drift 18s linear infinite reverse;
+}
+
+.knowledge-wave-middle {
+  bottom: 10px;
+  background: color-mix(in srgb, var(--knowledge-bg) 62%, transparent);
+  opacity: 0.58;
+  animation: knowledge-wave-drift 24s linear infinite;
+}
+
+.knowledge-wave-front {
+  bottom: -1px;
+  animation: knowledge-wave-drift 32s linear infinite reverse;
+}
+
+@keyframes knowledge-wave-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .knowledge-art-placeholder span {
@@ -2588,6 +2639,10 @@ body.auth-elegant .knowledge-site {
     bottom: 104px;
   }
 
+  .knowledge-hero-waves {
+    height: 112px;
+  }
+
   .knowledge-layout {
     width: calc(100% - 24px);
     margin-top: -45px;
@@ -2649,5 +2704,11 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-art-placeholder {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-wave {
+    animation: none;
   }
 }

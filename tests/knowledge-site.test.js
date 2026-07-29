@@ -192,6 +192,8 @@ assert.match(writerCss, /\.knowledge-writer-slash-menu/);
 assert.match(writerCss, /\.knowledge-writer-bubble/);
 assert.match(writerCss, /\.knowledge-writer-cover-preview/);
 assert.match(writerCss, /@media \(max-width:\s*768px\)/);
+assert.match(html, /class="knowledge-hero-waves"/);
+assert.match(css, /@keyframes knowledge-wave-drift/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
   assert.equal(
