@@ -1156,6 +1156,18 @@ body.auth-elegant .knowledge-site {
   font-size: 13px;
 }
 
+.knowledge-update-panel .knowledge-update-list {
+  padding-left: 14px;
+}
+
+.knowledge-update-panel .knowledge-update-list li {
+  padding-left: 11px;
+}
+
+.knowledge-update-panel .knowledge-update-list li::before {
+  left: -19px;
+}
+
 .knowledge-side-search {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

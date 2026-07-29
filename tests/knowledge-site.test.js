@@ -19,6 +19,11 @@ assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
+assert.ok(
+  html.indexOf('class="knowledge-sidebar knowledge-left-sidebar"')
+    < html.indexOf('id="knowledgeUpdateList"')
+  && html.indexOf('id="knowledgeUpdateList"') < html.indexOf('class="knowledge-feed"')
+);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
 assert.match(html, /data-knowledge-route="mover">文章搬家/);
 assert.match(html, /knowledge-article-mover\.css/);
