@@ -767,8 +767,9 @@ body.auth-elegant .knowledge-site {
   width: 72px;
   height: 72px;
   margin: 0 auto 10px;
-  display: grid;
-  place-items: center;
+  display: block;
+  object-fit: cover;
+  object-position: center;
   color: #ffffff;
   background: var(--knowledge-primary);
   border-radius: 50%;
