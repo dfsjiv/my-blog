@@ -114,6 +114,10 @@ function createDatabase() {
         path.join(rootDir, "migrations", "0003_add_knowledge_migration_map.sql"),
         "utf8"
     ));
+    sqlite.exec(fs.readFileSync(
+        path.join(rootDir, "migrations", "0004_add_external_article_mover.sql"),
+        "utf8"
+    ));
     return { sqlite, DB: new D1Database(sqlite) };
 }
 
@@ -214,12 +218,20 @@ test("knowledge migration creates isolated tables and constraints", () => {
         ORDER BY name
     `).all().map((row) => row.name);
     assert.deepEqual(tables, [
+        "knowledge_external_source_map",
         "knowledge_migration_map",
         "knowledge_post_tags",
         "knowledge_posts",
         "knowledge_solution_meta",
         "knowledge_tags"
     ]);
+    assert.equal(
+        sqlite.prepare(`
+            SELECT COUNT(*) AS count FROM sqlite_master
+            WHERE type = 'table' AND name = 'external_article_snapshots'
+        `).get().count,
+        1
+    );
     assert.throws(() => sqlite.prepare(`
         INSERT INTO knowledge_posts (
             author_user_id, slug, type, title, status, created_at, updated_at
@@ -487,6 +499,155 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     assert.equal(finalFacets.body.data.stats.posts, 1);
     assert.equal(finalFacets.body.data.stats.notes, 1);
     sqlite.close();
+});
+
+test("article mover previews safely and imports one idempotent draft", async () => {
+    const { sqlite, DB } = createDatabase();
+    const api = createApi({ DB });
+    let externalHtml = `<!doctype html>
+        <html><head>
+          <meta property="og:title" content="题解 | 示例题_牛客网">
+          <meta name="description" content="公开题解摘要">
+        </head><body>
+          <span class="name-text">Lee Ethan</span>
+          <span class="time-text">07-20 12:30</span>
+          <div class="content-post-title"><h1>题解 | 示例题</h1></div>
+          <a class="discuss-terminal-card"
+             href="https://www.nowcoder.com/practice/abc123">
+             <p class="question-title">示例题</p>
+          </a>
+          <div class="nc-slate-editor-content">
+            <h2>思路</h2>
+            <p onclick="steal()">使用 <strong>二分</strong>。</p>
+            <script>window.bad = true</script>
+            <pre><code>int main() { return 0; }</code></pre>
+            <img src="https://uploadfiles.nowcoder.com/example.png"
+                 onerror="steal()">
+          </div>
+        </body></html>`;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(externalHtml, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" }
+    });
+    try {
+        const forbidden = await api("/api/knowledge/admin/article-mover/preview", {
+            method: "POST",
+            token: "user-token",
+            body: { urls: ["https://www.nowcoder.com/discuss/123456"] }
+        });
+        assert.equal(forbidden.status, 403);
+
+        const preview = await api("/api/knowledge/admin/article-mover/preview", {
+            method: "POST",
+            token: "admin-token",
+            body: { urls: ["https://www.nowcoder.com/discuss/123456"] }
+        });
+        assert.equal(preview.status, 200);
+        assert.equal(preview.body.data.items[0].ok, true);
+        assert.equal(preview.body.data.items[0].type, "solution");
+        assert.match(preview.body.data.items[0].contentMarkdown, /二分/);
+        assert.doesNotMatch(preview.body.data.items[0].safeHtml, /script|onclick|onerror/i);
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_posts").get().count,
+            0
+        );
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM external_article_snapshots").get().count,
+            0
+        );
+
+        const item = preview.body.data.items[0];
+        const imported = await api("/api/knowledge/admin/article-mover/import", {
+            method: "POST",
+            token: "admin-token",
+            body: {
+                items: [{
+                    selected: true,
+                    sourceUrl: item.sourceUrl,
+                    title: item.title,
+                    slug: item.slug,
+                    type: item.type,
+                    summary: item.summary,
+                    category: item.category,
+                    tags: ["牛客", "二分"]
+                }]
+            }
+        });
+        assert.equal(imported.status, 200);
+        assert.equal(imported.body.data.items[0].code, "IMPORTED");
+        assert.equal(
+            sqlite.prepare("SELECT status FROM knowledge_posts").get().status,
+            "draft"
+        );
+        assert.equal(
+            sqlite.prepare("SELECT source_url FROM knowledge_posts").get().source_url,
+            "https://www.nowcoder.com/discuss/123456"
+        );
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM external_article_snapshots").get().count,
+            1
+        );
+
+        const repeated = await api("/api/knowledge/admin/article-mover/import", {
+            method: "POST",
+            token: "admin-token",
+            body: {
+                items: [{
+                    selected: true,
+                    sourceUrl: item.sourceUrl,
+                    title: item.title,
+                    slug: item.slug,
+                    type: item.type
+                }]
+            }
+        });
+        assert.equal(repeated.body.data.items[0].code, "ALREADY_IMPORTED");
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_posts").get().count,
+            1
+        );
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM external_article_snapshots").get().count,
+            1
+        );
+
+        externalHtml = externalHtml.replace(
+            "使用 <strong>二分</strong>。",
+            "使用 <strong>二分</strong>，并补充边界说明。"
+        );
+        const changed = await api("/api/knowledge/admin/article-mover/import", {
+            method: "POST",
+            token: "admin-token",
+            body: {
+                items: [{
+                    selected: true,
+                    sourceUrl: item.sourceUrl,
+                    title: item.title,
+                    slug: item.slug,
+                    type: item.type
+                }]
+            }
+        });
+        assert.equal(changed.body.data.items[0].code, "REMOTE_UPDATED");
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_posts").get().count,
+            1
+        );
+        assert.equal(
+            sqlite.prepare("SELECT COUNT(*) AS count FROM external_article_snapshots").get().count,
+            2
+        );
+        assert.equal(
+            sqlite.prepare("SELECT import_status FROM knowledge_external_source_map").get()
+                .import_status,
+            "remote_updated"
+        );
+    }
+    finally {
+        globalThis.fetch = originalFetch;
+        sqlite.close();
+    }
 });
 
 test("knowledge API adapts legacy articles and keeps migration checks read-only", async () => {

@@ -707,7 +707,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'all', 'categories', 'tags', 'archives', 'about',
-      'writer', 'drafts', 'manage'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -782,6 +782,7 @@
     if (route === 'archives') return renderFacetIndex('archives', controller);
     if (route === 'about') return renderAbout();
     if (route === 'detail') return renderDetail(details.slug, controller);
+    if (route === 'mover') return renderArticleMover();
     if (route === 'writer' || route === 'drafts' || route === 'manage') {
       return renderWriterPlaceholder(route);
     }
@@ -1088,6 +1089,21 @@
     const label = labels[route];
     const node = showRouteShell('AUTHOR', label[0], label[1]);
     node.appendChild(makeEmptyState(label[0] + '功能待接入', '本轮不实现写入和管理功能。'));
+  }
+
+  function renderArticleMover() {
+    if (!isAuthor()) return navigate('home', {}, { replace: true });
+    const mover = window.KnowledgeArticleMover;
+    const node = showRouteShell(
+      'AUTHOR TOOL',
+      '文章搬家',
+      '复制公开的牛客题解与知乎文章，检查后导入为知识站草稿。'
+    );
+    if (!mover || typeof mover.render !== 'function') {
+      node.appendChild(makeEmptyState('文章搬家暂时不可用', '页面模块未能正确加载。'));
+      return;
+    }
+    mover.render(node);
   }
 
   async function renderDetail(slug, controller) {

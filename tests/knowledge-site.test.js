@@ -9,12 +9,17 @@ const site = fs.readFileSync(path.join(root, 'knowledge-site.js'), 'utf8');
 const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
 const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
 const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
+const mover = fs.readFileSync(path.join(root, 'knowledge-article-mover.js'), 'utf8');
+const moverCss = fs.readFileSync(path.join(root, 'knowledge-article-mover.css'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
+assert.match(html, /data-knowledge-route="mover">文章搬家/);
+assert.match(html, /knowledge-article-mover\.css/);
+assert.match(html, /knowledge-article-mover\.js/);
 assert.match(html, /data-knowledge-nav-menu="links"/);
 assert.match(html, /data-knowledge-nav-menu="about"/);
 assert.match(html, /aria-haspopup="menu"/);
@@ -76,6 +81,8 @@ assert.match(site, /repository\.getPostBySlug/);
 assert.match(site, /repository\.getRelatedPosts/);
 assert.match(site, /repository\.getPostContext/);
 assert.match(site, /currentUser\(\)\.role === 'admin'/);
+assert.match(site, /renderArticleMover/);
+assert.match(site, /window\.KnowledgeArticleMover/);
 assert.match(site, /bilibili:\s*'https:\/\/space\.bilibili\.com\/3546789605018414'/);
 assert.match(site, /github:\s*'https:\/\/github\.com\/dfsjiv'/);
 assert.match(site, /zhihu:\s*'https:\/\/www\.zhihu\.com\/people\/study-32-31'/);
@@ -104,6 +111,13 @@ assert.match(markdown, /navigator\.clipboard\.writeText/);
 assert.match(markdown, /querySelectorAll\('h2, h3, h4'\)/);
 assert.doesNotMatch(markdown, /\beval\(/);
 assert.doesNotMatch(markdown, /new Function/);
+assert.match(mover, /\/api\/knowledge\/admin\/article-mover\/preview/);
+assert.match(mover, /\/api\/knowledge\/admin\/article-mover\/import/);
+assert.match(mover, /Authorization:\s*'Bearer '/);
+assert.match(mover, /KnowledgeMarkdown\.render/);
+assert.doesNotMatch(mover, /\binnerHTML\b/);
+assert.doesNotMatch(mover, /\beval\(/);
+assert.match(moverCss, /\.knowledge-mover/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
   assert.equal(

@@ -25,6 +25,7 @@
     '写文章': 'Write',
     '草稿箱': 'Drafts',
     '文章管理': 'Manage Posts',
+    '文章搬家': 'Article Mover',
     '打开账户菜单': 'Open account menu',
     '当前用户': 'Current User',
     '已登录账户': 'Signed-in account',
@@ -298,6 +299,10 @@
     '页面只展示已经发布且未删除的知识文章。': 'Only published, non-deleted knowledge posts are shown.',
     '草稿管理将在后续接入。': 'Draft management will be added later.',
     '文章管理后台将在后续接入。': 'Post management will be added later.',
+    '复制公开的牛客题解与知乎文章，检查后导入为知识站草稿。':
+      'Copy public NowCoder solutions and Zhihu articles into reviewed knowledge-site drafts.',
+    '文章搬家暂时不可用': 'Article Mover is unavailable',
+    '页面模块未能正确加载。': 'The page module did not load correctly.',
     '本轮不实现写入和管理功能。': 'Writing and management are not implemented in this iteration.',
     '正在加载正文…': 'Loading post…',
     '文章不存在或尚未发布。': 'The post does not exist or is not published.',

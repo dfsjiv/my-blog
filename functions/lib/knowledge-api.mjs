@@ -7,6 +7,10 @@ import {
     getMigratedLegacyIds,
     tableExists
 } from "./legacy-knowledge-adapter.mjs";
+import {
+    handleArticleMoverRequest,
+    isArticleMoverPath
+} from "./article-mover/index.mjs";
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -74,6 +78,11 @@ export async function handleKnowledgeRequest(context) {
                 data: { dryRun: await buildLegacyMigrationDryRun(env) }
             });
         }
+        if (isArticleMoverPath(url.pathname)) {
+            const auth = await requireAuthor(context);
+            if (auth.response) return auth.response;
+            return await handleArticleMoverRequest(context, auth.user, createPost);
+        }
 
         if (url.pathname === "/api/knowledge/admin/posts" && request.method === "GET") {
             const auth = await requireAuthor(context);
@@ -126,6 +135,7 @@ export async function handleKnowledgeRequest(context) {
             || url.pathname === "/api/knowledge/facets"
             || url.pathname === "/api/knowledge/admin/migration/audit"
             || url.pathname === "/api/knowledge/admin/migration/dry-run"
+            || isArticleMoverPath(url.pathname)
             || url.pathname === "/api/knowledge/admin/posts"
             || Boolean(adminPostMatch)
             || Boolean(adminActionMatch);
