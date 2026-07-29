@@ -5,7 +5,7 @@
   const PAGE_SIZE = 10;
   const URL_KEYS = [
     'knowledge', 'slug', 'q', 'type', 'category', 'tag', 'sort',
-    'featured', 'pinned', 'page', 'archive', 'channel', 'postId',
+    'featured', 'pinned', 'page', 'archive', 'channel', 'postId', 'status',
   ];
   const navigationLinks = Object.freeze({
     socialLinks: Object.freeze({
@@ -250,6 +250,12 @@
 
   function isAuthor() {
     return Boolean(currentUser() && currentUser().role === 'admin');
+  }
+
+  function currentToken() {
+    return window.authManager && window.authManager.state
+      ? window.authManager.state.token
+      : null;
   }
 
   function refreshIdentity(user) {
@@ -727,6 +733,7 @@
         archive: params.get('archive') || '',
         channel: params.get('channel') || '',
         postId: parseOptionalId(params.get('postId')),
+        status: params.get('status') || '',
       },
     };
   }
@@ -742,7 +749,7 @@
       if (route === 'writer' && payload.postId) {
         url.searchParams.set('postId', String(payload.postId));
       } else if (route !== 'writer') {
-        ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive', 'channel']
+        ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive', 'channel', 'status']
           .forEach(function (key) {
             if (payload[key]) url.searchParams.set(key, payload[key]);
           });
@@ -798,9 +805,7 @@
     if (route === 'detail') return renderDetail(details.slug, controller);
     if (route === 'mover') return renderArticleMover();
     if (route === 'writer') return renderWriter(details);
-    if (route === 'drafts' || route === 'manage') {
-      return renderWriterPlaceholder(route);
-    }
+    if (route === 'drafts' || route === 'manage') return renderAdminPosts(route, details, controller);
     return navigate('home', {}, { replace: true });
   }
 
@@ -1094,15 +1099,218 @@
     shellNode.appendChild(content);
   }
 
-  function renderWriterPlaceholder(route) {
-    const labels = {
-      drafts: ['草稿箱', '草稿管理将在后续接入。'],
-      manage: ['文章管理', '文章管理后台将在后续接入。'],
-    };
+  async function renderAdminPosts(route, initialFilters, controller) {
     if (!isAuthor()) return navigate('home', {}, { replace: true });
-    const label = labels[route];
-    const node = showRouteShell('AUTHOR', label[0], label[1]);
-    node.appendChild(makeEmptyState(label[0] + '功能待接入', '本轮不实现写入和管理功能。'));
+    const isDrafts = route === 'drafts';
+    const filters = Object.assign({
+      q: '',
+      status: isDrafts ? 'draft' : '',
+      sort: 'updated',
+      page: 1,
+    }, initialFilters || {});
+    if (isDrafts) filters.status = 'draft';
+
+    const node = showRouteShell(
+      'AUTHOR',
+      isDrafts ? '草稿箱' : '文章管理',
+      isDrafts
+        ? '继续编辑、发布或删除尚未公开的文章。'
+        : '集中管理草稿、已发布、已归档和已删除文章。'
+    );
+    const header = node.querySelector('.knowledge-route-header');
+    const headerActions = element('div', 'knowledge-route-actions');
+    const createButton = button('新建文章', 'knowledge-route-button is-primary');
+    createButton.addEventListener('click', function () {
+      navigate('writer', { returnRoute: route });
+    });
+    headerActions.appendChild(createButton);
+    header.appendChild(headerActions);
+
+    const controls = element('div', 'knowledge-admin-controls');
+    const keyword = element('input');
+    keyword.type = 'search';
+    keyword.placeholder = t('搜索标题或正文');
+    keyword.value = filters.q || '';
+    controls.appendChild(keyword);
+    let statusControl = null;
+    if (!isDrafts) {
+      statusControl = selectControl('全部状态', [
+        { label: '草稿', value: 'draft' },
+        { label: '已发布', value: 'published' },
+        { label: '已归档', value: 'archived' },
+        { label: '已删除', value: 'deleted' },
+      ], filters.status);
+      controls.appendChild(statusControl);
+    }
+    const resultSummary = element('div', 'knowledge-result-summary');
+    const results = element('div', 'knowledge-admin-list');
+    const pagination = element('nav', 'knowledge-pagination');
+    results.appendChild(makeLoadingState('正在加载文章…'));
+    node.append(controls, resultSummary, results, pagination);
+
+    function nextFilters(page) {
+      return {
+        q: keyword.value.trim(),
+        status: isDrafts ? 'draft' : (statusControl?.value || ''),
+        sort: 'updated',
+        page: page || 1,
+      };
+    }
+
+    keyword.addEventListener('input', debounce(function () {
+      navigate(route, nextFilters(1), { replace: true });
+    }, 380));
+    statusControl?.addEventListener('change', function () {
+      navigate(route, nextFilters(1));
+    });
+
+    try {
+      const response = await repository.getAdminPosts({
+        page: filters.page,
+        pageSize: PAGE_SIZE,
+        q: filters.q,
+        status: filters.status,
+        sort: 'updated',
+      }, {
+        token: currentToken(),
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      results.replaceChildren();
+      response.items.forEach(function (post) {
+        results.appendChild(makeAdminPostRow(post, route));
+      });
+      if (!response.items.length) {
+        results.appendChild(makeEmptyState(
+          isDrafts ? '草稿箱是空的。' : '没有符合条件的文章。',
+          isDrafts ? '新建或导入的草稿会显示在这里。' : '请调整搜索词或状态筛选。'
+        ));
+      }
+      resultSummary.textContent = t('当前结果') + ' ' + response.items.length
+        + ' / ' + t('总文章') + ' ' + response.pagination.total;
+      renderPagination(pagination, response.pagination, function (page) {
+        navigate(route, nextFilters(page));
+      });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error('Knowledge admin posts request failed:', error.message);
+      results.replaceChildren(makeErrorState(function () {
+        navigate(route, filters, { replace: true });
+      }));
+      resultSummary.textContent = '--';
+    }
+  }
+
+  function makeAdminPostRow(post, returnRoute) {
+    const row = element('article', 'knowledge-admin-row');
+    const content = element('div', 'knowledge-admin-row-content');
+    const titleLine = element('div', 'knowledge-admin-row-title');
+    titleLine.append(
+      contentElement('h2', '', post.title),
+      element('span', 'knowledge-admin-status is-' + post.status, statusLabel(post.status))
+    );
+    const meta = element('div', 'knowledge-admin-row-meta');
+    appendIf(meta, '', typeLabel(post.type));
+    appendIf(meta, t('分类：'), post.category);
+    appendIf(meta, t('更新：'), formatDate(post.updatedAt, true));
+    appendIf(meta, '', post.wordCount + ' ' + t('字'));
+    content.append(titleLine, contentElement('p', '', post.summary || t('暂无摘要')), meta);
+
+    const actions = element('div', 'knowledge-admin-row-actions');
+    const edit = button('编辑', 'knowledge-route-button');
+    edit.addEventListener('click', function () {
+      navigate('writer', { postId: post.id, returnRoute });
+    });
+    actions.appendChild(edit);
+    if (post.status === 'published') {
+      const view = button('查看', 'knowledge-route-button');
+      view.addEventListener('click', function () {
+        navigate('detail', { slug: post.slug });
+      });
+      const copy = button('复制分享链接', 'knowledge-route-button');
+      copy.addEventListener('click', function () {
+        copyShareLink(post, copy);
+      });
+      actions.append(view, copy);
+    }
+    appendAdminStateActions(actions, post, returnRoute);
+    row.append(content, actions);
+    return row;
+  }
+
+  function statusLabel(status) {
+    return t({
+      draft: '草稿',
+      published: '已发布',
+      archived: '已归档',
+      deleted: '已删除',
+    }[status] || status);
+  }
+
+  function appendAdminStateActions(container, post, returnRoute) {
+    if (post.status === 'draft' || post.status === 'archived') {
+      container.appendChild(adminActionButton('发布', post, 'publish', returnRoute));
+    }
+    if (post.status === 'published') {
+      container.append(
+        adminActionButton('撤回', post, 'unpublish', returnRoute),
+        adminActionButton('归档', post, 'archive', returnRoute)
+      );
+    }
+    if (post.status === 'deleted') {
+      container.appendChild(adminActionButton('恢复', post, 'restore', returnRoute));
+      return;
+    }
+    const remove = button('删除', 'knowledge-route-button is-danger');
+    let armed = false;
+    let resetTimer = 0;
+    remove.addEventListener('click', async function () {
+      if (!armed) {
+        armed = true;
+        remove.textContent = t('确认删除');
+        window.clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(function () {
+          armed = false;
+          remove.textContent = t('删除');
+        }, 5000);
+        return;
+      }
+      window.clearTimeout(resetTimer);
+      await runAdminAction(remove, function () {
+        return repository.deletePost(post.id, { token: currentToken() });
+      }, returnRoute);
+    });
+    container.appendChild(remove);
+  }
+
+  function adminActionButton(label, post, action, returnRoute) {
+    const actionButton = button(label, 'knowledge-route-button');
+    actionButton.addEventListener('click', function () {
+      runAdminAction(actionButton, function () {
+        return repository.changePostState(post.id, action, { token: currentToken() });
+      }, returnRoute);
+    });
+    return actionButton;
+  }
+
+  async function runAdminAction(control, operation, returnRoute) {
+    const original = control.textContent;
+    control.disabled = true;
+    control.textContent = t('处理中…');
+    try {
+      await operation();
+      navigate(returnRoute, state.routePayload, { replace: true });
+    } catch (error) {
+      control.disabled = false;
+      control.textContent = original;
+      const row = control.closest('.knowledge-admin-row');
+      let notice = row?.querySelector('.knowledge-admin-row-error');
+      if (!notice && row) {
+        notice = element('p', 'knowledge-admin-row-error');
+        row.appendChild(notice);
+      }
+      if (notice) notice.textContent = error.message || t('操作失败，请稍后重试。');
+    }
   }
 
   async function renderWriter(details) {
@@ -1123,7 +1331,7 @@
     await writer.render(routeView, {
       postId: details.postId || null,
       onBack: function () {
-        navigate('home', {});
+        navigate(details.returnRoute || 'home', {});
       },
     });
   }
@@ -1192,6 +1400,7 @@
       sourceLink.rel = 'noopener noreferrer';
       header.appendChild(sourceLink);
     }
+    header.appendChild(makeShareLink(post));
     main.appendChild(header);
     if (post.type === 'solution') main.appendChild(makeSolutionInfo(post));
     const body = element('div', 'knowledge-detail-body');
@@ -1257,6 +1466,51 @@
       section.appendChild(link);
     }
     return section;
+  }
+
+  function shareUrl(post) {
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('knowledge', 'post');
+    url.searchParams.set('slug', post.slug);
+    return url.toString();
+  }
+
+  function makeShareLink(post) {
+    const share = element('div', 'knowledge-share-link');
+    const label = element('span', '', '分享链接');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.readOnly = true;
+    input.value = shareUrl(post);
+    input.setAttribute('aria-label', t('分享链接'));
+    const copy = button('复制链接', 'knowledge-route-button');
+    const status = element('span', 'knowledge-share-status');
+    status.setAttribute('aria-live', 'polite');
+    copy.addEventListener('click', function () {
+      copyShareLink(post, copy, status, input);
+    });
+    share.append(label, input, copy, status);
+    return share;
+  }
+
+  async function copyShareLink(post, control, status, input) {
+    const value = shareUrl(post);
+    try {
+      await navigator.clipboard.writeText(value);
+      if (status) status.textContent = t('已复制');
+      control.textContent = t('已复制');
+    } catch (error) {
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      if (status) status.textContent = t('请手动复制链接');
+      control.textContent = t('请手动复制');
+    }
+    window.setTimeout(function () {
+      control.textContent = t(input ? '复制链接' : '复制分享链接');
+      if (status) status.textContent = '';
+    }, 1800);
   }
 
   function makeToc(headings) {

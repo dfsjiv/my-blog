@@ -88,6 +88,7 @@
       'page',
       'pageSize',
       'type',
+      'status',
       'category',
       'tag',
       'q',
@@ -224,6 +225,25 @@
     return adaptPost(data && data.post);
   }
 
+  async function getAdminPosts(filters, options) {
+    const data = await apiRequest(
+      API_ROOT + '/admin/posts' + buildPostsQuery(filters),
+      options
+    );
+    const pagination = data && data.pagination ? data.pagination : {};
+    return {
+      items: Array.isArray(data && data.items) ? data.items.map(adaptPost) : [],
+      pagination: {
+        page: Number(pagination.page) || 1,
+        pageSize: Number(pagination.pageSize) || 10,
+        total: Number(pagination.total) || 0,
+        totalPages: Number(pagination.totalPages) || 0,
+        hasPrevious: Boolean(pagination.hasPrevious),
+        hasNext: Boolean(pagination.hasNext),
+      },
+    };
+  }
+
   async function createPost(input, options) {
     const settings = Object.assign({}, options || {}, {
       method: 'POST',
@@ -239,6 +259,27 @@
       method: 'PATCH',
       body: input,
     });
+    const data = await apiRequest(
+      API_ROOT + '/admin/posts/' + encodeURIComponent(String(id)),
+      settings
+    );
+    clearCache();
+    return adaptPost(data && data.post);
+  }
+
+  async function changePostState(id, action, options) {
+    const settings = Object.assign({}, options || {}, { method: 'POST' });
+    const data = await apiRequest(
+      API_ROOT + '/admin/posts/' + encodeURIComponent(String(id))
+        + '/' + encodeURIComponent(String(action)),
+      settings
+    );
+    clearCache();
+    return adaptPost(data && data.post);
+  }
+
+  async function deletePost(id, options) {
+    const settings = Object.assign({}, options || {}, { method: 'DELETE' });
     const data = await apiRequest(
       API_ROOT + '/admin/posts/' + encodeURIComponent(String(id)),
       settings
@@ -332,9 +373,12 @@
     getPosts,
     getPostBySlug,
     getFacets,
+    getAdminPosts,
     getAdminPost,
     createPost,
     updatePost,
+    changePostState,
+    deletePost,
     searchPosts,
     getArchivePosts,
     getPostContext,

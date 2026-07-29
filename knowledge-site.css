@@ -508,6 +508,119 @@ body.auth-elegant .knowledge-site {
   font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
 }
 
+.knowledge-admin-controls {
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px);
+  gap: 8px;
+}
+
+.knowledge-admin-controls input,
+.knowledge-admin-controls select {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  color: var(--knowledge-text);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+  font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.knowledge-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.knowledge-admin-row {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  background: color-mix(in srgb, var(--knowledge-surface) 78%, transparent);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+}
+
+.knowledge-admin-row-content,
+.knowledge-admin-row-title {
+  min-width: 0;
+}
+
+.knowledge-admin-row-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.knowledge-admin-row-title h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-admin-row-content > p {
+  margin: 7px 0;
+  overflow: hidden;
+  color: var(--knowledge-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-admin-row-meta,
+.knowledge-admin-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.knowledge-admin-row-meta {
+  color: var(--knowledge-muted);
+  font-size: 11px;
+}
+
+.knowledge-admin-row-actions {
+  max-width: 410px;
+  justify-content: flex-end;
+}
+
+.knowledge-admin-status {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  color: var(--knowledge-muted);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.knowledge-admin-status.is-published {
+  color: #84c995;
+  border-color: color-mix(in srgb, #84c995 45%, transparent);
+}
+
+.knowledge-admin-status.is-deleted,
+.knowledge-route-button.is-danger,
+.knowledge-admin-row-error {
+  color: #ef8e8e;
+}
+
+.knowledge-route-button.is-danger {
+  border-color: color-mix(in srgb, #ef8e8e 42%, var(--knowledge-border));
+}
+
+.knowledge-admin-row-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+}
+
 .knowledge-global-search input {
   width: 100%;
 }
@@ -961,6 +1074,36 @@ body.auth-elegant .knowledge-site {
   border-radius: var(--knowledge-radius-small);
   text-decoration: none;
   font-size: 12px;
+}
+
+.knowledge-share-link {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-share-link > span:first-child {
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+.knowledge-share-link input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--knowledge-text);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+  font: 12px Consolas, "Courier New", monospace;
+}
+
+.knowledge-share-status {
+  min-width: 48px;
+  color: var(--knowledge-primary);
+  font-size: 11px;
 }
 
 .knowledge-update-list {
@@ -1770,6 +1913,24 @@ body.auth-elegant .knowledge-site {
   .knowledge-solution-info dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .knowledge-admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-admin-row-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .knowledge-share-link {
+    grid-template-columns: 1fr auto;
+  }
+
+  .knowledge-share-link > span:first-child,
+  .knowledge-share-status {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1814,6 +1975,30 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-intro h1 {
     font-size: 29px;
+  }
+
+  .knowledge-admin-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-admin-row-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .knowledge-admin-row-title h2,
+  .knowledge-admin-row-content > p {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .knowledge-share-link {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-share-link > span:first-child,
+  .knowledge-share-status {
+    grid-column: auto;
   }
 
   .knowledge-global-search {
