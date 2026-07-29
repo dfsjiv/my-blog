@@ -52,6 +52,11 @@
     homeController: null,
     sectionObserver: null,
     facets: null,
+    homeLatestPage: 1,
+    homeLatestHasNext: false,
+    homeLatestLoading: false,
+    homeLatestError: false,
+    homeLatestSlugs: new Set(),
   };
   shell.dataset.language = state.language;
 
@@ -359,6 +364,21 @@
     return cover;
   }
 
+  function detailCoverNode(post) {
+    const safe = safeExternalUrl(post.coverUrl);
+    if (!safe) return null;
+    const figure = element('figure', 'knowledge-detail-cover');
+    const image = document.createElement('img');
+    image.src = safe;
+    image.alt = post.title;
+    image.decoding = 'async';
+    image.addEventListener('error', function () {
+      figure.remove();
+    }, { once: true });
+    figure.appendChild(image);
+    return figure;
+  }
+
   function appendIf(container, label, value) {
     if (value === null || value === undefined || value === '') return;
     container.appendChild(contentElement('span', '', label + value));
@@ -604,6 +624,54 @@
     });
   }
 
+  function updateHomeLoadMoreButton() {
+    const control = document.getElementById('knowledgeLoadMore');
+    control.hidden = !state.homeLatestHasNext;
+    control.disabled = state.homeLatestLoading;
+    control.textContent = t(
+      state.homeLatestLoading
+        ? '正在加载更多…'
+        : state.homeLatestError ? '加载失败，点击重试' : '加载更多'
+    );
+  }
+
+  function appendLatestPosts(container, posts) {
+    posts.forEach(function (post) {
+      if (state.homeLatestSlugs.has(post.slug)) return;
+      state.homeLatestSlugs.add(post.slug);
+      container.appendChild(makeContentCard(post));
+    });
+  }
+
+  async function loadMoreLatest() {
+    if (state.homeLatestLoading || !state.homeLatestHasNext || !state.homeController) return;
+    const latest = document.getElementById('knowledgeLatestList');
+    const controller = state.homeController;
+    state.homeLatestLoading = true;
+    state.homeLatestError = false;
+    updateHomeLoadMoreButton();
+    try {
+      const result = await repository.getPosts({
+        page: state.homeLatestPage + 1,
+        pageSize: 5,
+        sort: 'latest',
+      }, { signal: controller.signal });
+      if (controller.signal.aborted || state.homeController !== controller) return;
+      appendLatestPosts(latest, result.items);
+      state.homeLatestPage = result.pagination.page;
+      state.homeLatestHasNext = Boolean(result.pagination.hasNext);
+      applyViewMode();
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      state.homeLatestError = true;
+    } finally {
+      if (state.homeController === controller) {
+        state.homeLatestLoading = false;
+        updateHomeLoadMoreButton();
+      }
+    }
+  }
+
   async function loadHome(options) {
     if (state.homeController) state.homeController.abort();
     const controller = new AbortController();
@@ -614,6 +682,12 @@
     const latest = document.getElementById('knowledgeLatestList');
     const solutions = document.getElementById('knowledgeSolutionList');
     const updates = document.getElementById('knowledgeUpdateList');
+    state.homeLatestPage = 1;
+    state.homeLatestHasNext = false;
+    state.homeLatestLoading = false;
+    state.homeLatestError = false;
+    state.homeLatestSlugs = new Set();
+    updateHomeLoadMoreButton();
     [featured, latest, solutions, updates].forEach(function (container) {
       container.replaceChildren(makeLoadingState('正在加载…'));
     });
@@ -634,9 +708,24 @@
       renderCollection(featured, results[1].value.items, makeFeaturedCard);
     } else featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
     if (results[2].status === 'fulfilled') {
-      renderCollection(latest, results[2].value.items, makeContentCard);
+      latest.replaceChildren();
+      appendLatestPosts(latest, results[2].value.items);
+      if (!results[2].value.items.length) {
+        latest.appendChild(makeEmptyState(
+          '这里暂时还没有发布内容。',
+          '发布后的内容会显示在这里。',
+          true
+        ));
+      }
+      state.homeLatestPage = results[2].value.pagination.page;
+      state.homeLatestHasNext = Boolean(results[2].value.pagination.hasNext);
+      updateHomeLoadMoreButton();
       applyViewMode();
-    } else latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    } else {
+      state.homeLatestHasNext = false;
+      updateHomeLoadMoreButton();
+      latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    }
     if (results[3].status === 'fulfilled') {
       renderCollection(solutions, results[3].value.items, makeSolutionCard);
     } else solutions.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
@@ -1437,6 +1526,8 @@
       header.appendChild(authorActions);
     }
     main.appendChild(header);
+    const detailCover = detailCoverNode(post);
+    if (detailCover) main.appendChild(detailCover);
     if (post.type === 'solution') main.appendChild(makeSolutionInfo(post));
     const body = element('div', 'knowledge-detail-body');
     let renderedHeadings = [];
@@ -1725,6 +1816,7 @@
     event.preventDefault();
     handleSearchSubmit(event.currentTarget);
   });
+  document.getElementById('knowledgeLoadMore').addEventListener('click', loadMoreLatest);
   menuToggle.addEventListener('click', function () {
     setNavOpen(!navLinks.classList.contains('is-open'));
   });

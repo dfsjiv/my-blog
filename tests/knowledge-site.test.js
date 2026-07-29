@@ -17,6 +17,7 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /id="knowledgeLatestList"/);
+assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
 assert.ok(
@@ -64,6 +65,7 @@ assert.match(css, /knowledge-loading-state/);
 assert.match(css, /knowledge-pagination/);
 assert.match(css, /knowledge-code-toolbar/);
 assert.match(css, /knowledge-toc button\.is-active/);
+assert.match(css, /\.knowledge-detail-cover/);
 assert.match(css, /max-width:\s*920px/);
 assert.match(css, /overflow-x:\s*auto/);
 assert.match(css, /prefers-color-scheme:\s*dark/);
@@ -98,6 +100,9 @@ assert.match(site, /knowledge', 'post'/);
 assert.match(site, /repository\.getPosts/);
 assert.match(site, /repository\.getFacets/);
 assert.match(site, /repository\.getPostBySlug/);
+assert.match(site, /function loadMoreLatest/);
+assert.match(site, /result\.pagination\.hasNext/);
+assert.match(site, /function detailCoverNode/);
 assert.match(site, /repository\.getRelatedPosts/);
 assert.match(site, /repository\.getPostContext/);
 assert.match(site, /currentUser\(\)\.role === 'admin'/);

@@ -1020,6 +1020,11 @@ body.auth-elegant .knowledge-site {
   color: var(--knowledge-muted);
 }
 
+.knowledge-load-more:not(:disabled):hover {
+  color: var(--knowledge-text);
+  border-color: color-mix(in srgb, var(--knowledge-primary) 55%, var(--knowledge-border));
+}
+
 .knowledge-solution-card {
   min-width: 0;
   padding: 15px;
@@ -1462,6 +1467,26 @@ body.auth-elegant .knowledge-site {
 .knowledge-detail-header > p {
   color: var(--knowledge-muted);
   line-height: 1.7;
+}
+
+.knowledge-detail-cover {
+  width: 100%;
+  max-height: 560px;
+  margin: 0 0 16px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--knowledge-surface);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius);
+  box-shadow: var(--knowledge-shadow);
+}
+
+.knowledge-detail-cover img {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  object-fit: contain;
 }
 
 .knowledge-detail-meta {
