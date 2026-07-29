@@ -98,6 +98,7 @@ assert.match(site, /window\.addEventListener\('popstate'/);
 assert.match(site, /URLSearchParams\(window\.location\.search\)/);
 assert.match(site, /knowledge', 'post'/);
 assert.match(site, /repository\.getPosts/);
+assert.match(site, /featured\.closest\('\.knowledge-feed-section'\)\.hidden = !featuredPosts\.length/);
 assert.match(site, /repository\.getFacets/);
 assert.match(site, /repository\.getPostBySlug/);
 assert.match(site, /function loadMoreLatest/);

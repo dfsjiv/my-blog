@@ -705,8 +705,14 @@
     if (results[0].status === 'fulfilled') renderFacets(results[0].value);
     else renderFacetError();
     if (results[1].status === 'fulfilled') {
-      renderCollection(featured, results[1].value.items, makeFeaturedCard);
-    } else featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+      const featuredPosts = results[1].value.items;
+      featured.closest('.knowledge-feed-section').hidden = !featuredPosts.length;
+      if (featuredPosts.length) renderCollection(featured, featuredPosts, makeFeaturedCard);
+      else featured.replaceChildren();
+    } else {
+      featured.closest('.knowledge-feed-section').hidden = false;
+      featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+    }
     if (results[2].status === 'fulfilled') {
       latest.replaceChildren();
       appendLatestPosts(latest, results[2].value.items);
@@ -877,6 +883,7 @@
     const controller = abortRouteWork();
     const route = state.route;
     const details = state.routePayload;
+    shell.dataset.route = route;
     if (route !== 'writer') {
       shell.classList.remove('knowledge-writing-mode');
       window.KnowledgeWriter?.destroy?.();
