@@ -439,7 +439,8 @@
       link.rel = 'noopener noreferrer';
       body.appendChild(link);
     }
-    card.append(identity, body);
+    const visual = safeExternalUrl(post.coverUrl) ? coverNode(post) : identity;
+    card.append(visual, body);
     return card;
   }
 

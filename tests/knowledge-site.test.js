@@ -117,6 +117,7 @@ assert.match(site, /repository\.changePostState/);
 assert.match(site, /repository\.deletePost/);
 assert.match(site, /function makeShareLink/);
 assert.match(site, /navigator\.clipboard\.writeText/);
+assert.match(site, /safeExternalUrl\(post\.coverUrl\) \? coverNode\(post\) : identity/);
 assert.doesNotMatch(site, /草稿箱功能待接入|文章管理功能待接入/);
 assert.doesNotMatch(site, /data\.posts/);
 assert.doesNotMatch(site, /演示内容/);

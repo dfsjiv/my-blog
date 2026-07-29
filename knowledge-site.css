@@ -1042,6 +1042,10 @@ body.auth-elegant .knowledge-site {
   border-radius: var(--knowledge-radius-small);
 }
 
+.knowledge-solution-card > .knowledge-cover-placeholder {
+  min-height: 128px;
+}
+
 .knowledge-solution-identity strong {
   color: var(--knowledge-primary);
   font-size: 14px;
