@@ -726,6 +726,83 @@ test("knowledge API adapts legacy articles and keeps migration checks read-only"
     sqlite.close();
 });
 
+test("admin can convert a legacy article once and edit its cover", async () => {
+    const { sqlite, DB } = createDatabase();
+    sqlite.prepare(`
+        INSERT INTO articles (
+            title, summary, content, category, author_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        "Editable Legacy Article",
+        "Legacy summary",
+        "# Legacy body",
+        "computer",
+        1,
+        "2026-07-10 10:00:00",
+        "2026-07-11 11:00:00"
+    );
+    const api = createApi({ DB });
+
+    const adminList = await api("/api/knowledge/admin/posts?status=published", {
+        token: "admin-token"
+    });
+    assert.equal(adminList.status, 200);
+    assert.equal(adminList.body.data.items[0].source, "legacy-blog");
+
+    const unauthorized = await api("/api/knowledge/admin/legacy-posts/1/edit", {
+        method: "POST"
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const converted = await api("/api/knowledge/admin/legacy-posts/1/edit", {
+        method: "POST",
+        token: "admin-token"
+    });
+    assert.equal(converted.status, 201);
+    assert.equal(converted.body.data.post.source, "knowledge");
+    assert.equal(converted.body.data.post.title, "Editable Legacy Article");
+    assert.equal(converted.body.data.post.contentMarkdown, "# Legacy body");
+    const convertedId = converted.body.data.post.id;
+
+    const updated = await api(`/api/knowledge/admin/posts/${convertedId}`, {
+        method: "PATCH",
+        token: "admin-token",
+        body: {
+            version: converted.body.data.post.version,
+            coverUrl: "https://example.test/api/knowledge/images/cover.png"
+        }
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(
+        updated.body.data.post.coverUrl,
+        "https://example.test/api/knowledge/images/cover.png"
+    );
+
+    const repeated = await api("/api/knowledge/admin/legacy-posts/1/edit", {
+        method: "POST",
+        token: "admin-token"
+    });
+    assert.equal(repeated.status, 200);
+    assert.equal(repeated.body.data.post.id, convertedId);
+    assert.equal(
+        sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_posts").get().count,
+        1
+    );
+    assert.equal(
+        sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_migration_map").get().count,
+        1
+    );
+    assert.equal(
+        sqlite.prepare("SELECT title FROM articles WHERE id = 1").get().title,
+        "Editable Legacy Article"
+    );
+
+    const publicList = await api("/api/knowledge/posts");
+    assert.equal(publicList.body.data.pagination.total, 1);
+    assert.equal(publicList.body.data.items[0].source, "knowledge");
+    sqlite.close();
+});
+
 test("public knowledge API works before knowledge tables are deployed", async () => {
     const { sqlite, DB } = createDatabase();
     sqlite.exec(`

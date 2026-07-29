@@ -1218,9 +1218,12 @@
     content.append(titleLine, contentElement('p', '', post.summary || t('暂无摘要')), meta);
 
     const actions = element('div', 'knowledge-admin-row-actions');
-    const edit = button('编辑', 'knowledge-route-button');
+    const edit = button(
+      post.source === 'legacy-blog' ? '转换并编辑' : '编辑',
+      'knowledge-route-button'
+    );
     edit.addEventListener('click', function () {
-      navigate('writer', { postId: post.id, returnRoute });
+      openPostEditor(post, returnRoute, edit);
     });
     actions.appendChild(edit);
     if (post.status === 'published') {
@@ -1237,6 +1240,25 @@
     appendAdminStateActions(actions, post, returnRoute);
     row.append(content, actions);
     return row;
+  }
+
+  async function openPostEditor(post, returnRoute, control) {
+    if (post.source !== 'legacy-blog') {
+      navigate('writer', { postId: post.id, returnRoute });
+      return;
+    }
+    control.disabled = true;
+    control.textContent = '正在转换...';
+    try {
+      const editable = await repository.createEditableLegacyPost(post.legacyId || post.sourceId, {
+        token: currentToken(),
+      });
+      navigate('writer', { postId: editable.id, returnRoute });
+    } catch (error) {
+      console.error('Legacy post conversion failed:', error.message);
+      control.disabled = false;
+      control.textContent = '转换失败，重试';
+    }
   }
 
   function statusLabel(status) {
@@ -1402,6 +1424,18 @@
       header.appendChild(sourceLink);
     }
     header.appendChild(makeShareLink(post));
+    if (isAuthor()) {
+      const authorActions = element('div', 'knowledge-detail-author-actions');
+      const edit = button(
+        post.source === 'legacy-blog' ? '转换并编辑' : '编辑文章',
+        'knowledge-route-button'
+      );
+      edit.addEventListener('click', function () {
+        openPostEditor(post, 'detail', edit);
+      });
+      authorActions.appendChild(edit);
+      header.appendChild(authorActions);
+    }
     main.appendChild(header);
     if (post.type === 'solution') main.appendChild(makeSolutionInfo(post));
     const body = element('div', 'knowledge-detail-body');

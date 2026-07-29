@@ -83,6 +83,12 @@ const context = {
         data: { post: { ...post, ...JSON.parse(options.body), version: 2 } },
       });
     }
+    if (url === '/api/knowledge/admin/legacy-posts/3/edit' && options.method === 'POST') {
+      return response({
+        success: true,
+        data: { post: { ...post, id: 9, source: 'knowledge', legacyId: null } },
+      }, 201);
+    }
     if (url === '/api/knowledge/facets') {
       return response({
         success: true,
@@ -177,6 +183,10 @@ vm.runInContext(source, context);
     version: 1,
   }, { token: 'admin-token' });
   assert.equal(updated.version, 2);
+  const converted = await repository.createEditableLegacyPost(3, {
+    token: 'admin-token',
+  });
+  assert.equal(converted.id, 9);
   const uploaded = await repository.uploadImage(
     new Blob(['image'], { type: 'image/png' }),
     { token: 'admin-token' }
@@ -188,6 +198,11 @@ vm.runInContext(source, context);
   assert.equal(uploadRequest.options.headers.Authorization, 'Bearer admin-token');
   assert.equal(uploadRequest.options.headers['Content-Type'], undefined);
   assert.equal(uploadRequest.options.body instanceof FormData, true);
+  const legacyEditRequest = requests.find(
+    (request) => request.url === '/api/knowledge/admin/legacy-posts/3/edit'
+  );
+  assert.equal(legacyEditRequest.options.method, 'POST');
+  assert.equal(legacyEditRequest.options.headers.Authorization, 'Bearer admin-token');
   const writeRequests = requests.filter((request) => (
     request.url.startsWith('/api/knowledge/admin/posts')
   ));

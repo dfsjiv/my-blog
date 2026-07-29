@@ -1110,6 +1110,12 @@ body.auth-elegant .knowledge-site {
   font-size: 11px;
 }
 
+.knowledge-detail-author-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .knowledge-update-list {
   margin: 0;
   padding: 0 0 0 19px;

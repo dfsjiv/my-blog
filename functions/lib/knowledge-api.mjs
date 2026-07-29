@@ -1,6 +1,7 @@
 import {
     buildLegacyMigrationAudit,
     buildLegacyMigrationDryRun,
+    createLegacyChecksum,
     fetchLegacyPostBySlug,
     fetchLegacyPosts,
     getLegacyFacets,
@@ -46,6 +47,10 @@ export async function handleKnowledgeRequest(context) {
     try {
         const publicPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/posts\/([^/]+)$/);
         const adminPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/admin\/posts\/(\d+)$/);
+        const legacyEditMatch = matchPath(
+            url.pathname,
+            /^\/api\/knowledge\/admin\/legacy-posts\/(\d+)\/edit$/
+        );
         const adminActionMatch = matchPath(
             url.pathname,
             /^\/api\/knowledge\/admin\/posts\/(\d+)\/(publish|unpublish|archive|restore)$/
@@ -113,6 +118,16 @@ export async function handleKnowledgeRequest(context) {
             if (auth.response) return auth.response;
             return await createPost(request, env, auth.user, jsonResponse);
         }
+        if (legacyEditMatch && request.method === "POST") {
+            const auth = await requireAuthor(context);
+            if (auth.response) return auth.response;
+            return await createEditableLegacyPost(
+                Number(legacyEditMatch[1]),
+                env,
+                auth.user,
+                jsonResponse
+            );
+        }
         if (adminPostMatch && request.method === "GET") {
             const auth = await requireAuthor(context);
             if (auth.response) return auth.response;
@@ -157,9 +172,10 @@ export async function handleKnowledgeRequest(context) {
             || url.pathname === "/api/knowledge/admin/migration/dry-run"
             || isArticleMoverPath(url.pathname)
             || url.pathname === "/api/knowledge/admin/images"
-            || url.pathname === "/api/knowledge/admin/posts"
-            || Boolean(adminPostMatch)
-            || Boolean(adminActionMatch);
+             || url.pathname === "/api/knowledge/admin/posts"
+             || Boolean(adminPostMatch)
+             || Boolean(legacyEditMatch)
+             || Boolean(adminActionMatch);
         return knownPath
             ? errorResponse(
                 jsonResponse,
@@ -377,7 +393,22 @@ async function getKnowledgeFacets(env) {
 async function getAdminPosts(request, env, jsonResponse) {
     const filters = parseListFilters(request, true);
     if (filters.error) return validationResponse(jsonResponse, filters.error);
-    const result = await queryPostList(env, filters, false);
+    const fetchLimit = filters.page * filters.pageSize;
+    const includeLegacy = !filters.status || filters.status === "published";
+    const migratedIds = includeLegacy ? await getMigratedLegacyIds(env) : new Set();
+    const [knowledgeResult, legacyResult] = await Promise.all([
+        queryPostList(env, { ...filters, page: 1, pageSize: fetchLimit }, false),
+        includeLegacy
+            ? fetchLegacyPosts(env, { ...filters, excludeSourceIds: migratedIds }, fetchLimit)
+            : Promise.resolve({ items: [], total: 0 })
+    ]);
+    const merged = [...knowledgeResult.items, ...legacyResult.items]
+        .sort(postComparator(filters.sort));
+    const offset = (filters.page - 1) * filters.pageSize;
+    const result = {
+        items: merged.slice(offset, offset + filters.pageSize),
+        total: knowledgeResult.total + legacyResult.total
+    };
     return jsonResponse({
         success: true,
         data: {
@@ -385,6 +416,92 @@ async function getAdminPosts(request, env, jsonResponse) {
             pagination: makePagination(filters.page, filters.pageSize, result.total)
         }
     });
+}
+
+async function createEditableLegacyPost(legacyId, env, user, jsonResponse) {
+    const sourceId = String(legacyId);
+    const existingMap = await env.DB.prepare(`
+        SELECT target_post_id
+        FROM knowledge_migration_map
+        WHERE source_type = 'legacy-blog' AND source_id = ?
+        LIMIT 1
+    `).bind(sourceId).first();
+    if (existingMap?.target_post_id) {
+        const existingPost = await getPostById(env, Number(existingMap.target_post_id));
+        if (existingPost) {
+            return jsonResponse({
+                success: true,
+                data: { post: toDetailPost(existingPost, true) }
+            });
+        }
+    }
+
+    const legacyPost = await fetchLegacyPostBySlug(env, `legacy-article-${legacyId}`);
+    if (!legacyPost) {
+        return errorResponse(jsonResponse, 404, "NOT_FOUND", "原版文章不存在");
+    }
+
+    const slugResult = await resolveCreateSlug(env, legacyPost.slug || legacyPost.title, false);
+    const slug = slugResult.slug;
+    const now = new Date().toISOString();
+    const createdAt = legacyPost.createdAt || now;
+    const updatedAt = legacyPost.updatedAt || createdAt;
+    const publishedAt = legacyPost.publishedAt || createdAt;
+    const checksum = await createLegacyChecksum(legacyPost);
+
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT INTO knowledge_posts (
+                author_user_id, slug, type, title, summary, content_markdown,
+                cover_url, category, category_slug, status, is_pinned,
+                is_featured, source_url, word_count, reading_time_minutes,
+                version, created_at, updated_at, published_at, deleted_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, 'published', 0, 0, NULL, ?, ?, 1, ?, ?, ?, NULL)
+        `).bind(
+            user.id,
+            slug,
+            legacyPost.type,
+            legacyPost.title,
+            legacyPost.summary,
+            legacyPost.contentMarkdown,
+            legacyPost.category,
+            legacyPost.categorySlug,
+            legacyPost.wordCount,
+            legacyPost.readingTimeMinutes,
+            createdAt,
+            updatedAt,
+            publishedAt
+        ),
+        env.DB.prepare(`
+            INSERT INTO knowledge_migration_map (
+                source_type, source_table, source_id, source_slug,
+                target_post_id, source_checksum, target_checksum,
+                migration_status, migration_message, migrated_at, created_at
+            )
+            SELECT
+                'legacy-blog', 'articles', ?, NULL, id, ?, ?,
+                'migrated', 'Converted for editing', ?, ?
+            FROM knowledge_posts
+            WHERE slug = ?
+            ON CONFLICT(source_type, source_id) DO UPDATE SET
+                target_post_id = excluded.target_post_id,
+                source_checksum = excluded.source_checksum,
+                target_checksum = excluded.target_checksum,
+                migration_status = 'migrated',
+                migration_message = excluded.migration_message,
+                migrated_at = excluded.migrated_at
+        `).bind(sourceId, checksum, checksum, now, now, slug)
+    ]);
+
+    const created = await getPostBySlug(env, slug, false);
+    if (!created) {
+        throw new Error("Converted legacy post could not be loaded");
+    }
+    return jsonResponse({
+        success: true,
+        data: { post: toDetailPost(created, true) }
+    }, 201);
 }
 
 async function getAdminPost(id, env, jsonResponse) {

@@ -268,6 +268,16 @@
     return adaptPost(data && data.post);
   }
 
+  async function createEditableLegacyPost(id, options) {
+    const settings = Object.assign({}, options || {}, { method: 'POST' });
+    const data = await apiRequest(
+      API_ROOT + '/admin/legacy-posts/' + encodeURIComponent(String(id)) + '/edit',
+      settings
+    );
+    clearCache();
+    return adaptPost(data && data.post);
+  }
+
   async function changePostState(id, action, options) {
     const settings = Object.assign({}, options || {}, { method: 'POST' });
     const data = await apiRequest(
@@ -423,6 +433,7 @@
     getAdminPost,
     createPost,
     updatePost,
+    createEditableLegacyPost,
     changePostState,
     deletePost,
     uploadImage,
