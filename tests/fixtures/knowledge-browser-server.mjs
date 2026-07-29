@@ -101,6 +101,13 @@ function json(response, data, status = 200) {
     response.end(JSON.stringify(data));
 }
 
+async function readJsonBody(request) {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    if (!chunks.length) return {};
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
 function listPosts(url) {
     let items = emptyMode ? [] : posts.slice();
     const type = url.searchParams.get("type");
@@ -231,6 +238,56 @@ http.createServer(async (request, response) => {
                 },
             },
         });
+    }
+    if (url.pathname === "/api/knowledge/admin/posts" && request.method === "POST") {
+        if (request.headers.authorization !== "Bearer fixture-admin-token") {
+            return json(response, {
+                success: false,
+                error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+            }, 401);
+        }
+        const input = await readJsonBody(request);
+        return json(response, {
+            success: true,
+            data: {
+                post: {
+                    ...posts[0],
+                    ...input,
+                    id: 3,
+                    slug: input.slug || "fixture-created-post",
+                    version: 1,
+                },
+            },
+        }, 201);
+    }
+    const adminPostMatch = url.pathname.match(/^\/api\/knowledge\/admin\/posts\/(\d+)$/);
+    if (adminPostMatch) {
+        if (request.headers.authorization !== "Bearer fixture-admin-token") {
+            return json(response, {
+                success: false,
+                error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+            }, 401);
+        }
+        const post = posts.find((item) => item.id === Number(adminPostMatch[1]));
+        if (!post) {
+            return json(response, {
+                success: false,
+                error: { code: "NOT_FOUND", message: "文章不存在" },
+            }, 404);
+        }
+        if (request.method === "PATCH") {
+            const input = await readJsonBody(request);
+            return json(response, {
+                success: true,
+                data: { post: { ...post, ...input, version: 2 } },
+            });
+        }
+        if (request.method === "GET") {
+            return json(response, {
+                success: true,
+                data: { post: { ...post, version: 1 } },
+            });
+        }
     }
     const detailMatch = url.pathname.match(/^\/api\/knowledge\/posts\/([^/]+)$/);
     if (detailMatch) {

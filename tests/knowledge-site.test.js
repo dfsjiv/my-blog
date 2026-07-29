@@ -11,6 +11,9 @@ const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), '
 const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
 const mover = fs.readFileSync(path.join(root, 'knowledge-article-mover.js'), 'utf8');
 const moverCss = fs.readFileSync(path.join(root, 'knowledge-article-mover.css'), 'utf8');
+const writer = fs.readFileSync(path.join(root, 'knowledge-writer.js'), 'utf8');
+const writerCss = fs.readFileSync(path.join(root, 'knowledge-writer.css'), 'utf8');
+const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /id="knowledgeLatestList"/);
@@ -37,9 +40,18 @@ assert.match(html, /data-about-link="novels" role="menuitem"/);
 assert.match(html, /assets\/vendor\/knowledge\/marked\.umd\.js/);
 assert.match(html, /assets\/vendor\/knowledge\/purify\.min\.js/);
 assert.match(html, /knowledge-markdown\.js/);
+assert.match(html, /knowledge-writer\.css/);
+assert.match(html, /assets\/vendor\/knowledge-editor\/tiptap\.bundle\.js/);
+assert.match(html, /knowledge-editor-adapter\.js/);
+assert.match(html, /knowledge-writer\.js/);
 assert.ok(
   html.indexOf('marked.umd.js') < html.indexOf('knowledge-markdown.js')
   && html.indexOf('purify.min.js') < html.indexOf('knowledge-markdown.js')
+);
+assert.ok(
+  html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
+  && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
+  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -68,6 +80,9 @@ assert.match(repository, /getPostBySlug/);
 assert.match(repository, /getFacets/);
 assert.match(repository, /getRelatedPosts/);
 assert.match(repository, /getPostContext/);
+assert.match(repository, /getAdminPost/);
+assert.match(repository, /createPost/);
+assert.match(repository, /updatePost/);
 
 assert.match(site, /knowledge-site-theme/);
 assert.match(site, /knowledge-site-language/);
@@ -82,6 +97,9 @@ assert.match(site, /repository\.getRelatedPosts/);
 assert.match(site, /repository\.getPostContext/);
 assert.match(site, /currentUser\(\)\.role === 'admin'/);
 assert.match(site, /renderArticleMover/);
+assert.match(site, /renderWriter/);
+assert.match(site, /window\.KnowledgeWriter/);
+assert.match(site, /knowledge-writing-mode/);
 assert.match(site, /window\.KnowledgeArticleMover/);
 assert.match(site, /bilibili:\s*'https:\/\/space\.bilibili\.com\/3546789605018414'/);
 assert.match(site, /github:\s*'https:\/\/github\.com\/dfsjiv'/);
@@ -118,6 +136,31 @@ assert.match(mover, /KnowledgeMarkdown\.render/);
 assert.doesNotMatch(mover, /\binnerHTML\b/);
 assert.doesNotMatch(mover, /\beval\(/);
 assert.match(moverCss, /\.knowledge-mover/);
+assert.match(writer, /knowledge-writer-draft:v1:/);
+assert.match(writer, /AUTO_SAVE_DELAY = 1500/);
+assert.match(writer, /editorDocumentToMarkdown/);
+assert.match(writer, /getAdminPost/);
+assert.match(writer, /createPost/);
+assert.match(writer, /updatePost/);
+assert.match(writer, /正在保存|正在加载/);
+assert.match(writer, /检测到未保存的本地草稿/);
+assert.match(writer, /图片上传功能将在下一阶段接入/);
+assert.match(editorAdapter, /contentType:\s*'markdown'/);
+assert.match(editorAdapter, /DOMPurify/);
+assert.match(editorAdapter, /transformPastedHTML/);
+assert.match(editorAdapter, /FORBID_TAGS/);
+assert.match(editorAdapter, /protocols:\s*\['http', 'https', 'mailto'\]/);
+assert.doesNotMatch(writer, /\binnerHTML\b/);
+assert.doesNotMatch(writer, /\bcontenteditable\b/i);
+assert.doesNotMatch(writer, /\beval\(/);
+assert.doesNotMatch(writer, /new Function/);
+assert.doesNotMatch(editorAdapter, /\beval\(/);
+assert.doesNotMatch(editorAdapter, /new Function/);
+assert.match(writerCss, /\.knowledge-writer-page/);
+assert.match(writerCss, /\.knowledge-tiptap-editor/);
+assert.match(writerCss, /\.knowledge-writer-slash-menu/);
+assert.match(writerCss, /\.knowledge-writer-bubble/);
+assert.match(writerCss, /@media \(max-width:\s*768px\)/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
   assert.equal(
@@ -126,5 +169,10 @@ assert.match(moverCss, /\.knowledge-mover/);
     `${file} should be vendored locally`
   );
 });
+assert.equal(
+  fs.existsSync(path.join(root, 'assets', 'vendor', 'knowledge-editor', 'tiptap.bundle.js')),
+  true,
+  'Tiptap editor bundle should be vendored locally'
+);
 
 console.log('knowledge site tests passed');

@@ -42,8 +42,13 @@
     let response;
     try {
       response = await fetch(path, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
+        method: settings.method || 'GET',
+        headers: Object.assign(
+          { Accept: 'application/json' },
+          settings.token ? { Authorization: 'Bearer ' + settings.token } : {},
+          settings.body !== undefined ? { 'Content-Type': 'application/json' } : {}
+        ),
+        body: settings.body === undefined ? undefined : JSON.stringify(settings.body),
         signal: requestSignal.signal,
         credentials: 'same-origin',
       });
@@ -150,6 +155,7 @@
       sourceUrl: source.sourceUrl || null,
       wordCount: Number(source.wordCount) || 0,
       readingTimeMinutes: Math.max(1, Number(source.readingTimeMinutes) || 1),
+      version: Math.max(1, Number(source.version) || 1),
       createdAt: source.createdAt || null,
       updatedAt: source.updatedAt || null,
       publishedAt: source.publishedAt || null,
@@ -207,6 +213,38 @@
     facetsCache.value = value;
     facetsCache.expiresAt = Date.now() + FACETS_CACHE_MS;
     return value;
+  }
+
+  async function getAdminPost(id, options) {
+    const settings = options || {};
+    const data = await apiRequest(
+      API_ROOT + '/admin/posts/' + encodeURIComponent(String(id)),
+      settings
+    );
+    return adaptPost(data && data.post);
+  }
+
+  async function createPost(input, options) {
+    const settings = Object.assign({}, options || {}, {
+      method: 'POST',
+      body: input,
+    });
+    const data = await apiRequest(API_ROOT + '/admin/posts', settings);
+    clearCache();
+    return adaptPost(data && data.post);
+  }
+
+  async function updatePost(id, input, options) {
+    const settings = Object.assign({}, options || {}, {
+      method: 'PATCH',
+      body: input,
+    });
+    const data = await apiRequest(
+      API_ROOT + '/admin/posts/' + encodeURIComponent(String(id)),
+      settings
+    );
+    clearCache();
+    return adaptPost(data && data.post);
   }
 
   async function getArchivePosts(year, month, options) {
@@ -294,6 +332,9 @@
     getPosts,
     getPostBySlug,
     getFacets,
+    getAdminPost,
+    createPost,
+    updatePost,
     searchPosts,
     getArchivePosts,
     getPostContext,

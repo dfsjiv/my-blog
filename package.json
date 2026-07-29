@@ -1,0 +1,20 @@
+{
+  "name": "lee-ethan-knowledge-site",
+  "private": true,
+  "scripts": {
+    "build:knowledge-editor": "esbuild src/knowledge-editor-vendor.js --bundle --format=iife --global-name=KnowledgeEditorVendor --outfile=assets/vendor/knowledge-editor/tiptap.bundle.js --minify --legal-comments=linked"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.29.2",
+    "@tiptap/extension-bubble-menu": "3.29.2",
+    "@tiptap/extension-link": "3.29.2",
+    "@tiptap/extension-list": "3.29.2",
+    "@tiptap/extension-table": "3.29.2",
+    "@tiptap/extensions": "3.29.2",
+    "@tiptap/markdown": "3.29.2",
+    "@tiptap/starter-kit": "3.29.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  }
+}

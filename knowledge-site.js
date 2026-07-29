@@ -5,7 +5,7 @@
   const PAGE_SIZE = 10;
   const URL_KEYS = [
     'knowledge', 'slug', 'q', 'type', 'category', 'tag', 'sort',
-    'featured', 'pinned', 'page', 'archive', 'channel',
+    'featured', 'pinned', 'page', 'archive', 'channel', 'postId',
   ];
   const navigationLinks = Object.freeze({
     socialLinks: Object.freeze({
@@ -700,6 +700,11 @@
     return Number.isInteger(page) && page > 0 ? page : 1;
   }
 
+  function parseOptionalId(value) {
+    const id = Number.parseInt(value || '', 10);
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }
+
   function routeFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const routeName = params.get('knowledge') || 'home';
@@ -721,6 +726,7 @@
         page: parsePage(params.get('page')),
         archive: params.get('archive') || '',
         channel: params.get('channel') || '',
+        postId: parseOptionalId(params.get('postId')),
       },
     };
   }
@@ -733,11 +739,15 @@
       url.searchParams.set('slug', payload.slug);
     } else if (route !== 'home') {
       url.searchParams.set('knowledge', route);
-      ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive', 'channel']
-        .forEach(function (key) {
-          if (payload[key]) url.searchParams.set(key, payload[key]);
-        });
-      if (payload.page && payload.page > 1) url.searchParams.set('page', String(payload.page));
+      if (route === 'writer' && payload.postId) {
+        url.searchParams.set('postId', String(payload.postId));
+      } else if (route !== 'writer') {
+        ['q', 'type', 'category', 'tag', 'sort', 'featured', 'pinned', 'archive', 'channel']
+          .forEach(function (key) {
+            if (payload[key]) url.searchParams.set(key, payload[key]);
+          });
+        if (payload.page && payload.page > 1) url.searchParams.set('page', String(payload.page));
+      }
     }
     const method = replace ? 'replaceState' : 'pushState';
     window.history[method]({ knowledgeRoute: route }, '', url.pathname + url.search + url.hash);
@@ -770,6 +780,10 @@
     const controller = abortRouteWork();
     const route = state.route;
     const details = state.routePayload;
+    if (route !== 'writer') {
+      shell.classList.remove('knowledge-writing-mode');
+      window.KnowledgeWriter?.destroy?.();
+    }
     if (route === 'home') {
       homeView.hidden = false;
       routeView.hidden = true;
@@ -783,7 +797,8 @@
     if (route === 'about') return renderAbout();
     if (route === 'detail') return renderDetail(details.slug, controller);
     if (route === 'mover') return renderArticleMover();
-    if (route === 'writer' || route === 'drafts' || route === 'manage') {
+    if (route === 'writer') return renderWriter(details);
+    if (route === 'drafts' || route === 'manage') {
       return renderWriterPlaceholder(route);
     }
     return navigate('home', {}, { replace: true });
@@ -1081,7 +1096,6 @@
 
   function renderWriterPlaceholder(route) {
     const labels = {
-      writer: ['写文章', 'Markdown 编辑器将在后续接入。'],
       drafts: ['草稿箱', '草稿管理将在后续接入。'],
       manage: ['文章管理', '文章管理后台将在后续接入。'],
     };
@@ -1089,6 +1103,29 @@
     const label = labels[route];
     const node = showRouteShell('AUTHOR', label[0], label[1]);
     node.appendChild(makeEmptyState(label[0] + '功能待接入', '本轮不实现写入和管理功能。'));
+  }
+
+  async function renderWriter(details) {
+    if (!isAuthor()) return navigate('home', {}, { replace: true });
+    const writer = window.KnowledgeWriter;
+    homeView.hidden = true;
+    routeView.hidden = false;
+    routeView.replaceChildren();
+    shell.classList.add('knowledge-writing-mode');
+    if (!writer || typeof writer.render !== 'function') {
+      shell.classList.remove('knowledge-writing-mode');
+      const node = showRouteShell('AUTHOR', '写文章', '编辑器模块暂时无法加载。');
+      node.appendChild(makeErrorState(function () {
+        navigate('writer', details, { replace: true });
+      }));
+      return;
+    }
+    await writer.render(routeView, {
+      postId: details.postId || null,
+      onBack: function () {
+        navigate('home', {});
+      },
+    });
   }
 
   function renderArticleMover() {

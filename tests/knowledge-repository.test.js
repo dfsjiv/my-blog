@@ -53,6 +53,21 @@ const context = {
   console,
   fetch(url, options) {
     requests.push({ url, options });
+    if (url === '/api/knowledge/admin/posts/7' && options.method === 'GET') {
+      return response({ success: true, data: { post } });
+    }
+    if (url === '/api/knowledge/admin/posts' && options.method === 'POST') {
+      return response({
+        success: true,
+        data: { post: { ...post, ...JSON.parse(options.body), id: 8, version: 1 } },
+      }, 201);
+    }
+    if (url === '/api/knowledge/admin/posts/7' && options.method === 'PATCH') {
+      return response({
+        success: true,
+        data: { post: { ...post, ...JSON.parse(options.body), version: 2 } },
+      });
+    }
     if (url === '/api/knowledge/facets') {
       return response({
         success: true,
@@ -132,6 +147,37 @@ vm.runInContext(source, context);
   assert.equal(
     requests.filter((request) => request.url === '/api/knowledge/posts/binary-search').length,
     1
+  );
+
+  const adminPost = await repository.getAdminPost(7, { token: 'admin-token' });
+  assert.equal(adminPost.id, 7);
+  const created = await repository.createPost({
+    title: 'New post',
+    contentMarkdown: '## Body',
+  }, { token: 'admin-token' });
+  assert.equal(created.id, 8);
+  const updated = await repository.updatePost(7, {
+    title: 'Updated post',
+    contentMarkdown: '## Updated',
+    version: 1,
+  }, { token: 'admin-token' });
+  assert.equal(updated.version, 2);
+  const writeRequests = requests.filter((request) => (
+    request.url.startsWith('/api/knowledge/admin/posts')
+  ));
+  assert.deepEqual(
+    writeRequests.map((request) => request.options.method),
+    ['GET', 'POST', 'PATCH']
+  );
+  assert.equal(
+    writeRequests.every((request) => request.options.headers.Authorization === 'Bearer admin-token'),
+    true
+  );
+  assert.equal(
+    writeRequests.filter((request) => request.options.body).every(
+      (request) => request.options.headers['Content-Type'] === 'application/json'
+    ),
+    true
   );
   assert.equal(requests.every((request) => request.options.signal), true);
   console.log('knowledge repository tests passed');
