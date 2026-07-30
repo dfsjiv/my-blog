@@ -764,15 +764,17 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-author-avatar {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 10px;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0 auto 16px;
   display: block;
   object-fit: cover;
   object-position: center;
   color: #ffffff;
   background: var(--knowledge-primary);
-  border-radius: 50%;
+  border-radius: 6px;
   font-weight: 700;
 }
 
@@ -2496,14 +2498,14 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-author-card {
-  padding-top: 22px;
+  padding-top: 18px;
 }
 
 .knowledge-author-avatar {
-  width: 82px;
-  height: 82px;
-  border: 4px solid color-mix(in srgb, var(--knowledge-surface-solid) 88%, transparent);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  width: 100%;
+  height: auto;
+  border: 1px solid color-mix(in srgb, var(--knowledge-surface-solid) 88%, transparent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 }
 
 .knowledge-feed {
