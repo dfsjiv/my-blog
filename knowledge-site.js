@@ -34,6 +34,7 @@
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
+  const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
   const data = window.KnowledgeMockData;
@@ -74,6 +75,41 @@
     } catch (error) {
       // Storage is an enhancement; the page remains usable without it.
     }
+  }
+
+  function setupHeroCarousel() {
+    if (heroSlides.length < 2) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let activeIndex = 0;
+    let timer = 0;
+
+    function showSlide(index) {
+      activeIndex = index;
+      heroSlides.forEach(function (slide, slideIndex) {
+        slide.classList.toggle('is-active', slideIndex === activeIndex);
+      });
+    }
+
+    function stop() {
+      if (!timer) return;
+      window.clearInterval(timer);
+      timer = 0;
+    }
+
+    function start() {
+      stop();
+      if (document.hidden || reducedMotion.matches) return;
+      timer = window.setInterval(function () {
+        showSlide((activeIndex + 1) % heroSlides.length);
+      }, 7000);
+    }
+
+    document.addEventListener('visibilitychange', start);
+    if (typeof reducedMotion.addEventListener === 'function') {
+      reducedMotion.addEventListener('change', start);
+    }
+    showSlide(0);
+    start();
   }
 
   function t(value) {
@@ -1850,6 +1886,7 @@
   translateStaticTree();
   updateLanguageButton();
   applyTheme();
+  setupHeroCarousel();
   refreshIdentity();
   const initialRoute = routeFromUrl();
   state.route = initialRoute.route;

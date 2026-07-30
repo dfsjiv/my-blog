@@ -194,6 +194,11 @@ assert.match(writerCss, /\.knowledge-writer-cover-preview/);
 assert.match(writerCss, /@media \(max-width:\s*768px\)/);
 assert.match(html, /class="knowledge-hero-waves"/);
 assert.match(css, /@keyframes knowledge-wave-drift/);
+assert.equal((html.match(/data-knowledge-hero-slide/g) || []).length, 4);
+assert.match(css, /hero-01\.webp/);
+assert.match(css, /hero-04\.webp/);
+assert.match(site, /function setupHeroCarousel/);
+assert.match(site, /window\.setInterval/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
   assert.equal(

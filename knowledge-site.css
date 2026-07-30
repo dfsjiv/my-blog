@@ -2282,13 +2282,52 @@ body.auth-elegant .knowledge-site {
   overflow: hidden;
   color: #ffffff;
   background-color: #173047;
-  background-image: var(--knowledge-banner-image);
-  background-position: center 42%;
-  background-size: cover;
+  background-image: none;
   border: 0;
   border-radius: 0;
   box-shadow: none;
   text-align: center;
+}
+
+.knowledge-hero-slides,
+.knowledge-hero-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.knowledge-hero-slides {
+  z-index: -3;
+  overflow: hidden;
+  background: #173047;
+}
+
+.knowledge-hero-slide {
+  opacity: 0;
+  background-position: center 42%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: opacity 1600ms ease-in-out;
+  will-change: opacity;
+}
+
+.knowledge-hero-slide:nth-child(1) {
+  background-image: url("assets/knowledge/hero-01.webp");
+}
+
+.knowledge-hero-slide:nth-child(2) {
+  background-image: url("assets/knowledge/hero-02.webp");
+}
+
+.knowledge-hero-slide:nth-child(3) {
+  background-image: url("assets/knowledge/hero-03.webp");
+}
+
+.knowledge-hero-slide:nth-child(4) {
+  background-image: url("assets/knowledge/hero-04.webp");
+}
+
+.knowledge-hero-slide.is-active {
+  opacity: 1;
 }
 
 .knowledge-intro::before {
@@ -2711,6 +2750,10 @@ body.auth-elegant .knowledge-site {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .knowledge-hero-slide {
+    transition: none;
+  }
+
   .knowledge-wave {
     animation: none;
   }
