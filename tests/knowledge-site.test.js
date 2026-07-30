@@ -199,6 +199,8 @@ assert.match(css, /hero-01\.webp/);
 assert.match(css, /hero-04\.webp/);
 assert.match(site, /function setupHeroCarousel/);
 assert.match(site, /window\.setInterval/);
+assert.match(site, /typeof window\.authUi\.showElegantLogin === 'function'/);
+assert.match(site, /user\.role !== 'guest'/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
   assert.equal(

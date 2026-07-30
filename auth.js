@@ -2,6 +2,9 @@
   const API_BASE_URL = '';
   const TOKEN_KEY = 'blog_session_token';
   const ACCOUNT_ROLES = new Set(['admin', 'user']);
+  const PUBLIC_KNOWLEDGE_ROUTES = new Set([
+    'home', 'post', 'all', 'categories', 'tags', 'archives', 'about',
+  ]);
 
   class AuthError extends Error {
     constructor(code, message, status) {
@@ -281,8 +284,15 @@
 
     const auth = createAuthManager();
     let loginPending = false;
+    let loginDestination = 'version';
     window.authState = auth.state;
     window.authManager = auth;
+
+    function isPublicKnowledgeEntry() {
+      const params = new URLSearchParams(window.location.search);
+      const route = params.get('knowledge');
+      return Boolean(route && PUBLIC_KNOWLEDGE_ROUTES.has(route));
+    }
 
     function setMessage(message, isStatus) {
       elements.loginMessage.textContent = message || '';
@@ -326,7 +336,8 @@
       elements.startUserRole.textContent = roleLabel;
     }
 
-    function showLoginScreen(message) {
+    function showLoginScreen(message, destination) {
+      loginDestination = destination === 'elegant' ? 'elegant' : 'version';
       document.body.classList.remove('auth-pending', 'auth-version', 'auth-elegant', 'auth-desktop');
       document.body.classList.add('auth-login');
       elements.desktopShell.setAttribute('aria-hidden', 'true');
@@ -339,6 +350,18 @@
       elements.username.focus();
       notifyBlogAuthChanged();
       if (window.aiChat) window.aiChat.refreshAccess();
+    }
+
+    function showElegantLogin(message) {
+      showLoginScreen(message || '', 'elegant');
+    }
+
+    function showAuthenticatedDestination(user) {
+      if (loginDestination === 'elegant') {
+        showElegantVersion(user);
+        return;
+      }
+      showVersionSelector(user);
     }
 
     function showVersionSelector(user) {
@@ -423,15 +446,18 @@
       setLoginPending(true, '');
       try {
         const user = await auth.login(username, password);
-        showVersionSelector(user);
+        showAuthenticatedDestination(user);
       } catch (error) {
-        showLoginScreen(error && error.message ? error.message : '无法连接服务器，请稍后重试');
+        showLoginScreen(
+          error && error.message ? error.message : '无法连接服务器，请稍后重试',
+          loginDestination
+        );
       }
     });
 
     elements.guestButton.addEventListener('click', function () {
       if (loginPending) return;
-      showVersionSelector(auth.enterAsGuest());
+      showAuthenticatedDestination(auth.enterAsGuest());
     });
 
     elements.osVersionButton.addEventListener('click', function () {
@@ -454,20 +480,30 @@
     });
 
     (async function restoreOnStartup() {
+      const publicKnowledgeEntry = isPublicKnowledgeEntry();
       const hadToken = auth.hasStoredToken();
       if (!hadToken) {
-        showLoginScreen('');
+        if (publicKnowledgeEntry) {
+          showElegantVersion(auth.enterAsGuest());
+        } else {
+          showLoginScreen('');
+        }
         return;
       }
 
       setLoginPending(true, '正在验证登录状态...');
       const result = await auth.restoreSession();
       if (result.success) {
-        showVersionSelector(result.user);
+        if (publicKnowledgeEntry) showElegantVersion(result.user);
+        else showVersionSelector(result.user);
       } else {
-        showLoginScreen(result.reason === 'expired'
-          ? '登录状态已失效，请重新登录'
-          : '无法连接服务器，请稍后重试');
+        if (publicKnowledgeEntry) {
+          showElegantVersion(auth.enterAsGuest());
+        } else {
+          showLoginScreen(result.reason === 'expired'
+            ? '登录状态已失效，请重新登录'
+            : '无法连接服务器，请稍后重试');
+        }
       }
     }());
 
@@ -476,6 +512,7 @@
       showVersionSelector,
       showDesktop,
       showElegantVersion,
+      showElegantLogin,
       updateUserIdentityUI,
       logoutToLogin,
     };

@@ -33,6 +33,8 @@
   const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
+  const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
+  const accountSummary = accountMenu ? accountMenu.querySelector('summary') : null;
   const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
   const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
   const repository = window.KnowledgeRepository;
@@ -306,6 +308,12 @@
     const accountInitial = document.getElementById('knowledgeAccountInitial');
     if (accountName) accountName.textContent = username;
     if (accountInitial) accountInitial.textContent = username.slice(0, 1).toUpperCase() || 'U';
+    if (accountSummary) {
+      const isGuest = Boolean(activeUser && activeUser.role === 'guest');
+      const label = isGuest ? t('登录账户') : t('打开账户菜单');
+      accountSummary.setAttribute('aria-label', label);
+      accountSummary.title = label;
+    }
     authorTools.hidden = !(activeUser && activeUser.role === 'admin');
   }
 
@@ -1868,6 +1876,17 @@
   searchButton.addEventListener('click', function () {
     navigate('all', { q: '', page: 1, sort: 'latest' });
   });
+  if (accountSummary) {
+    accountSummary.addEventListener('click', function (event) {
+      const user = currentUser();
+      if (!user || user.role !== 'guest') return;
+      event.preventDefault();
+      accountMenu.removeAttribute('open');
+      if (window.authUi && typeof window.authUi.showElegantLogin === 'function') {
+        window.authUi.showElegantLogin('');
+      }
+    });
+  }
   logoutButton.addEventListener('click', function () {
     closeNavigation();
     if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');

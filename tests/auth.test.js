@@ -204,8 +204,12 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /<script src="auth\.js"><\/script>/);
   assert.match(source, /showVersionSelector\(user\)/);
-  assert.match(source, /showVersionSelector\(auth\.enterAsGuest\(\)\)/);
-  assert.match(source, /showVersionSelector\(result\.user\)/);
+  assert.match(source, /function isPublicKnowledgeEntry/);
+  assert.match(source, /PUBLIC_KNOWLEDGE_ROUTES/);
+  assert.match(source, /showElegantVersion\(auth\.enterAsGuest\(\)\)/);
+  assert.match(source, /if \(publicKnowledgeEntry\) showElegantVersion\(result\.user\)/);
+  assert.match(source, /function showElegantLogin/);
+  assert.match(source, /showAuthenticatedDestination\(auth\.enterAsGuest\(\)\)/);
   assert.match(source, /typeof window\.elegantShell\.closeNavigation === 'function'/);
   assert.match(source, /typeof window\.elegantShell\.refreshIdentity === 'function'/);
   assert.match(source, /showElegantVersion\(user\)/);
