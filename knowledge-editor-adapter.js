@@ -103,6 +103,11 @@
           if (!clipboard || !editorRef || editorRef.isActive('codeBlock')) return false;
           const html = clipboard.getData('text/html');
           const plain = clipboard.getData('text/plain');
+          if (looksLikeSourceCode(plain)) {
+            event.preventDefault();
+            insertCodeBlock(editorRef, plain, detectCodeLanguage(plain));
+            return true;
+          }
           if (html || !looksLikeMarkdown(plain)) return false;
           event.preventDefault();
           editorRef.commands.insertContent(plain, { contentType: 'markdown' });
@@ -166,11 +171,100 @@
       || /\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+]\([^)]+\)/.test(text);
   }
 
+  function looksLikeSourceCode(value) {
+    const text = normalizeCode(value);
+    const lines = text.split('\n').filter(function (line) {
+      return line.trim();
+    });
+    if (lines.length < 3) return false;
+
+    let score = 0;
+    if (/^\s*#\s*(include|define|if|ifdef|pragma)\b/m.test(text)) score += 4;
+    if (/\b(?:int|long long|double|float|bool|char|void|string|auto)\s+[A-Za-z_]\w*\s*(?:[=(;,{]|\[)/.test(text)) score += 2;
+    if (/\b(?:if|for|while|switch|catch)\s*\([^\n]*\)/.test(text)) score += 2;
+    if (/\b(?:return|break|continue|throw)\b[^\n]*;/.test(text)) score += 2;
+    if (/\b(?:const|let|var|function|class|interface|import|export|new)\b/.test(text)) score += 2;
+    if (/^\s*(?:def|class|from|import)\s+[A-Za-z_]\w*/m.test(text)) score += 3;
+    if (/^\s*(?:public|private|protected|static)\b/m.test(text)) score += 2;
+    if (/^\s*<\/?[A-Za-z][^>]*>\s*$/m.test(text)) score += 3;
+    if (/^\s*[.#]?[A-Za-z_-][\w-]*(?:\s+[.#]?[A-Za-z_-][\w-]*)*\s*\{\s*$/m.test(text)) score += 2;
+    if ((text.match(/[{}]/g) || []).length >= 2) score += 1;
+    if ((text.match(/;\s*$/gm) || []).length >= 2) score += 2;
+    if (/^\s*(?:\/\/|\/\*|\*|#(?!\s))/m.test(text)) score += 1;
+    if (/\n[\t ]{2,}\S/.test(text)) score += 1;
+    return score >= 4;
+  }
+
+  function detectCodeLanguage(value) {
+    const text = normalizeCode(value);
+    if (/^\s*#\s*include\b/m.test(text) || /\bstd::|\bvector\s*</.test(text)) return 'cpp';
+    if (/^\s*(?:def|from|import)\s+\w+/m.test(text) || /:\s*(?:#.*)?$/m.test(text) && /\b(?:print|range|None|True|False)\b/.test(text)) return 'python';
+    if (/\b(?:interface|implements|public static void main|System\.out)\b/.test(text)) return 'java';
+    if (/\b(?:const|let|var|function|export|import)\b/.test(text) || /=>/.test(text)) return 'javascript';
+    if (/^\s*<!(?:doctype)|^\s*<(?:html|head|body|main|section|div)\b/im.test(text)) return 'html';
+    if (/^\s*[.#]?[A-Za-z_-][\w-]*(?:\s+[.#]?[A-Za-z_-][\w-]*)*\s*\{/m.test(text)) return 'css';
+    if (/^\s*(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b/im.test(text)) return 'sql';
+    if (/^\s*(?:#!\/|sudo\s|npm\s|git\s|curl\s)/m.test(text)) return 'bash';
+    return 'text';
+  }
+
+  function insertCodeBlock(editor, value, language) {
+    const text = normalizeCode(value).replace(/\n+$/, '');
+    if (!text) return false;
+    return editor.commands.insertContent(codeBlockNode(text, language));
+  }
+
+  function selectionToCodeBlock(editor, language) {
+    if (!editor || editor.state.selection.empty) return false;
+    const selection = editor.state.selection;
+    const text = editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n');
+    if (!text) return false;
+    return editor.chain()
+      .focus()
+      .deleteSelection()
+      .insertContent(codeBlockNode(text, language))
+      .run();
+  }
+
+  function selectionToText(editor) {
+    if (!editor || editor.state.selection.empty) return false;
+    const selection = editor.state.selection;
+    const text = editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n');
+    if (!text) return false;
+    const paragraphs = normalizeCode(text).split('\n').map(function (line) {
+      return {
+        type: 'paragraph',
+        content: line ? [{ type: 'text', text: line }] : [],
+      };
+    });
+    return editor.chain()
+      .focus()
+      .deleteSelection()
+      .insertContent(paragraphs)
+      .run();
+  }
+
+  function codeBlockNode(value, language) {
+    return {
+      type: 'codeBlock',
+      attrs: { language: language || 'text' },
+      content: [{ type: 'text', text: normalizeCode(value) }],
+    };
+  }
+
+  function normalizeCode(value) {
+    return String(value || '').replace(/\r\n?/g, '\n');
+  }
+
   window.KnowledgeEditorAdapter = {
     create,
     editorDocumentToMarkdown,
     markdownToEditorDocument,
     sanitizePastedHtml,
     safeLink,
+    looksLikeSourceCode,
+    detectCodeLanguage,
+    selectionToCodeBlock,
+    selectionToText,
   };
 }());

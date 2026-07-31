@@ -561,7 +561,11 @@
           return chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
         },
       };
-      if (commands[action]) commands[action]();
+      if (action === 'selection-code') {
+        adapter.selectionToCodeBlock(editor, languageSelect.value);
+      } else if (action === 'selection-text') {
+        adapter.selectionToText(editor);
+      } else if (commands[action]) commands[action]();
       else if (action === 'link') openLinkPopover();
       else if (action === 'image') {
         if (!state.bodyImageUploading) bodyImageInput.click();
@@ -864,6 +868,10 @@
       const target = event.target.closest('[data-editor-action]');
       if (target) runAction(target.dataset.editorAction);
     });
+    bubble.addEventListener('click', function (event) {
+      const action = event.target.closest('[data-editor-action]')?.dataset.editorAction;
+      if (action === 'selection-text' || action === 'selection-code') runAction(action);
+    });
     titleInput.addEventListener('input', function () {
       titleCount.textContent = titleInput.value.length + ' / 100';
       titleError.textContent = '';
@@ -970,6 +978,18 @@
 
   function buildBubbleMenu() {
     const menu = element('div', 'knowledge-writer-bubble');
+    const typeGroup = element('div', 'knowledge-writer-bubble-types');
+    [
+      ['文本', 'selection-text'],
+      ['代码', 'selection-code'],
+    ].forEach(function (entry) {
+      const button = element('button', 'knowledge-writer-format-choice', entry[0]);
+      button.type = 'button';
+      button.dataset.editorAction = entry[1];
+      button.setAttribute('aria-label', '转换为' + entry[0]);
+      typeGroup.appendChild(button);
+    });
+    menu.appendChild(typeGroup);
     [
       ['加粗', 'B', 'bold'],
       ['斜体', 'I', 'italic'],
@@ -1265,6 +1285,8 @@
       task: ['taskList'],
       quote: ['blockquote'],
       'code-block': ['codeBlock'],
+      'selection-code': ['codeBlock'],
+      'selection-text': ['paragraph'],
       link: ['link'],
     };
     return map[action] ? editor.isActive.apply(editor, map[action]) : false;

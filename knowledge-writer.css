@@ -368,6 +368,32 @@
   color: #e7edf4;
 }
 
+.knowledge-writer-bubble-types {
+  display: flex;
+  gap: 2px;
+  padding-right: 4px;
+  margin-right: 2px;
+  border-right: 1px solid rgba(255, 255, 255, .12);
+}
+
+.knowledge-writer-format-choice {
+  min-width: 48px;
+  height: 32px;
+  padding: 0 10px;
+  color: #e7edf4;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.knowledge-writer-format-choice:hover,
+.knowledge-writer-format-choice.is-active {
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+}
+
 .knowledge-writer-slash-menu[hidden],
 .knowledge-writer-link-popover[hidden],
 .knowledge-writer-notice[hidden],
