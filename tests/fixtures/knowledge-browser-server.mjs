@@ -95,6 +95,23 @@ const posts = [
         },
     },
 ];
+let favoriteItems = [
+    {
+        id: 1,
+        kind: "anime",
+        title: "Example Anime",
+        coverUrl: "/assets/knowledge/hero-03.webp",
+        description: "A sample favorite with several platform links.",
+        links: [
+            { platform: "Bilibili", label: "Watch on Bilibili", url: "https://www.bilibili.com" },
+            { platform: "Official", label: "Official website", url: "https://example.com" }
+        ],
+        sortOrder: 0,
+        status: "published",
+        createdAt: now,
+        updatedAt: now
+    }
+];
 
 function json(response, data, status = 200) {
     response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -161,6 +178,7 @@ const contentTypes = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
     ".ttf": "font/ttf",
 };
 
@@ -238,6 +256,46 @@ http.createServer(async (request, response) => {
                 },
             },
         });
+    }
+    if (url.pathname === "/api/knowledge/favorites" && request.method === "GET") {
+        const kind = url.searchParams.get("kind");
+        const items = favoriteItems.filter((item) => item.status === "published"
+            && (!kind || item.kind === kind));
+        return json(response, { success: true, data: { items } });
+    }
+    if (url.pathname === "/api/knowledge/admin/favorites") {
+        if (request.headers.authorization !== "Bearer fixture-admin-token") {
+            return json(response, { success: false, error: { code: "UNAUTHORIZED", message: "Unauthorized" } }, 401);
+        }
+        if (request.method === "GET") {
+            const kind = url.searchParams.get("kind");
+            return json(response, {
+                success: true,
+                data: { items: favoriteItems.filter((item) => !kind || item.kind === kind) }
+            });
+        }
+        if (request.method === "POST") {
+            const input = await readJsonBody(request);
+            const item = { ...input, id: favoriteItems.length + 1, createdAt: now, updatedAt: now };
+            favoriteItems.push(item);
+            return json(response, { success: true, data: { item } }, 201);
+        }
+    }
+    const favoriteMatch = url.pathname.match(/^\/api\/knowledge\/admin\/favorites\/(\d+)$/);
+    if (favoriteMatch) {
+        if (request.headers.authorization !== "Bearer fixture-admin-token") {
+            return json(response, { success: false, error: { code: "UNAUTHORIZED", message: "Unauthorized" } }, 401);
+        }
+        const id = Number(favoriteMatch[1]);
+        if (request.method === "PATCH") {
+            const input = await readJsonBody(request);
+            favoriteItems = favoriteItems.map((item) => item.id === id ? { ...item, ...input, updatedAt: now } : item);
+            return json(response, { success: true, data: { item: favoriteItems.find((item) => item.id === id) } });
+        }
+        if (request.method === "DELETE") {
+            favoriteItems = favoriteItems.filter((item) => item.id !== id);
+            return json(response, { success: true, data: { id } });
+        }
     }
     if (url.pathname === "/api/knowledge/admin/posts" && request.method === "POST") {
         if (request.headers.authorization !== "Bearer fixture-admin-token") {

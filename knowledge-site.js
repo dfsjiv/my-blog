@@ -998,6 +998,24 @@
   }
 
   async function renderPostIndex(initialFilters, controller) {
+    if (initialFilters?.channel === 'anime' || initialFilters?.channel === 'games') {
+      const kind = initialFilters.channel === 'games' ? 'game' : 'anime';
+      const node = showRouteShell(
+        kind === 'game' ? 'GAMES' : 'ANIME',
+        state.language === 'zh' ? (kind === 'game' ? '游戏' : '动漫') : (kind === 'game' ? 'Games' : 'Anime'),
+        state.language === 'zh'
+          ? (kind === 'game' ? '我喜欢的游戏，以及可以了解或体验它们的平台。' : '我喜欢的动漫，以及可以观看或了解它们的平台。')
+          : (kind === 'game' ? 'Games I enjoy and where to find them.' : 'Anime I enjoy and where to watch or learn more.')
+      );
+      return window.KnowledgeFavorites.render(node, {
+        kind,
+        language: state.language,
+        isAdmin: isAuthor(),
+        token: currentToken(),
+        repository,
+        signal: controller.signal,
+      });
+    }
     const filters = Object.assign({
       q: '',
       type: '',

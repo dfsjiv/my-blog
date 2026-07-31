@@ -118,6 +118,10 @@ function createDatabase() {
         path.join(rootDir, "migrations", "0004_add_external_article_mover.sql"),
         "utf8"
     ));
+    sqlite.exec(fs.readFileSync(
+        path.join(rootDir, "migrations", "0005_add_knowledge_favorites.sql"),
+        "utf8"
+    ));
     return { sqlite, DB: new D1Database(sqlite) };
 }
 
@@ -219,6 +223,7 @@ test("knowledge migration creates isolated tables and constraints", () => {
     `).all().map((row) => row.name);
     assert.deepEqual(tables, [
         "knowledge_external_source_map",
+        "knowledge_favorites",
         "knowledge_migration_map",
         "knowledge_post_tags",
         "knowledge_posts",
@@ -238,6 +243,59 @@ test("knowledge migration creates isolated tables and constraints", () => {
         ) VALUES (1, 'invalid', 'unknown', 'Invalid', 'draft', 'now', 'now')
     `).run());
     sqlite.close();
+});
+
+test("favorites support public listing and admin CRUD with multiple links", async () => {
+    const env = createDatabase();
+    const api = createApi(env);
+    const input = {
+        kind: "anime",
+        title: "Example Anime",
+        description: "A favorite series.",
+        coverUrl: "https://example.test/cover.webp",
+        status: "published",
+        sortOrder: 2,
+        links: [
+            { platform: "Bilibili", label: "Watch", url: "https://www.bilibili.com/bangumi/play/example" },
+            { platform: "Official", label: "Website", url: "https://example.com/anime" }
+        ]
+    };
+
+    const forbidden = await api("/api/knowledge/admin/favorites", {
+        method: "POST",
+        token: "user-token",
+        body: input
+    });
+    assert.equal(forbidden.status, 403);
+
+    const created = await api("/api/knowledge/admin/favorites", {
+        method: "POST",
+        token: "admin-token",
+        body: input
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.data.item.links.length, 2);
+
+    const listed = await api("/api/knowledge/favorites?kind=anime");
+    assert.equal(listed.status, 200);
+    assert.equal(listed.body.data.items.length, 1);
+    assert.equal(listed.body.data.items[0].title, "Example Anime");
+
+    const updated = await api(`/api/knowledge/admin/favorites/${created.body.data.item.id}`, {
+        method: "PATCH",
+        token: "admin-token",
+        body: { ...input, title: "Updated Anime", status: "draft" }
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.data.item.title, "Updated Anime");
+    const publicAfterDraft = await api("/api/knowledge/favorites?kind=anime");
+    assert.equal(publicAfterDraft.body.data.items.length, 0);
+
+    const removed = await api(`/api/knowledge/admin/favorites/${created.body.data.item.id}`, {
+        method: "DELETE",
+        token: "admin-token"
+    });
+    assert.equal(removed.status, 200);
 });
 
 test("knowledge helpers support Chinese slugs, summaries, and mixed word counts", () => {

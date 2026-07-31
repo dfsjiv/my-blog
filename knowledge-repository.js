@@ -165,6 +165,28 @@
     };
   }
 
+  function adaptFavorite(item) {
+    const source = item && typeof item === 'object' ? item : {};
+    return {
+      id: Number(source.id) || 0,
+      kind: source.kind === 'game' ? 'game' : 'anime',
+      title: typeof source.title === 'string' ? source.title : '',
+      coverUrl: typeof source.coverUrl === 'string' ? source.coverUrl : null,
+      description: typeof source.description === 'string' ? source.description : '',
+      links: Array.isArray(source.links) ? source.links.map(function (link) {
+        return {
+          platform: typeof link.platform === 'string' ? link.platform : '',
+          label: typeof link.label === 'string' ? link.label : '',
+          url: typeof link.url === 'string' ? link.url : '',
+        };
+      }).filter(function (link) { return link.platform && link.label && link.url; }) : [],
+      sortOrder: Number(source.sortOrder) || 0,
+      status: source.status === 'draft' ? 'draft' : 'published',
+      createdAt: source.createdAt || null,
+      updatedAt: source.updatedAt || null,
+    };
+  }
+
   async function getPosts(filters, options) {
     const data = await apiRequest(API_ROOT + '/posts' + buildPostsQuery(filters), options);
     const pagination = data && data.pagination ? data.pagination : {};
@@ -215,6 +237,48 @@
     facetsCache.value = value;
     facetsCache.expiresAt = Date.now() + FACETS_CACHE_MS;
     return value;
+  }
+
+  async function getFavorites(kind, options) {
+    const params = new URLSearchParams();
+    appendParam(params, 'kind', kind);
+    const query = params.toString();
+    const data = await apiRequest(API_ROOT + '/favorites' + (query ? '?' + query : ''), options);
+    return Array.isArray(data && data.items) ? data.items.map(adaptFavorite) : [];
+  }
+
+  async function getAdminFavorites(kind, options) {
+    const params = new URLSearchParams();
+    appendParam(params, 'kind', kind);
+    const query = params.toString();
+    const data = await apiRequest(
+      API_ROOT + '/admin/favorites' + (query ? '?' + query : ''),
+      options
+    );
+    return Array.isArray(data && data.items) ? data.items.map(adaptFavorite) : [];
+  }
+
+  async function createFavorite(input, options) {
+    const settings = Object.assign({}, options || {}, { method: 'POST', body: input });
+    const data = await apiRequest(API_ROOT + '/admin/favorites', settings);
+    return adaptFavorite(data && data.item);
+  }
+
+  async function updateFavorite(id, input, options) {
+    const settings = Object.assign({}, options || {}, { method: 'PATCH', body: input });
+    const data = await apiRequest(
+      API_ROOT + '/admin/favorites/' + encodeURIComponent(String(id)),
+      settings
+    );
+    return adaptFavorite(data && data.item);
+  }
+
+  async function deleteFavorite(id, options) {
+    const settings = Object.assign({}, options || {}, { method: 'DELETE' });
+    return apiRequest(
+      API_ROOT + '/admin/favorites/' + encodeURIComponent(String(id)),
+      settings
+    );
   }
 
   async function getAdminPost(id, options) {
@@ -429,6 +493,11 @@
     getPosts,
     getPostBySlug,
     getFacets,
+    getFavorites,
+    getAdminFavorites,
+    createFavorite,
+    updateFavorite,
+    deleteFavorite,
     getAdminPosts,
     getAdminPost,
     createPost,

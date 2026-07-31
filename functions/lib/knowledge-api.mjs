@@ -16,6 +16,10 @@ import {
     getKnowledgeImage,
     uploadKnowledgeImage
 } from "./knowledge-images.mjs";
+import {
+    handleKnowledgeFavoriteRequest,
+    isKnowledgeFavoritePath
+} from "./knowledge-favorites.mjs";
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -45,6 +49,9 @@ export async function handleKnowledgeRequest(context) {
     const { request, env, url, jsonResponse } = context;
 
     try {
+        if (isKnowledgeFavoritePath(url.pathname)) {
+            return await handleKnowledgeFavoriteRequest(context, requireAuthor);
+        }
         const publicPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/posts\/([^/]+)$/);
         const adminPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/admin\/posts\/(\d+)$/);
         const legacyEditMatch = matchPath(
