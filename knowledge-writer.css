@@ -357,7 +357,9 @@
   z-index: 50;
   padding: 4px;
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
+  max-width: min(420px, calc(100vw - 24px));
   background: #202732;
   border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 5px;
@@ -369,29 +371,35 @@
 }
 
 .knowledge-writer-bubble-types {
+  flex: 0 0 100%;
   display: flex;
-  gap: 2px;
-  padding-right: 4px;
-  margin-right: 2px;
-  border-right: 1px solid rgba(255, 255, 255, .12);
+  gap: 4px;
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
 }
 
+.knowledge-writer-bubble-select,
 .knowledge-writer-format-choice {
-  min-width: 48px;
+  min-width: 88px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 28px 0 9px;
   color: #e7edf4;
-  background: transparent;
-  border: 0;
+  background: #252e3b;
+  border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 3px;
   font: inherit;
   cursor: pointer;
 }
 
-.knowledge-writer-format-choice:hover,
-.knowledge-writer-format-choice.is-active {
-  color: #fff;
-  background: rgba(255, 255, 255, .12);
+.knowledge-writer-bubble-format {
+  flex: 1;
+  min-width: 150px;
+}
+
+.knowledge-writer-bubble-select:focus {
+  border-color: var(--knowledge-primary);
+  outline: 1px solid var(--knowledge-primary);
 }
 
 .knowledge-writer-slash-menu[hidden],

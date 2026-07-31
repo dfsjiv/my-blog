@@ -11,6 +11,21 @@
     ['essay', '思考随笔'],
   ];
   const LANGUAGE_OPTIONS = ['text', 'cpp', 'javascript', 'python', 'java', 'csharp', 'rust'];
+  const BUBBLE_TEXT_FORMATS = [
+    ['paragraph', 'P 正文'],
+    ['h1', 'H1 一级标题'],
+    ['h2', 'H2 二级标题'],
+    ['h3', 'H3 三级标题'],
+  ];
+  const BUBBLE_CODE_FORMATS = [
+    ['text', '纯文本'],
+    ['cpp', 'C++'],
+    ['javascript', 'JavaScript'],
+    ['python', 'Python'],
+    ['java', 'Java'],
+    ['csharp', 'C#'],
+    ['rust', 'Rust'],
+  ];
   const adapter = window.KnowledgeEditorAdapter;
   const repository = window.KnowledgeRepository;
   const markdownRenderer = window.KnowledgeMarkdown;
@@ -145,6 +160,8 @@
     bodyImageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
     bodyImageInput.hidden = true;
     const bubble = buildBubbleMenu();
+    const bubbleModeSelect = bubble.querySelector('[data-bubble-mode]');
+    const bubbleFormatSelect = bubble.querySelector('[data-bubble-format]');
     bubble.style.visibility = 'hidden';
     bubble.style.opacity = '0';
     const slashMenu = element('div', 'knowledge-writer-slash-menu');
@@ -530,7 +547,24 @@
       });
       const language = editor.getAttributes('codeBlock').language;
       if (language && LANGUAGE_OPTIONS.includes(language)) languageSelect.value = language;
+      syncBubbleFormatControls(editor);
       updateSlashMenu();
+    }
+
+    function syncBubbleFormatControls(editor) {
+      if (!bubbleModeSelect || !bubbleFormatSelect) return;
+      if (editor.isActive('codeBlock')) {
+        const language = editor.getAttributes('codeBlock').language || 'text';
+        bubbleModeSelect.value = 'selection-code';
+        setBubbleFormatOptions(bubbleFormatSelect, 'selection-code', language);
+        return;
+      }
+      let format = 'paragraph';
+      if (editor.isActive('heading', { level: 1 })) format = 'h1';
+      else if (editor.isActive('heading', { level: 2 })) format = 'h2';
+      else if (editor.isActive('heading', { level: 3 })) format = 'h3';
+      bubbleModeSelect.value = 'selection-text';
+      setBubbleFormatOptions(bubbleFormatSelect, 'selection-text', format);
     }
 
     function runAction(action) {
@@ -561,11 +595,7 @@
           return chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
         },
       };
-      if (action === 'selection-code') {
-        adapter.selectionToCodeBlock(editor, languageSelect.value);
-      } else if (action === 'selection-text') {
-        adapter.selectionToText(editor);
-      } else if (commands[action]) commands[action]();
+      if (commands[action]) commands[action]();
       else if (action === 'link') openLinkPopover();
       else if (action === 'image') {
         if (!state.bodyImageUploading) bodyImageInput.click();
@@ -868,9 +898,34 @@
       const target = event.target.closest('[data-editor-action]');
       if (target) runAction(target.dataset.editorAction);
     });
-    bubble.addEventListener('click', function (event) {
-      const action = event.target.closest('[data-editor-action]')?.dataset.editorAction;
-      if (action === 'selection-text' || action === 'selection-code') runAction(action);
+    bubble.addEventListener('change', function (event) {
+      if (event.target === bubbleModeSelect) {
+        const current = bubbleModeSelect.value === 'selection-code'
+          ? languageSelect.value
+          : 'paragraph';
+        setBubbleFormatOptions(bubbleFormatSelect, bubbleModeSelect.value, current);
+        return;
+      }
+      if (
+        event.target !== bubbleFormatSelect
+        || !state.editor
+        || state.editor.state.selection.empty
+      ) return;
+      if (bubbleModeSelect.value === 'selection-code') {
+        const language = bubbleFormatSelect.value;
+        if (LANGUAGE_OPTIONS.includes(language)) languageSelect.value = language;
+        adapter.selectionToCodeBlock(state.editor, language);
+        markDirty();
+        updateEditorUi();
+        return;
+      }
+      if (bubbleFormatSelect.value === 'paragraph') {
+        adapter.selectionToText(state.editor);
+        markDirty();
+        updateEditorUi();
+      } else {
+        runAction(bubbleFormatSelect.value);
+      }
     });
     titleInput.addEventListener('input', function () {
       titleCount.textContent = titleInput.value.length + ' / 100';
@@ -979,16 +1034,20 @@
   function buildBubbleMenu() {
     const menu = element('div', 'knowledge-writer-bubble');
     const typeGroup = element('div', 'knowledge-writer-bubble-types');
-    [
-      ['文本', 'selection-text'],
-      ['代码', 'selection-code'],
-    ].forEach(function (entry) {
-      const button = element('button', 'knowledge-writer-format-choice', entry[0]);
-      button.type = 'button';
-      button.dataset.editorAction = entry[1];
-      button.setAttribute('aria-label', '转换为' + entry[0]);
-      typeGroup.appendChild(button);
-    });
+    const modeSelect = document.createElement('select');
+    modeSelect.className = 'knowledge-writer-bubble-select';
+    modeSelect.dataset.bubbleMode = '';
+    modeSelect.setAttribute('aria-label', '内容类型');
+    modeSelect.append(
+      new Option('文字', 'selection-text'),
+      new Option('代码', 'selection-code')
+    );
+    const formatSelect = document.createElement('select');
+    formatSelect.className = 'knowledge-writer-bubble-select knowledge-writer-bubble-format';
+    formatSelect.dataset.bubbleFormat = '';
+    formatSelect.setAttribute('aria-label', '文字格式');
+    setBubbleFormatOptions(formatSelect, 'selection-text', 'paragraph');
+    typeGroup.append(modeSelect, formatSelect);
     menu.appendChild(typeGroup);
     [
       ['加粗', 'B', 'bold'],
@@ -1007,6 +1066,18 @@
       page?.querySelector('.knowledge-writer-toolbar [data-editor-action="' + action + '"]')?.click();
     });
     return menu;
+  }
+
+  function setBubbleFormatOptions(select, mode, selectedValue) {
+    const options = mode === 'selection-code' ? BUBBLE_CODE_FORMATS : BUBBLE_TEXT_FORMATS;
+    select.replaceChildren();
+    options.forEach(function (entry) {
+      select.appendChild(new Option(entry[1], entry[0]));
+    });
+    if (options.some(function (entry) { return entry[0] === selectedValue; })) {
+      select.value = selectedValue;
+    }
+    select.setAttribute('aria-label', mode === 'selection-code' ? '代码语言' : '文字格式');
   }
 
   function buildLinkPopover() {
@@ -1285,8 +1356,6 @@
       task: ['taskList'],
       quote: ['blockquote'],
       'code-block': ['codeBlock'],
-      'selection-code': ['codeBlock'],
-      'selection-text': ['paragraph'],
       link: ['link'],
     };
     return map[action] ? editor.isActive.apply(editor, map[action]) : false;
