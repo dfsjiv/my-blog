@@ -104,12 +104,44 @@
 
         <div class="knowledge-nav-links" id="knowledgeNavLinks">
           <button class="is-active" type="button" data-knowledge-route="home">首页</button>
-          <button type="button" data-knowledge-route="all">全部文章</button>
-          <button type="button" data-knowledge-route="articles">技术文章</button>
-          <button type="button" data-knowledge-route="solutions">算法题解</button>
-          <button type="button" data-knowledge-route="notes">学习笔记</button>
-          <button type="button" data-knowledge-route="projects">项目记录</button>
-          <button type="button" data-knowledge-route="archives">归档</button>
+          <div class="knowledge-nav-menu" data-knowledge-nav-menu="articles">
+            <button class="knowledge-nav-menu-trigger" type="button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeArticleMenu">
+              文章 <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="knowledge-nav-submenu" id="knowledgeArticleMenu" role="menu" hidden>
+              <button type="button" data-knowledge-route="all" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">全</span>
+                <span>全部文章</span>
+                <small>全部内容</small>
+              </button>
+              <button type="button" data-knowledge-route="articles" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">技</span>
+                <span>技术文章</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-knowledge-route="solutions" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">题</span>
+                <span>算法题解</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-knowledge-route="notes" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">记</span>
+                <span>学习笔记</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-knowledge-route="projects" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">项</span>
+                <span>项目记录</span>
+                <small>内容频道</small>
+              </button>
+              <button type="button" data-knowledge-route="archives" role="menuitem">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">档</span>
+                <span>归档</span>
+                <small>时间索引</small>
+              </button>
+            </div>
+          </div>
           <div class="knowledge-nav-menu" data-knowledge-nav-menu="links">
             <button class="knowledge-nav-menu-trigger" type="button"
               aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeLinkMenu">

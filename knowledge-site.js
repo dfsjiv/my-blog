@@ -839,6 +839,15 @@
       }
       item.classList.toggle('is-active', active);
     });
+    navMenus.forEach(function (menu) {
+      const trigger = menu.querySelector('.knowledge-nav-menu-trigger');
+      if (trigger) {
+        trigger.classList.toggle(
+          'is-active',
+          Boolean(menu.querySelector('[data-knowledge-route].is-active'))
+        );
+      }
+    });
   }
 
   function parsePage(value) {

@@ -221,7 +221,7 @@ body.auth-elegant .knowledge-site {
   top: calc(100% - 1px);
   left: 0;
   z-index: 6;
-  width: 224px;
+  width: 320px;
   padding: 9px;
   display: grid;
   gap: 3px;
@@ -233,6 +233,10 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-nav-submenu[hidden] {
   display: none;
+}
+
+#knowledgeArticleMenu button {
+  grid-template-columns: 28px minmax(132px, 1fr) max-content;
 }
 
 .knowledge-nav-submenu a,
