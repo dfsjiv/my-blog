@@ -235,8 +235,9 @@ body.auth-elegant .knowledge-site {
   display: none;
 }
 
-#knowledgeArticleMenu button {
-  grid-template-columns: 28px minmax(132px, 1fr) max-content;
+#knowledgeArticleMenu button,
+#knowledgeAboutMenu button {
+  grid-template-columns: 28px minmax(0, 1fr);
 }
 
 .knowledge-nav-submenu a,
@@ -276,6 +277,14 @@ body.auth-elegant .knowledge-site {
   border-radius: var(--knowledge-radius-small);
   font-size: 10px;
   font-weight: 800;
+}
+
+.knowledge-site[data-language="zh"] .knowledge-nav-menu-icon[data-icon-zh]::before {
+  content: attr(data-icon-zh);
+}
+
+.knowledge-site[data-language="en"] .knowledge-nav-menu-icon[data-icon-en]::before {
+  content: attr(data-icon-en);
 }
 
 .knowledge-nav-external,
@@ -2230,7 +2239,8 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-brand,
 .knowledge-brand strong,
-.knowledge-nav-links button,
+.knowledge-nav-links > button,
+.knowledge-nav-menu-trigger,
 .knowledge-icon-button,
 .knowledge-language-button,
 .knowledge-menu-toggle,
@@ -2240,7 +2250,8 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-brand small,
-.knowledge-nav-links button,
+.knowledge-nav-links > button,
+.knowledge-nav-menu-trigger,
 .knowledge-icon-button {
   color: rgba(245, 248, 252, 0.72);
 }
@@ -2252,9 +2263,12 @@ body.auth-elegant .knowledge-site {
   border-radius: 9px;
 }
 
-.knowledge-nav-links button:hover,
-.knowledge-nav-links button:focus-visible,
-.knowledge-nav-links button.is-active,
+.knowledge-nav-links > button:hover,
+.knowledge-nav-links > button:focus-visible,
+.knowledge-nav-links > button.is-active,
+.knowledge-nav-menu-trigger:hover,
+.knowledge-nav-menu-trigger:focus-visible,
+.knowledge-nav-menu-trigger.is-active,
 .knowledge-icon-button:hover,
 .knowledge-language-button:hover {
   color: #ffffff;
