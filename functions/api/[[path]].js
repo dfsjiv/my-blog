@@ -1,7 +1,10 @@
 import { getContestsResponse } from "../lib/contests/index.mjs";
 import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
 
-const ALLOWED_ORIGIN = "https://lilinzheng.bbroot.com";
+const ALLOWED_ORIGINS = new Set([
+    "https://lilinzheng.top",
+    "https://lilinzheng.bbroot.com"
+]);
 
 const PBKDF2_ITERATIONS = 100000;
 const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1973,11 +1976,11 @@ function addCorsHeaders(
     */
 
     if (
-        origin === ALLOWED_ORIGIN
+        ALLOWED_ORIGINS.has(origin)
     ) {
         headers.set(
             "Access-Control-Allow-Origin",
-            ALLOWED_ORIGIN
+            origin
         );
     }
 
