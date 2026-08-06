@@ -36,6 +36,7 @@ body.is-desktop.auth-desktop .desktop-shell {
   color: #ffffff;
   font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
   background: #07324f;
+  isolation: isolate;
 }
 
 .login-screen::before {
@@ -48,13 +49,26 @@ body.is-desktop.auth-desktop .desktop-shell {
     linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
   filter: blur(3px);
   transform: scale(1.01);
+  z-index: 0;
 }
 
 .login-screen::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(2, 16, 27, 0.42);
+  z-index: 2;
+  background: rgba(2, 16, 27, 0.34);
+  pointer-events: none;
+}
+
+.login-reactive-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .auth-desktop .login-screen {
@@ -132,7 +146,7 @@ body.auth-version .version-selector {
 
 .login-panel {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   width: min(286px, calc(100vw - 40px));
   text-align: center;
 }
@@ -300,7 +314,7 @@ body.auth-version .version-selector {
   position: absolute;
   right: 24px;
   bottom: 20px;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 7px;

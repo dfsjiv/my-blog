@@ -195,6 +195,7 @@ function response(status, data, jsonError) {
 
   const indexHtml = fs.readFileSync(indexPath, 'utf8');
   assert.match(indexHtml, /id="loginForm"/);
+  assert.match(indexHtml, /id="loginReactiveCanvas"/);
   assert.match(indexHtml, /id="guestButton"/);
   assert.match(indexHtml, /id="versionSelector"/);
   assert.match(indexHtml, /id="osVersionButton"/);
@@ -203,6 +204,7 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /<script src="auth\.js"><\/script>/);
+  assert.match(indexHtml, /<script src="login-background\.js"><\/script>/);
   assert.match(source, /showVersionSelector\(user\)/);
   assert.match(source, /function isPublicKnowledgeEntry/);
   assert.match(source, /PUBLIC_KNOWLEDGE_ROUTES/);
