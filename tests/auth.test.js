@@ -206,7 +206,7 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /<script src="auth\.js"><\/script>/);
   assert.match(indexHtml, /assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /background\?auto=1&amp;v=20260807-2/);
-  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js"><\/script>/);
+  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260807-mikutap-2"><\/script>/);
   assert.match(indexHtml, /Mikutap by daniwell/);
   assert.match(source, /showVersionSelector\(user\)/);
   assert.match(source, /function isPublicKnowledgeEntry/);
