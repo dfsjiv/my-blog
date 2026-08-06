@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Mikutap Background</title>
+  <link rel="stylesheet" href="css/css.css" />
+  <link rel="stylesheet" href="shared/sp/css/common.css" />
+  <link rel="stylesheet" href="css/mikutap.css" />
+  <style>
+    #scene_top,
+    #scene_loading,
+    #scene_main,
+    #about,
+    #about_cover,
+    #bt_back,
+    #bt_fs {
+      display: none !important;
+    }
+
+    html,
+    body,
+    #view,
+    #view canvas {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/pixi.min.js"></script>
+  <script src="js/gsap.min.js"></script>
+  <script src="shared/js/common-2.min.js"></script>
+  <script src="js/mikutap.js"></script>
+</head>
+<body>
+  <div id="view"></div>
+  <div id="scene_top" aria-hidden="true">
+    <div class="ok"><p id="bt_start"><a href="#">开始</a></p></div>
+  </div>
+  <div id="scene_loading" aria-hidden="true"><hr /></div>
+  <div id="scene_main" aria-hidden="true"></div>
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      window.setTimeout(function () {
+        var startButton = document.querySelector('#bt_start a');
+        if (startButton) startButton.click();
+      }, 80);
+    });
+
+    function resumeMikutapAudio() {
+      if (window.aidn
+        && window.aidn.___waContext
+        && window.aidn.___waContext.state === 'suspended') {
+        window.aidn.___waContext.resume().catch(function () {});
+      }
+    }
+
+    window.addEventListener('pointerdown', resumeMikutapAudio, { passive: true });
+    window.addEventListener('keydown', resumeMikutapAudio);
+  </script>
+</body>
+</html>
