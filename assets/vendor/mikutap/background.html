@@ -48,15 +48,18 @@
       if (!loginMikutapVisualActive || !window.jQuery) return;
       var context = window.aidn && window.aidn.___waContext;
       if (context && context.state === 'running') return;
-      var keyCode = 48 + Math.floor(Math.random() * 43);
-      window.jQuery(window).trigger(window.jQuery.Event('keydown', {
-        keyCode: keyCode,
-        which: keyCode
-      }));
-      window.jQuery(window).trigger(window.jQuery.Event('keyup', {
-        keyCode: keyCode,
-        which: keyCode
-      }));
+      var pulseCount = Math.random() < 0.35 ? 2 : 1;
+      for (var index = 0; index < pulseCount; index += 1) {
+        var keyCode = 48 + Math.floor(Math.random() * 43);
+        window.jQuery(window).trigger(window.jQuery.Event('keydown', {
+          keyCode: keyCode,
+          which: keyCode
+        }));
+        window.jQuery(window).trigger(window.jQuery.Event('keyup', {
+          keyCode: keyCode,
+          which: keyCode
+        }));
+      }
     }
 
     window.addEventListener('DOMContentLoaded', function () {
@@ -64,7 +67,7 @@
         var startButton = document.querySelector('#bt_start a');
         if (startButton) startButton.click();
       }, 80);
-      window.setInterval(pulseMikutapWhileAudioIsBlocked, 720);
+      window.setInterval(pulseMikutapWhileAudioIsBlocked, 210);
     });
 
     function resumeMikutapAudio() {
