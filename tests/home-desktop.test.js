@@ -364,7 +364,7 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
   assert.match(homeDesktopCss, /\.start-menu-apps\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
-  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260807-mikutap-2"\s*\/>/);
+  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260807-mikutap-3"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 5);
   assert.strictEqual((indexHtml.match(/src="assets\/chat-icon\.png"/g) || []).length, 4);

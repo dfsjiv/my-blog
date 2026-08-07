@@ -35,7 +35,7 @@ body.is-desktop.auth-desktop .desktop-shell {
   overflow: hidden;
   color: #ffffff;
   font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-  background: #07324f;
+  background: transparent;
   isolation: isolate;
 }
 
@@ -43,12 +43,7 @@ body.is-desktop.auth-desktop .desktop-shell {
   content: "";
   position: absolute;
   inset: -5px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
-    linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.12) 42% 44%, transparent 44% 100%),
-    linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
-  filter: blur(3px);
-  transform: scale(1.01);
+  background: transparent;
   z-index: 0;
 }
 
@@ -62,14 +57,19 @@ body.is-desktop.auth-desktop .desktop-shell {
 }
 
 .login-mikutap-frame {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 1;
-  display: block;
+  z-index: 98;
+  display: none;
   width: 100%;
   height: 100%;
   border: 0;
   background: #88cccc;
+}
+
+body.auth-login .login-mikutap-frame,
+body.auth-version .login-mikutap-frame {
+  display: block;
 }
 
 .auth-desktop .login-screen {
@@ -86,10 +86,7 @@ body.is-desktop.auth-desktop .desktop-shell {
   overflow: hidden;
   color: #ffffff;
   font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px) 62% 34% / 280px 190px no-repeat,
-    linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.12) 42% 44%, transparent 44% 100%),
-    linear-gradient(135deg, #0b5a80 0%, #0a4569 48%, #07324f 100%);
+  background: transparent;
 }
 
 body.auth-version .login-screen {
@@ -101,6 +98,8 @@ body.auth-version .version-selector {
 }
 
 .version-selector-content {
+  position: relative;
+  z-index: 3;
   width: min(420px, calc(100vw - 40px));
   text-align: center;
 }

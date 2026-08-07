@@ -3,16 +3,18 @@
 
   const frame = document.getElementById('loginMikutapFrame');
   const loginScreen = document.getElementById('loginScreen');
-  if (!frame || !loginScreen) return;
+  const versionSelector = document.getElementById('versionSelector');
+  if (!frame || !loginScreen || !versionSelector) return;
 
   let forwardingPointer = false;
 
-  function isLoginVisible() {
-    return loginScreen.getAttribute('aria-hidden') !== 'true';
+  function isMikutapVisible() {
+    return loginScreen.getAttribute('aria-hidden') !== 'true'
+      || versionSelector.getAttribute('aria-hidden') !== 'true';
   }
 
   function callFrame(method, ...args) {
-    if (!frame.contentWindow || !isLoginVisible()) return;
+    if (!frame.contentWindow || !isMikutapVisible()) return;
     const handler = frame.contentWindow[method];
     if (typeof handler === 'function') handler(...args);
   }
@@ -23,8 +25,8 @@
     if (typeof pause === 'function') pause();
   }
 
-  function syncAudioWithLogin() {
-    if (!isLoginVisible()) {
+  function syncMikutapState() {
+    if (!isMikutapVisible()) {
       pauseFrameAudio();
       return;
     }
@@ -32,26 +34,36 @@
     if (typeof activateVisuals === 'function') activateVisuals(true);
   }
 
-  new MutationObserver(syncAudioWithLogin).observe(loginScreen, {
+  const visibilityObserver = new MutationObserver(syncMikutapState);
+  visibilityObserver.observe(loginScreen, {
+    attributes: true,
+    attributeFilter: ['aria-hidden'],
+  });
+  visibilityObserver.observe(versionSelector, {
     attributes: true,
     attributeFilter: ['aria-hidden'],
   });
 
-  frame.addEventListener('load', syncAudioWithLogin);
+  frame.addEventListener('load', syncMikutapState);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) pauseFrameAudio();
   });
 
-  loginScreen.addEventListener('pointerdown', function (event) {
+  function handlePointerDown(event) {
     if (event.target === frame) return;
     forwardingPointer = true;
     callFrame('loginMikutapPointerDown', event.clientX, event.clientY);
-  }, true);
+  }
 
-  loginScreen.addEventListener('pointermove', function (event) {
+  function handlePointerMove(event) {
     if (!forwardingPointer) return;
     callFrame('loginMikutapPointerMove', event.clientX, event.clientY);
-  }, true);
+  }
+
+  [loginScreen, versionSelector].forEach(function (surface) {
+    surface.addEventListener('pointerdown', handlePointerDown, true);
+    surface.addEventListener('pointermove', handlePointerMove, true);
+  });
 
   window.addEventListener('pointerup', function () {
     if (!forwardingPointer) return;
@@ -60,12 +72,12 @@
   }, true);
 
   window.addEventListener('keydown', function (event) {
-    if (event.repeat || !isLoginVisible()) return;
+    if (event.repeat || !isMikutapVisible()) return;
     callFrame('loginMikutapKeyDown', event.keyCode || event.which || 0);
   });
 
   window.addEventListener('keyup', function (event) {
-    if (!isLoginVisible()) return;
+    if (!isMikutapVisible()) return;
     callFrame('loginMikutapKeyUp', event.keyCode || event.which || 0);
   });
 }());
