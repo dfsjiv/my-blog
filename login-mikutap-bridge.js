@@ -17,6 +17,26 @@
     if (typeof handler === 'function') handler(...args);
   }
 
+  function pauseFrameAudio() {
+    if (!frame.contentWindow) return;
+    const pause = frame.contentWindow.pauseMikutapAudio;
+    if (typeof pause === 'function') pause();
+  }
+
+  function syncAudioWithLogin() {
+    if (!isLoginVisible()) pauseFrameAudio();
+  }
+
+  new MutationObserver(syncAudioWithLogin).observe(loginScreen, {
+    attributes: true,
+    attributeFilter: ['aria-hidden'],
+  });
+
+  frame.addEventListener('load', syncAudioWithLogin);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) pauseFrameAudio();
+  });
+
   loginScreen.addEventListener('pointerdown', function (event) {
     if (event.target === frame) return;
     forwardingPointer = true;

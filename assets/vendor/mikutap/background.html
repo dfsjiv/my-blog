@@ -57,6 +57,15 @@
       }
     }
 
+    window.pauseMikutapAudio = function () {
+      if (window.aidn
+        && window.aidn.___waContext
+        && window.aidn.___waContext.state === 'running') {
+        return window.aidn.___waContext.suspend().catch(function () {});
+      }
+      return Promise.resolve();
+    };
+
     window.addEventListener('pointerdown', resumeMikutapAudio, { passive: true });
     window.addEventListener('keydown', resumeMikutapAudio);
 

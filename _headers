@@ -1,0 +1,8 @@
+/assets/vendor/mikutap/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/login-mikutap-bridge.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/home-desktop.css
+  Cache-Control: public, max-age=0, must-revalidate
