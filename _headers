@@ -1,3 +1,9 @@
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
 /assets/vendor/mikutap/*
   Cache-Control: public, max-age=0, must-revalidate
 
