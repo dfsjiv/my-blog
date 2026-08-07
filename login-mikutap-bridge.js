@@ -24,7 +24,12 @@
   }
 
   function syncAudioWithLogin() {
-    if (!isLoginVisible()) pauseFrameAudio();
+    if (!isLoginVisible()) {
+      pauseFrameAudio();
+      return;
+    }
+    const activateVisuals = frame.contentWindow && frame.contentWindow.setMikutapVisualActive;
+    if (typeof activateVisuals === 'function') activateVisuals(true);
   }
 
   new MutationObserver(syncAudioWithLogin).observe(loginScreen, {

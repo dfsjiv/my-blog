@@ -42,14 +42,33 @@
   <div id="scene_loading" aria-hidden="true"><hr /></div>
   <div id="scene_main" aria-hidden="true"></div>
   <script>
+    var loginMikutapVisualActive = true;
+
+    function pulseMikutapWhileAudioIsBlocked() {
+      if (!loginMikutapVisualActive || !window.jQuery) return;
+      var context = window.aidn && window.aidn.___waContext;
+      if (context && context.state === 'running') return;
+      var keyCode = 48 + Math.floor(Math.random() * 43);
+      window.jQuery(window).trigger(window.jQuery.Event('keydown', {
+        keyCode: keyCode,
+        which: keyCode
+      }));
+      window.jQuery(window).trigger(window.jQuery.Event('keyup', {
+        keyCode: keyCode,
+        which: keyCode
+      }));
+    }
+
     window.addEventListener('DOMContentLoaded', function () {
       window.setTimeout(function () {
         var startButton = document.querySelector('#bt_start a');
         if (startButton) startButton.click();
       }, 80);
+      window.setInterval(pulseMikutapWhileAudioIsBlocked, 720);
     });
 
     function resumeMikutapAudio() {
+      loginMikutapVisualActive = true;
       if (window.aidn
         && window.aidn.___waContext
         && window.aidn.___waContext.state === 'suspended') {
@@ -58,12 +77,17 @@
     }
 
     window.pauseMikutapAudio = function () {
+      loginMikutapVisualActive = false;
       if (window.aidn
         && window.aidn.___waContext
         && window.aidn.___waContext.state === 'running') {
         return window.aidn.___waContext.suspend().catch(function () {});
       }
       return Promise.resolve();
+    };
+
+    window.setMikutapVisualActive = function (active) {
+      loginMikutapVisualActive = Boolean(active);
     };
 
     window.addEventListener('pointerdown', resumeMikutapAudio, { passive: true });
