@@ -11,38 +11,36 @@
     return loginScreen.getAttribute('aria-hidden') !== 'true';
   }
 
-  function send(payload) {
+  function callFrame(method, ...args) {
     if (!frame.contentWindow || !isLoginVisible()) return;
-    frame.contentWindow.postMessage({
-      source: 'login-mikutap-bridge',
-      ...payload,
-    }, window.location.origin);
+    const handler = frame.contentWindow[method];
+    if (typeof handler === 'function') handler(...args);
   }
 
   loginScreen.addEventListener('pointerdown', function (event) {
     if (event.target === frame) return;
     forwardingPointer = true;
-    send({ type: 'pointerdown', x: event.clientX, y: event.clientY });
+    callFrame('loginMikutapPointerDown', event.clientX, event.clientY);
   }, true);
 
   loginScreen.addEventListener('pointermove', function (event) {
     if (!forwardingPointer) return;
-    send({ type: 'pointermove', x: event.clientX, y: event.clientY });
+    callFrame('loginMikutapPointerMove', event.clientX, event.clientY);
   }, true);
 
   window.addEventListener('pointerup', function () {
     if (!forwardingPointer) return;
     forwardingPointer = false;
-    send({ type: 'pointerup' });
+    callFrame('loginMikutapPointerUp');
   }, true);
 
   window.addEventListener('keydown', function (event) {
     if (event.repeat || !isLoginVisible()) return;
-    send({ type: 'keydown', keyCode: event.keyCode || event.which || 0 });
+    callFrame('loginMikutapKeyDown', event.keyCode || event.which || 0);
   });
 
   window.addEventListener('keyup', function (event) {
     if (!isLoginVisible()) return;
-    send({ type: 'keyup', keyCode: event.keyCode || event.which || 0 });
+    callFrame('loginMikutapKeyUp', event.keyCode || event.which || 0);
   });
 }());

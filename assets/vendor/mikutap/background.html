@@ -60,31 +60,43 @@
     window.addEventListener('pointerdown', resumeMikutapAudio, { passive: true });
     window.addEventListener('keydown', resumeMikutapAudio);
 
-    window.addEventListener('message', function (event) {
-      if (event.origin !== window.location.origin || !window.jQuery) return;
-      var payload = event.data;
-      if (!payload || payload.source !== 'login-mikutap-bridge') return;
-
+    window.loginMikutapPointerDown = function (x, y) {
+      if (!window.jQuery) return;
       resumeMikutapAudio();
-      if (payload.type === 'pointerdown') {
-        window.jQuery('#view').trigger(window.jQuery.Event('mousedown', {
-          pageX: payload.x,
-          pageY: payload.y
-        }));
-      } else if (payload.type === 'pointermove') {
-        window.jQuery(window).trigger(window.jQuery.Event('mousemove', {
-          pageX: payload.x,
-          pageY: payload.y
-        }));
-      } else if (payload.type === 'pointerup') {
-        window.jQuery(window).trigger(window.jQuery.Event('mouseup'));
-      } else if (payload.type === 'keydown' || payload.type === 'keyup') {
-        window.jQuery(window).trigger(window.jQuery.Event(payload.type, {
-          keyCode: payload.keyCode,
-          which: payload.keyCode
-        }));
-      }
-    });
+      window.jQuery('#view').trigger(window.jQuery.Event('mousedown', {
+        pageX: x,
+        pageY: y
+      }));
+    };
+
+    window.loginMikutapPointerMove = function (x, y) {
+      if (!window.jQuery) return;
+      window.jQuery(window).trigger(window.jQuery.Event('mousemove', {
+        pageX: x,
+        pageY: y
+      }));
+    };
+
+    window.loginMikutapPointerUp = function () {
+      if (window.jQuery) window.jQuery(window).trigger(window.jQuery.Event('mouseup'));
+    };
+
+    window.loginMikutapKeyDown = function (keyCode) {
+      if (!window.jQuery) return;
+      resumeMikutapAudio();
+      window.jQuery(window).trigger(window.jQuery.Event('keydown', {
+        keyCode: keyCode,
+        which: keyCode
+      }));
+    };
+
+    window.loginMikutapKeyUp = function (keyCode) {
+      if (!window.jQuery) return;
+      window.jQuery(window).trigger(window.jQuery.Event('keyup', {
+        keyCode: keyCode,
+        which: keyCode
+      }));
+    };
   </script>
 </body>
 </html>
