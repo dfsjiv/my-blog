@@ -32,7 +32,7 @@
   <script src="js/pixi.min.js"></script>
   <script src="js/gsap.min.js"></script>
   <script src="shared/js/common-2.min.js"></script>
-  <script src="js/mikutap.js?v=20260807-visual-start-2"></script>
+  <script src="js/mikutap.js?v=20260807-input-idle-2"></script>
 </head>
 <body>
   <div id="view"></div>
@@ -43,30 +43,32 @@
   <div id="scene_main" aria-hidden="true"></div>
   <script>
     var loginMikutapVisualActive = true;
+    var pendingMikutapAction = null;
 
     // Automatic login backgrounds must not wait for browser audio permission.
     window.loginMikutapStartVisualsImmediately = true;
+    // Keep input-driven effects, but disable Mikutap's music timeline effects.
+    window.loginMikutapDisableTimeline = true;
 
-    function pulseMikutapWhileAudioIsBlocked() {
-      if (!loginMikutapVisualActive || !window.jQuery) return;
-      var pulseCount = Math.random() < 0.35 ? 2 : 1;
-      for (var index = 0; index < pulseCount; index += 1) {
-        var keyCode = 48 + Math.floor(Math.random() * 43);
-        window.jQuery(window).trigger(window.jQuery.Event('keydown', {
-          keyCode: keyCode,
-          which: keyCode
-        }));
-        window.jQuery(window).trigger(window.jQuery.Event('keyup', {
-          keyCode: keyCode,
-          which: keyCode
-        }));
+    function runWhenMikutapReady(action) {
+      if (window.loginMikutapReady) {
+        action();
+        return;
       }
+
+      pendingMikutapAction = action;
     }
+
+    window.addEventListener('loginMikutapReady', function () {
+      if (!pendingMikutapAction) return;
+      var action = pendingMikutapAction;
+      pendingMikutapAction = null;
+      action();
+    });
 
     window.jQuery(function () {
       var startButton = document.querySelector('#bt_start a');
       if (startButton) window.jQuery(startButton).trigger('click');
-      window.setInterval(pulseMikutapWhileAudioIsBlocked, 210);
     });
 
     function resumeMikutapAudio() {
@@ -96,41 +98,42 @@
     window.addEventListener('keydown', resumeMikutapAudio);
 
     window.loginMikutapPointerDown = function (x, y) {
-      if (!window.jQuery) return;
       resumeMikutapAudio();
-      window.jQuery('#view').trigger(window.jQuery.Event('mousedown', {
-        pageX: x,
-        pageY: y
-      }));
+      runWhenMikutapReady(function () {
+        if (window.loginMikutapChangeAtPoint) {
+          window.loginMikutapChangeAtPoint(x, y, false);
+        }
+      });
     };
 
     window.loginMikutapPointerMove = function (x, y) {
-      if (!window.jQuery) return;
-      window.jQuery(window).trigger(window.jQuery.Event('mousemove', {
-        pageX: x,
-        pageY: y
-      }));
+      if (window.loginMikutapReady && window.loginMikutapChangeAtPoint) {
+        window.loginMikutapChangeAtPoint(x, y, true);
+      }
     };
 
     window.loginMikutapPointerUp = function () {
-      if (window.jQuery) window.jQuery(window).trigger(window.jQuery.Event('mouseup'));
+      if (window.loginMikutapChangeId) window.loginMikutapChangeId(-1);
     };
 
     window.loginMikutapKeyDown = function (keyCode) {
-      if (!window.jQuery) return;
       resumeMikutapAudio();
-      window.jQuery(window).trigger(window.jQuery.Event('keydown', {
-        keyCode: keyCode,
-        which: keyCode
-      }));
+      runWhenMikutapReady(function () {
+        if (!window.loginMikutapChangeId) return;
+        var effectId = keyCode >= 65
+          ? keyCode - 55
+          : keyCode >= 48
+            ? keyCode - 48
+            : keyCode;
+        window.loginMikutapChangeId(effectId);
+        window.setTimeout(function () {
+          window.loginMikutapChangeId(-1);
+        }, 0);
+      });
     };
 
     window.loginMikutapKeyUp = function (keyCode) {
-      if (!window.jQuery) return;
-      window.jQuery(window).trigger(window.jQuery.Event('keyup', {
-        keyCode: keyCode,
-        which: keyCode
-      }));
+      if (window.loginMikutapChangeId) window.loginMikutapChangeId(-1);
     };
   </script>
 </body>
