@@ -44,6 +44,9 @@
   <script>
     var loginMikutapVisualActive = true;
 
+    // Automatic login backgrounds must not wait for browser audio permission.
+    window.loginMikutapStartVisualsImmediately = true;
+
     function pulseMikutapWhileAudioIsBlocked() {
       if (!loginMikutapVisualActive || !window.jQuery) return;
       var pulseCount = Math.random() < 0.35 ? 2 : 1;
