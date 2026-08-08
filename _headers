@@ -4,6 +4,9 @@
 /*.html
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
+/*.js
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+
 /assets/vendor/mikutap/*
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
