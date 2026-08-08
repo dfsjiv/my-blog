@@ -142,8 +142,8 @@
             borderRadius: '10px',
             boxShadow: '0 6px 18px rgba(79, 28, 53, 0.24)',
             boxSizing: 'border-box',
-            width: 'max-content',
-            maxWidth: MOBILE_VIEWPORT.matches ? '170px' : '230px',
+            width: MOBILE_VIEWPORT.matches ? '170px' : '230px',
+            maxWidth: 'calc(100vw - 24px)',
             whiteSpace: 'normal',
             overflowWrap: 'anywhere',
           },
@@ -176,9 +176,30 @@
     const newBodyChildren = Array.from(document.body.children).filter(function (element) {
       return !bodyChildren.has(element);
     });
+    const widgetContainer = newBodyChildren.find(function (element) {
+      return element.querySelector('canvas');
+    });
     statusElement = newBodyChildren.find(function (element) {
       return !element.querySelector('canvas');
     }) || null;
+
+    // l2d-widget renders the message in a nested inline span. Constrain that
+    // node as well so font metrics or browser zoom can never escape the bubble.
+    if (widgetContainer) {
+      const tipText = Array.from(widgetContainer.querySelectorAll('span')).find(function (element) {
+        return !element.closest('button');
+      });
+      if (tipText) {
+        Object.assign(tipText.style, {
+          display: 'block',
+          width: '100%',
+          maxWidth: '100%',
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere',
+          wordBreak: 'normal',
+        });
+      }
+    }
 
     // Hide the library's loading tab. Once loaded, restore the same element so
     // it remains available as the wake control after the model goes to sleep.
