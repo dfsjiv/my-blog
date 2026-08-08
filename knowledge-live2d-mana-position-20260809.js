@@ -126,7 +126,7 @@
       model: {
         path: getModelPath(),
         scale: 1,
-        offset: MOBILE_VIEWPORT.matches ? [-0.3, 0] : [-0.65, 0],
+        offset: MOBILE_VIEWPORT.matches ? [-0.24, 0] : [-0.54, 0],
         volume: 0,
         tips: {
           welcomeMessage: copy.welcome,
