@@ -1,0 +1,26 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "Mana_chan_Chibi.moc3",
+    "Textures": [
+      "Mana_chan_Chibi.2048/texture_00.png"
+    ],
+    "Physics": "Mana_chan_Chibi.physics3.json",
+    "DisplayInfo": "Mana_chan_Chibi.cdi3.json"
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": []
+    }
+  ]
+}
