@@ -78,13 +78,22 @@
         volume: 0,
         tips: false,
       },
-      position: 'bottom-right',
+      position: 'bottom-left',
       size: window.matchMedia('(max-width: 720px)').matches ? 220 : 300,
       primaryColor: 'rgba(70, 132, 203, 0.92)',
       transitionDuration: 500,
       transitionType: 'fade',
       menus: {
-        align: 'left',
+        align: 'right',
+        items: [
+          {
+            icon: 'mdi:chevron-down',
+            label: '收起模型',
+            onClick: function (currentWidget) {
+              currentWidget.sleep();
+            },
+          },
+        ],
       },
     });
 
