@@ -172,7 +172,7 @@
   }
 
   function looksLikeSourceCode(value) {
-    const text = normalizeCode(value);
+    const text = restoreEscapedCode(value);
     const lines = text.split('\n').filter(function (line) {
       return line.trim();
     });
@@ -196,7 +196,7 @@
   }
 
   function detectCodeLanguage(value) {
-    const text = normalizeCode(value);
+    const text = restoreEscapedCode(value);
     if (/^\s*#\s*include\b/m.test(text) || /\bstd::|\bvector\s*</.test(text)) return 'cpp';
     if (/^\s*(?:def|from|import)\s+\w+/m.test(text) || /:\s*(?:#.*)?$/m.test(text) && /\b(?:print|range|None|True|False)\b/.test(text)) return 'python';
     if (/\b(?:interface|implements|public static void main|System\.out)\b/.test(text)) return 'java';
@@ -217,7 +217,9 @@
   function selectionToCodeBlock(editor, language) {
     if (!editor || editor.state.selection.empty) return false;
     const selection = editor.state.selection;
-    const text = editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n');
+    const text = restoreEscapedCode(
+      editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n')
+    );
     if (!text) return false;
     return editor.chain()
       .focus()
@@ -256,6 +258,16 @@
     return String(value || '').replace(/\r\n?/g, '\n');
   }
 
+  function restoreEscapedCode(value) {
+    return normalizeCode(value)
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#(?:39|x27);/gi, "'")
+      .replace(/&amp;/gi, '&')
+      .replace(/\\([\\`*{}\[\]()#+.!_<>-])/g, '$1');
+  }
+
   window.KnowledgeEditorAdapter = {
     create,
     editorDocumentToMarkdown,
@@ -264,6 +276,7 @@
     safeLink,
     looksLikeSourceCode,
     detectCodeLanguage,
+    restoreEscapedCode,
     selectionToCodeBlock,
     selectionToText,
   };

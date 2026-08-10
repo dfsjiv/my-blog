@@ -25,6 +25,25 @@ const cpp = [
 
 assert.equal(adapter.looksLikeSourceCode(cpp), true);
 assert.equal(adapter.detectCodeLanguage(cpp), 'cpp');
+const escapedCpp = [
+  'bool erase(vector&lt;Node&gt;&amp; trie, string s) {',
+  '  for (int i = 0; i &lt; s.size(); i++) {',
+  '    trie\\[i\\].count--;',
+  '  }',
+  '}',
+].join('\n');
+assert.equal(adapter.looksLikeSourceCode(escapedCpp), true);
+assert.equal(adapter.detectCodeLanguage(escapedCpp), 'cpp');
+assert.equal(
+  adapter.restoreEscapedCode(escapedCpp),
+  [
+    'bool erase(vector<Node>& trie, string s) {',
+    '  for (int i = 0; i < s.size(); i++) {',
+    '    trie[i].count--;',
+    '  }',
+    '}',
+  ].join('\n')
+);
 assert.equal(adapter.looksLikeSourceCode('这是普通文章。\n这里有多行文字。\n不应该自动变成代码。'), false);
 
 let inserted = null;
@@ -34,6 +53,13 @@ assert.equal(inserted.type, 'codeBlock');
 assert.equal(inserted.attrs.language, 'cpp');
 assert.equal(inserted.content[0].text, cpp);
 assert.equal(inserted.content[0].text.includes('element\\_one'), false);
+
+let restoredCode = null;
+const escapedCodeEditor = fakeEditor(escapedCpp, (content) => { restoredCode = content; });
+assert.equal(adapter.selectionToCodeBlock(escapedCodeEditor, 'cpp'), true);
+assert.equal(restoredCode.content[0].text.includes('&lt;'), false);
+assert.equal(restoredCode.content[0].text.includes('\\['), false);
+assert.equal(restoredCode.content[0].text.includes('vector<Node>& trie'), true);
 
 let paragraphs = null;
 const textEditor = fakeEditor('first_line\nsecond_line', (content) => { paragraphs = content; });
