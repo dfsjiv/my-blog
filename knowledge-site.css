@@ -1247,6 +1247,218 @@ body.auth-elegant .knowledge-site {
   display: none;
 }
 
+.knowledge-site[data-route="games"] .knowledge-route-view {
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 78px);
+  min-height: 520px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.knowledge-game-gallery,
+.knowledge-game-rail {
+  width: 100%;
+  height: 100%;
+}
+
+.knowledge-game-gallery {
+  position: relative;
+  overflow: hidden;
+  background: var(--knowledge-bg);
+}
+
+.knowledge-game-rail {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--knowledge-primary) transparent;
+  overscroll-behavior-y: contain;
+}
+
+.knowledge-game-slide {
+  --game-accent: #55bde8;
+  min-height: 100%;
+  padding: clamp(28px, 5vh, 64px) clamp(42px, 9vw, 170px);
+  display: grid;
+  grid-template-columns: minmax(220px, 0.55fr) minmax(520px, 1.45fr);
+  align-items: center;
+  gap: clamp(34px, 6vw, 104px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  background-color: var(--knowledge-bg);
+  border-bottom: 1px solid var(--knowledge-border);
+}
+
+.knowledge-game-slide[data-tone="gold"] { --game-accent: #e5b94f; }
+.knowledge-game-slide[data-tone="coral"] { --game-accent: #e47c69; }
+.knowledge-game-slide[data-tone="green"] { --game-accent: #67bd91; }
+
+.knowledge-game-heading {
+  max-width: 420px;
+}
+
+.knowledge-game-heading h1 {
+  margin: 10px 0 16px;
+  color: var(--knowledge-text);
+  font-size: clamp(38px, 5vw, 76px);
+  line-height: 1;
+}
+
+.knowledge-game-heading p {
+  margin: 0;
+  color: var(--knowledge-muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.knowledge-game-window {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 55%, var(--knowledge-border));
+  background: var(--knowledge-panel);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.28);
+}
+
+.knowledge-game-titlebar,
+.knowledge-game-statusbar {
+  min-height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.knowledge-game-titlebar {
+  border-bottom: 1px solid var(--knowledge-border);
+}
+
+.knowledge-game-window-identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.knowledge-game-app-icon {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  color: #071019;
+  background: var(--game-accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.knowledge-game-state {
+  color: var(--game-accent);
+  font-size: 12px;
+}
+
+.knowledge-game-stage {
+  min-height: clamp(300px, 48vh, 540px);
+  padding: clamp(28px, 5vw, 72px);
+  display: grid;
+  grid-template-columns: minmax(120px, 0.55fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 70px);
+  background-color: color-mix(in srgb, var(--knowledge-bg) 74%, var(--knowledge-panel));
+}
+
+.knowledge-game-stage-mark {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  color: var(--game-accent);
+  border: 1px solid var(--game-accent);
+  font-size: clamp(48px, 8vw, 120px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.knowledge-game-stage-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.knowledge-game-stage-copy > span {
+  color: var(--game-accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.knowledge-game-stage-copy strong {
+  color: var(--knowledge-text);
+  font-size: clamp(26px, 3.5vw, 52px);
+  line-height: 1.1;
+}
+
+.knowledge-game-stage-copy p {
+  margin: 0;
+  color: var(--knowledge-muted);
+  line-height: 1.7;
+}
+
+.knowledge-game-statusbar {
+  min-height: 38px;
+  color: var(--knowledge-muted);
+  border-top: 1px solid var(--knowledge-border);
+  font-size: 11px;
+}
+
+.knowledge-game-pagination {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  gap: 10px;
+  transform: translateY(-50%);
+}
+
+.knowledge-game-pagination button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--knowledge-muted);
+  background: var(--knowledge-panel);
+  border: 1px solid var(--knowledge-border);
+  font-size: 10px;
+}
+
+.knowledge-game-pagination button:hover,
+.knowledge-game-pagination button:focus-visible,
+.knowledge-game-pagination button.is-active {
+  color: #071019;
+  background: var(--knowledge-primary);
+  border-color: var(--knowledge-primary);
+}
+
+.knowledge-game-wheel-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: var(--knowledge-muted);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.knowledge-game-wheel-hint span {
+  color: var(--knowledge-primary);
+  font-size: 22px;
+}
+
+.knowledge-game-wheel-hint small {
+  font-size: 11px;
+}
+
 .knowledge-route-shell {
   padding: 24px;
 }
@@ -1924,6 +2136,16 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-search-controls {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .knowledge-game-slide {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 24px;
+  }
+
+  .knowledge-game-heading {
+    max-width: 720px;
   }
 }
 
@@ -2950,6 +3172,31 @@ body.auth-elegant .knowledge-site {
   .knowledge-favorite-link-row input[type="url"] {
     grid-column: 1 / 3;
   }
+
+  .knowledge-site[data-route="games"] .knowledge-route-view {
+    height: calc(100vh - 72px);
+    min-height: 480px;
+    padding-top: 0;
+  }
+
+  .knowledge-game-slide {
+    padding: 34px 48px 52px 18px;
+  }
+
+  .knowledge-game-heading h1 {
+    font-size: 36px;
+  }
+
+  .knowledge-game-stage {
+    min-height: 280px;
+    padding: 24px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  .knowledge-game-pagination {
+    right: 8px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -2960,6 +3207,24 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-intro h1 {
     font-size: 38px;
+  }
+
+  .knowledge-game-slide {
+    padding: 24px 42px 46px 14px;
+  }
+
+  .knowledge-game-heading p,
+  .knowledge-game-stage-copy p {
+    font-size: 13px;
+  }
+
+  .knowledge-game-stage {
+    min-height: 260px;
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-game-stage-mark {
+    width: 86px;
   }
 
   .knowledge-global-search {

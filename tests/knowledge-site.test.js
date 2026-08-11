@@ -217,6 +217,11 @@ assert.match(css, /hero-01\.webp/);
 assert.match(css, /hero-04\.webp/);
 assert.match(site, /function setupHeroCarousel/);
 assert.match(site, /window\.setInterval/);
+assert.match(html, /data-knowledge-route="games">小游戏/);
+assert.match(site, /function renderGameGallery/);
+assert.match(site, /route === 'games'/);
+assert.match(css, /scroll-snap-type:\s*y mandatory/);
+assert.match(css, /\.knowledge-game-window/);
 assert.match(site, /typeof window\.authUi\.showElegantLogin === 'function'/);
 assert.match(site, /user\.role !== 'guest'/);
 
