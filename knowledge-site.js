@@ -927,54 +927,6 @@
     return state.routeController;
   }
 
-  function getRouteTransition() {
-    let transition = document.querySelector('.knowledge-page-transition');
-    if (transition) return transition;
-
-    transition = element('div', 'knowledge-page-transition');
-    transition.setAttribute('aria-hidden', 'true');
-    const panel = element('div', 'knowledge-page-transition-panel');
-    const mark = element('span', 'knowledge-page-transition-mark');
-    mark.append(element('i'), element('i'), element('i'));
-    const lines = element('span', 'knowledge-page-transition-lines');
-    for (let index = 0; index < 5; index += 1) lines.appendChild(element('i'));
-    panel.append(mark, lines);
-    transition.appendChild(panel);
-    document.body.appendChild(transition);
-    return transition;
-  }
-
-  function waitForTransition(panel, fallbackDelay) {
-    return new Promise(function (resolve) {
-      let settled = false;
-      const finish = function (event) {
-        if (event && event.target !== panel) return;
-        if (settled) return;
-        settled = true;
-        panel.removeEventListener('animationend', finish);
-        window.clearTimeout(timer);
-        resolve();
-      };
-      const timer = window.setTimeout(finish, fallbackDelay);
-      panel.addEventListener('animationend', finish);
-    });
-  }
-
-  async function showRouteTransition(transition) {
-    const panel = transition.querySelector('.knowledge-page-transition-panel');
-    transition.classList.remove('is-revealing');
-    transition.classList.add('is-covering');
-    await waitForTransition(panel, 520);
-  }
-
-  async function hideRouteTransition(transition) {
-    const panel = transition.querySelector('.knowledge-page-transition-panel');
-    transition.classList.remove('is-covering');
-    transition.classList.add('is-revealing');
-    await waitForTransition(panel, 620);
-    transition.classList.remove('is-revealing');
-  }
-
   function routeNeedsTransition(route, details, settings) {
     if (settings.refresh || settings.skipTransition) return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
@@ -982,25 +934,74 @@
     return route === 'detail' && details.slug !== state.routePayload.slug;
   }
 
-  async function performNavigation(route, details, settings) {
-    const shouldTransition = routeNeedsTransition(route, details, settings);
-    const transition = shouldTransition ? getRouteTransition() : null;
-    closeNavigation();
+  function waitForRouteSlide(node) {
+    return new Promise(function (resolve) {
+      let done = false;
+      const finish = function () {
+        if (done) return;
+        done = true;
+        node.removeEventListener('animationend', finish);
+        window.clearTimeout(timer);
+        resolve();
+      };
+      const timer = window.setTimeout(finish, 540);
+      node.addEventListener('animationend', finish, { once: true });
+    });
+  }
 
-    if (transition) await showRouteTransition(transition);
-
-    state.route = route;
-    state.routePayload = details;
-    if (!settings.fromHistory) writeRouteUrl(route, details, Boolean(settings.replace));
-    updateActiveNav(route, details);
-    if (!settings.preserveScroll) {
-      shell.scrollTo({ top: 0, behavior: transition ? 'auto' : 'smooth' });
-    }
+  async function runFallbackRouteTransition(updateRoute) {
+    const main = shell.querySelector('.knowledge-main');
+    const rect = main.getBoundingClientRect();
+    const previousPage = main.cloneNode(true);
+    previousPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
+    previousPage.removeAttribute('id');
+    previousPage.setAttribute('aria-hidden', 'true');
+    previousPage.classList.add('knowledge-route-snapshot');
+    Object.assign(previousPage.style, {
+      top: rect.top + 'px',
+      left: rect.left + 'px',
+      width: rect.width + 'px',
+      height: rect.height + 'px',
+    });
+    document.body.appendChild(previousPage);
 
     try {
-      return await renderCurrentRoute(settings);
+      await updateRoute();
+      main.classList.add('knowledge-route-entering');
+      previousPage.classList.add('knowledge-route-leaving');
+      await Promise.all([waitForRouteSlide(main), waitForRouteSlide(previousPage)]);
     } finally {
-      if (transition) await hideRouteTransition(transition);
+      main.classList.remove('knowledge-route-entering');
+      previousPage.remove();
+    }
+  }
+
+  async function performNavigation(route, details, settings) {
+    const shouldTransition = routeNeedsTransition(route, details, settings);
+    closeNavigation();
+
+    const updateRoute = async function () {
+      state.route = route;
+      state.routePayload = details;
+      if (!settings.fromHistory) writeRouteUrl(route, details, Boolean(settings.replace));
+      updateActiveNav(route, details);
+      if (!settings.preserveScroll) shell.scrollTo({ top: 0, behavior: 'auto' });
+      return renderCurrentRoute(settings);
+    };
+
+    if (!shouldTransition) {
+      return updateRoute();
+    }
+
+    if (typeof document.startViewTransition !== 'function') {
+      return runFallbackRouteTransition(updateRoute);
+    }
+
+    const transition = document.startViewTransition(updateRoute);
+    try {
+      await transition.finished;
+    } catch (error) {
+      // A newer navigation may supersede the current visual transition.
     }
   }
 
