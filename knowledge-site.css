@@ -719,27 +719,6 @@ body.auth-elegant .knowledge-site {
   font: 11px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
 }
 
-.knowledge-art-placeholder {
-  height: 210px;
-  display: grid;
-  place-content: center;
-  gap: 5px;
-  color: var(--knowledge-muted);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--knowledge-primary) 17%, transparent), color-mix(in srgb, var(--knowledge-secondary) 13%, transparent));
-  border: 1px dashed color-mix(in srgb, var(--knowledge-primary) 55%, var(--knowledge-border));
-  border-radius: 48% 48% 14% 14% / 28% 28% 12% 12%;
-  text-align: center;
-}
-
-.knowledge-art-placeholder span {
-  font-weight: 700;
-}
-
-.knowledge-art-placeholder small {
-  font-size: 11px;
-}
-
 .knowledge-layout {
   margin-top: 22px;
   display: grid;
@@ -2349,10 +2328,6 @@ body.auth-elegant .knowledge-site {
     grid-template-columns: 1fr;
   }
 
-  .knowledge-art-placeholder {
-    height: 170px;
-  }
-
   .knowledge-layout {
     grid-template-columns: 1fr;
   }
@@ -2829,22 +2804,6 @@ body.auth-elegant .knowledge-site {
   backdrop-filter: blur(10px);
 }
 
-.knowledge-art-placeholder {
-  position: absolute;
-  right: 28px;
-  bottom: 115px;
-  z-index: 3;
-  width: auto;
-  height: auto;
-  padding: 7px 10px;
-  display: grid;
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(10, 18, 28, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  backdrop-filter: blur(10px);
-}
-
 .knowledge-hero-waves {
   position: absolute;
   right: 0;
@@ -2901,14 +2860,6 @@ body.auth-elegant .knowledge-site {
   to {
     transform: translate3d(-50%, 0, 0);
   }
-}
-
-.knowledge-art-placeholder span {
-  font-size: 9px;
-}
-
-.knowledge-art-placeholder small {
-  font-size: 8px;
 }
 
 .knowledge-hero-scroll {
@@ -3312,11 +3263,6 @@ body.auth-elegant .knowledge-site {
     font-size: 16px;
   }
 
-  .knowledge-art-placeholder {
-    right: 14px;
-    bottom: 104px;
-  }
-
   .knowledge-hero-waves {
     height: 112px;
   }
@@ -3470,10 +3416,6 @@ body.auth-elegant .knowledge-site {
   .knowledge-content-card > .knowledge-cover-placeholder {
     height: 210px;
     min-height: 0;
-  }
-
-  .knowledge-art-placeholder {
-    display: none;
   }
 
   .knowledge-favorite-card,
