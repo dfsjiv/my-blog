@@ -953,6 +953,7 @@
     const main = shell.querySelector('.knowledge-main');
     const rect = main.getBoundingClientRect();
     const previousPage = main.cloneNode(true);
+    let nextPage = null;
     previousPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
     previousPage.removeAttribute('id');
     previousPage.setAttribute('aria-hidden', 'true');
@@ -967,11 +968,25 @@
 
     try {
       await updateRoute();
-      main.classList.add('knowledge-route-entering');
+      nextPage = main.cloneNode(true);
+      nextPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
+      nextPage.removeAttribute('id');
+      nextPage.setAttribute('aria-hidden', 'true');
+      nextPage.classList.add('knowledge-route-snapshot', 'knowledge-route-next');
+      Object.assign(nextPage.style, {
+        top: rect.top + 'px',
+        left: rect.left + 'px',
+        width: rect.width + 'px',
+        height: rect.height + 'px',
+      });
+      main.style.visibility = 'hidden';
+      document.body.appendChild(nextPage);
       previousPage.classList.add('knowledge-route-leaving');
-      await Promise.all([waitForRouteSlide(main), waitForRouteSlide(previousPage)]);
+      nextPage.classList.add('knowledge-route-entering');
+      await Promise.all([waitForRouteSlide(nextPage), waitForRouteSlide(previousPage)]);
     } finally {
-      main.classList.remove('knowledge-route-entering');
+      main.style.removeProperty('visibility');
+      if (nextPage) nextPage.remove();
       previousPage.remove();
     }
   }
@@ -993,16 +1008,7 @@
       return updateRoute();
     }
 
-    if (typeof document.startViewTransition !== 'function') {
-      return runFallbackRouteTransition(updateRoute);
-    }
-
-    const transition = document.startViewTransition(updateRoute);
-    try {
-      await transition.finished;
-    } catch (error) {
-      // A newer navigation may supersede the current visual transition.
-    }
+    return runFallbackRouteTransition(updateRoute);
   }
 
   async function navigate(route, payload, options) {

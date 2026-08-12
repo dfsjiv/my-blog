@@ -75,32 +75,14 @@ body.auth-elegant .knowledge-site {
   display: block;
 }
 
-.knowledge-main {
-  view-transition-name: knowledge-page;
-}
-
-::view-transition-group(knowledge-page) {
-  overflow: clip;
-  animation-duration: 460ms;
-  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-::view-transition-old(knowledge-page) {
-  animation: knowledge-page-slide-out 460ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-
-::view-transition-new(knowledge-page) {
-  animation: knowledge-page-slide-in 460ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-
 @keyframes knowledge-page-slide-out {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-100%, 0, 0); }
 }
 
 @keyframes knowledge-page-slide-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 .knowledge-route-snapshot {
@@ -110,15 +92,16 @@ body.auth-elegant .knowledge-site {
   overflow: hidden;
   pointer-events: none;
   background: var(--knowledge-bg);
-  view-transition-name: none;
+  contain: paint;
+  will-change: transform;
 }
 
 .knowledge-route-entering {
-  animation: knowledge-page-slide-in 460ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation: knowledge-page-slide-in 520ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .knowledge-route-snapshot.knowledge-route-leaving {
-  animation: knowledge-page-slide-out 460ms cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation: knowledge-page-slide-out 520ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .knowledge-backdrop {
@@ -3506,9 +3489,6 @@ body.auth-elegant .knowledge-site {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(knowledge-page),
-  ::view-transition-old(knowledge-page),
-  ::view-transition-new(knowledge-page),
   .knowledge-route-entering,
   .knowledge-route-snapshot.knowledge-route-leaving {
     animation-duration: 1ms;
