@@ -952,6 +952,20 @@
     });
   }
 
+  function resetRouteScroll() {
+    shell.scrollTop = 0;
+    shell.scrollLeft = 0;
+    routeView.scrollTop = 0;
+  }
+
+  function waitForRouteLayout() {
+    return new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(resolve);
+      });
+    });
+  }
+
   async function runFallbackRouteTransition(updateRoute) {
     const main = shell.querySelector('.knowledge-main');
     const previousRoute = shell.dataset.route || state.route || 'home';
@@ -970,10 +984,13 @@
       height: rect.height + 'px',
     });
     main.style.visibility = 'hidden';
+    shell.classList.add('knowledge-route-transitioning');
     shell.appendChild(previousPage);
 
     try {
       await updateRoute();
+      resetRouteScroll();
+      await waitForRouteLayout();
       const nextRect = main.getBoundingClientRect();
       nextPage = main.cloneNode(true);
       nextPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
@@ -993,9 +1010,11 @@
       nextPage.classList.add('knowledge-route-entering');
       await Promise.all([waitForRouteSlide(nextPage), waitForRouteSlide(previousPage)]);
     } finally {
+      resetRouteScroll();
       main.style.removeProperty('visibility');
       if (nextPage) nextPage.remove();
       previousPage.remove();
+      shell.classList.remove('knowledge-route-transitioning');
     }
   }
 
@@ -1008,8 +1027,10 @@
       state.routePayload = details;
       if (!settings.fromHistory) writeRouteUrl(route, details, Boolean(settings.replace));
       updateActiveNav(route, details);
-      if (!settings.preserveScroll) shell.scrollTo({ top: 0, behavior: 'auto' });
-      return renderCurrentRoute(settings);
+      if (!settings.preserveScroll) resetRouteScroll();
+      const result = await renderCurrentRoute(settings);
+      if (!settings.preserveScroll) resetRouteScroll();
+      return result;
     };
 
     if (!shouldTransition) {

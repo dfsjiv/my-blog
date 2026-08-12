@@ -104,6 +104,13 @@ body.auth-elegant .knowledge-site {
   animation: knowledge-page-slide-out 520ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+.knowledge-site.knowledge-route-transitioning,
+.knowledge-site.knowledge-route-transitioning .knowledge-main,
+.knowledge-site.knowledge-route-transitioning .knowledge-route-view {
+  scroll-behavior: auto;
+  overflow-anchor: none;
+}
+
 .knowledge-backdrop {
   position: fixed;
   inset: 0;
