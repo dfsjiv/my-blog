@@ -937,7 +937,10 @@
   function waitForRouteSlide(node) {
     return new Promise(function (resolve) {
       let done = false;
-      const finish = function () {
+      const finish = function (event) {
+        if (event && (event.target !== node || !event.animationName.startsWith('knowledge-page-slide-'))) {
+          return;
+        }
         if (done) return;
         done = true;
         node.removeEventListener('animationend', finish);
@@ -964,6 +967,7 @@
       width: rect.width + 'px',
       height: rect.height + 'px',
     });
+    main.style.visibility = 'hidden';
     document.body.appendChild(previousPage);
 
     try {
@@ -973,13 +977,13 @@
       nextPage.removeAttribute('id');
       nextPage.setAttribute('aria-hidden', 'true');
       nextPage.classList.add('knowledge-route-snapshot', 'knowledge-route-next');
+      nextPage.style.removeProperty('visibility');
       Object.assign(nextPage.style, {
         top: rect.top + 'px',
         left: rect.left + 'px',
         width: rect.width + 'px',
         height: rect.height + 'px',
       });
-      main.style.visibility = 'hidden';
       document.body.appendChild(nextPage);
       previousPage.classList.add('knowledge-route-leaving');
       nextPage.classList.add('knowledge-route-entering');
