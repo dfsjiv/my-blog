@@ -13,6 +13,7 @@ const mover = fs.readFileSync(path.join(root, 'knowledge-article-mover.js'), 'ut
 const moverCss = fs.readFileSync(path.join(root, 'knowledge-article-mover.css'), 'utf8');
 const writer = fs.readFileSync(path.join(root, 'knowledge-writer.js'), 'utf8');
 const writerCss = fs.readFileSync(path.join(root, 'knowledge-writer.css'), 'utf8');
+const game2048 = fs.readFileSync(path.join(root, 'knowledge-game-2048.js'), 'utf8');
 const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
@@ -220,6 +221,10 @@ assert.match(site, /window\.setInterval/);
 assert.match(html, /data-knowledge-route="games">小游戏/);
 assert.match(site, /function renderGameGallery/);
 assert.match(site, /route === 'games'/);
+assert.match(site, /KnowledgeGame2048\.mount/);
+assert.match(game2048, /class Game2048Engine/);
+assert.match(game2048, /localStorage/);
+assert.match(game2048, /touchstart/);
 assert.match(css, /scroll-snap-type:\s*y mandatory/);
 assert.match(css, /\.knowledge-game-window/);
 assert.match(site, /typeof window\.authUi\.showElegantLogin === 'function'/);

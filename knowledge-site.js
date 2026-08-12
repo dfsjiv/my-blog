@@ -54,6 +54,7 @@
     routeController: null,
     homeController: null,
     sectionObserver: null,
+    gameCleanup: null,
     facets: null,
     homeLatestPage: 1,
     homeLatestHasNext: false,
@@ -916,6 +917,10 @@
       state.sectionObserver.disconnect();
       state.sectionObserver = null;
     }
+    if (state.gameCleanup) {
+      state.gameCleanup();
+      state.gameCleanup = null;
+    }
     state.routeController = new AbortController();
     return state.routeController;
   }
@@ -966,7 +971,7 @@
     routeView.replaceChildren();
 
     const games = [
-      { number: '01', title: '小游戏占位', tone: 'cyan' },
+      { number: '01', title: '2048', tone: 'cyan', type: '2048' },
     ];
     const gallery = element('section', 'knowledge-game-gallery');
     gallery.setAttribute('aria-label', t('小游戏'));
@@ -985,7 +990,7 @@
       heading.append(
         element('span', 'knowledge-route-kicker', '游戏陈列室'),
         element('h1', '', game.title),
-        element('p', '', '游戏窗口框架已经就绪，具体内容将在后续接入。')
+        element('p', '', '合并相同数字，尝试得到 2048。支持方向键、WASD 和触摸滑动。')
       );
 
       const windowFrame = element('div', 'knowledge-game-window');
@@ -993,23 +998,23 @@
       const windowIdentity = element('div', 'knowledge-game-window-identity');
       const appIcon = element('span', 'knowledge-game-app-icon', game.number);
       windowIdentity.append(appIcon, element('strong', '', game.title));
-      const windowState = element('span', 'knowledge-game-state', '待接入');
+      const windowState = element('span', 'knowledge-game-state', '可游玩');
       titleBar.append(windowIdentity, windowState);
 
       const stage = element('div', 'knowledge-game-stage');
-      const stageMark = element('div', 'knowledge-game-stage-mark', game.number);
-      const stageCopy = element('div', 'knowledge-game-stage-copy');
-      stageCopy.append(
-        element('span', '', '窗口预览'),
-        element('strong', '', game.title),
-        element('p', '', '游戏窗口框架已经就绪，具体内容将在后续接入。')
-      );
-      stage.append(stageMark, stageCopy);
+      if (game.type === '2048') {
+        stage.classList.add('is-2048');
+        const gameRoot = element('div', 'knowledge-2048-mount');
+        stage.appendChild(gameRoot);
+        if (window.KnowledgeGame2048?.mount) {
+          state.gameCleanup = window.KnowledgeGame2048.mount(gameRoot, { translate: t });
+        }
+      }
 
       const statusBar = element('div', 'knowledge-game-statusbar');
       statusBar.append(
         element('span', '', game.number + ' / ' + String(games.length).padStart(2, '0')),
-        element('span', '', '使用滚轮切换')
+        element('span', '', games.length > 1 ? '使用滚轮切换' : '方向键 / WASD / 触摸滑动')
       );
       windowFrame.append(titleBar, stage, statusBar);
       slide.append(heading, windowFrame);
