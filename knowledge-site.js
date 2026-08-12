@@ -55,6 +55,8 @@
     homeController: null,
     sectionObserver: null,
     gameCleanup: null,
+    routeTransitionActive: false,
+    pendingNavigation: null,
     facets: null,
     homeLatestPage: 1,
     homeLatestHasNext: false,
@@ -925,16 +927,100 @@
     return state.routeController;
   }
 
-  async function navigate(route, payload, options) {
-    const settings = options || {};
-    const details = Object.assign({}, payload || {});
+  function getRouteTransition() {
+    let transition = document.querySelector('.knowledge-page-transition');
+    if (transition) return transition;
+
+    transition = element('div', 'knowledge-page-transition');
+    transition.setAttribute('aria-hidden', 'true');
+    const panel = element('div', 'knowledge-page-transition-panel');
+    const mark = element('span', 'knowledge-page-transition-mark');
+    mark.append(element('i'), element('i'), element('i'));
+    const lines = element('span', 'knowledge-page-transition-lines');
+    for (let index = 0; index < 5; index += 1) lines.appendChild(element('i'));
+    panel.append(mark, lines);
+    transition.appendChild(panel);
+    document.body.appendChild(transition);
+    return transition;
+  }
+
+  function waitForTransition(panel, fallbackDelay) {
+    return new Promise(function (resolve) {
+      let settled = false;
+      const finish = function (event) {
+        if (event && event.target !== panel) return;
+        if (settled) return;
+        settled = true;
+        panel.removeEventListener('animationend', finish);
+        window.clearTimeout(timer);
+        resolve();
+      };
+      const timer = window.setTimeout(finish, fallbackDelay);
+      panel.addEventListener('animationend', finish);
+    });
+  }
+
+  async function showRouteTransition(transition) {
+    const panel = transition.querySelector('.knowledge-page-transition-panel');
+    transition.classList.remove('is-revealing');
+    transition.classList.add('is-covering');
+    await waitForTransition(panel, 520);
+  }
+
+  async function hideRouteTransition(transition) {
+    const panel = transition.querySelector('.knowledge-page-transition-panel');
+    transition.classList.remove('is-covering');
+    transition.classList.add('is-revealing');
+    await waitForTransition(panel, 620);
+    transition.classList.remove('is-revealing');
+  }
+
+  function routeNeedsTransition(route, details, settings) {
+    if (settings.refresh || settings.skipTransition) return false;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    if (route !== state.route) return true;
+    return route === 'detail' && details.slug !== state.routePayload.slug;
+  }
+
+  async function performNavigation(route, details, settings) {
+    const shouldTransition = routeNeedsTransition(route, details, settings);
+    const transition = shouldTransition ? getRouteTransition() : null;
+    closeNavigation();
+
+    if (transition) await showRouteTransition(transition);
+
     state.route = route;
     state.routePayload = details;
     if (!settings.fromHistory) writeRouteUrl(route, details, Boolean(settings.replace));
-    closeNavigation();
     updateActiveNav(route, details);
-    if (!settings.preserveScroll) shell.scrollTo({ top: 0, behavior: 'smooth' });
-    return renderCurrentRoute(settings);
+    if (!settings.preserveScroll) {
+      shell.scrollTo({ top: 0, behavior: transition ? 'auto' : 'smooth' });
+    }
+
+    try {
+      return await renderCurrentRoute(settings);
+    } finally {
+      if (transition) await hideRouteTransition(transition);
+    }
+  }
+
+  async function navigate(route, payload, options) {
+    const settings = options || {};
+    const details = Object.assign({}, payload || {});
+    if (state.routeTransitionActive) {
+      state.pendingNavigation = { route, details, settings };
+      return;
+    }
+
+    state.routeTransitionActive = true;
+    try {
+      return await performNavigation(route, details, settings);
+    } finally {
+      state.routeTransitionActive = false;
+      const pending = state.pendingNavigation;
+      state.pendingNavigation = null;
+      if (pending) navigate(pending.route, pending.details, pending.settings);
+    }
   }
 
   async function renderCurrentRoute(options) {
