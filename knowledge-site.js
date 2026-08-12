@@ -966,10 +966,7 @@
     routeView.replaceChildren();
 
     const games = [
-      { number: '01', title: '游戏席位 01', tone: 'cyan' },
-      { number: '02', title: '游戏席位 02', tone: 'gold' },
-      { number: '03', title: '游戏席位 03', tone: 'coral' },
-      { number: '04', title: '游戏席位 04', tone: 'green' },
+      { number: '01', title: '小游戏占位', tone: 'cyan' },
     ];
     const gallery = element('section', 'knowledge-game-gallery');
     gallery.setAttribute('aria-label', t('小游戏'));
@@ -1029,7 +1026,8 @@
     const wheelHint = element('div', 'knowledge-game-wheel-hint');
     wheelHint.setAttribute('aria-hidden', 'true');
     wheelHint.append(element('span', '', '↓'), element('small', '', '使用滚轮切换'));
-    gallery.append(rail, pagination, wheelHint);
+    gallery.appendChild(rail);
+    if (games.length > 1) gallery.append(pagination, wheelHint);
     routeView.appendChild(gallery);
 
     const slides = Array.from(rail.querySelectorAll('.knowledge-game-slide'));
