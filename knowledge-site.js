@@ -954,6 +954,7 @@
 
   async function runFallbackRouteTransition(updateRoute) {
     const main = shell.querySelector('.knowledge-main');
+    const previousRoute = shell.dataset.route || state.route || 'home';
     const rect = main.getBoundingClientRect();
     const previousPage = main.cloneNode(true);
     let nextPage = null;
@@ -961,6 +962,7 @@
     previousPage.removeAttribute('id');
     previousPage.setAttribute('aria-hidden', 'true');
     previousPage.classList.add('knowledge-route-snapshot');
+    previousPage.dataset.snapshotRoute = previousRoute;
     Object.assign(previousPage.style, {
       top: rect.top + 'px',
       left: rect.left + 'px',
@@ -972,17 +974,19 @@
 
     try {
       await updateRoute();
+      const nextRect = main.getBoundingClientRect();
       nextPage = main.cloneNode(true);
       nextPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
       nextPage.removeAttribute('id');
       nextPage.setAttribute('aria-hidden', 'true');
       nextPage.classList.add('knowledge-route-snapshot', 'knowledge-route-next');
+      nextPage.dataset.snapshotRoute = shell.dataset.route || state.route;
       nextPage.style.removeProperty('visibility');
       Object.assign(nextPage.style, {
-        top: rect.top + 'px',
-        left: rect.left + 'px',
-        width: rect.width + 'px',
-        height: rect.height + 'px',
+        top: nextRect.top + 'px',
+        left: nextRect.left + 'px',
+        width: nextRect.width + 'px',
+        height: nextRect.height + 'px',
       });
       shell.appendChild(nextPage);
       previousPage.classList.add('knowledge-route-leaving');

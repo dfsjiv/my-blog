@@ -1276,7 +1276,8 @@ body.auth-elegant .knowledge-site {
   display: none;
 }
 
-.knowledge-site[data-route="games"] .knowledge-route-view {
+.knowledge-site[data-route="games"] > .knowledge-main:not(.knowledge-route-snapshot) .knowledge-route-view,
+.knowledge-route-snapshot[data-snapshot-route="games"] .knowledge-route-view {
   width: 100%;
   max-width: none;
   height: calc(100vh - 78px);
@@ -3349,7 +3350,8 @@ body.auth-elegant .knowledge-site {
     grid-column: 1 / 3;
   }
 
-  .knowledge-site[data-route="games"] .knowledge-route-view {
+  .knowledge-site[data-route="games"] > .knowledge-main:not(.knowledge-route-snapshot) .knowledge-route-view,
+  .knowledge-route-snapshot[data-snapshot-route="games"] .knowledge-route-view {
     height: calc(100vh - 72px);
     min-height: 480px;
     padding-top: 0;
