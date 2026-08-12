@@ -87,7 +87,7 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-route-snapshot {
   position: fixed;
-  z-index: 10000;
+  z-index: 45;
   margin: 0;
   overflow: hidden;
   pointer-events: none;

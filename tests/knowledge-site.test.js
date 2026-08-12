@@ -229,6 +229,8 @@ assert.match(site, /shell\.appendChild\(previousPage\)/);
 assert.match(site, /shell\.appendChild\(nextPage\)/);
 assert.doesNotMatch(site, /document\.body\.appendChild\((?:previousPage|nextPage)\)/);
 assert.match(css, /\.knowledge-route-snapshot/);
+assert.match(css, /\.knowledge-route-snapshot\s*\{[\s\S]*?z-index:\s*45/);
+assert.match(css, /\.knowledge-header\s*\{[\s\S]*?z-index:\s*50/);
 assert.match(css, /translate3d\(-100%, 0, 0\)/);
 assert.match(css, /translate3d\(100%, 0, 0\)/);
 assert.match(css, /@keyframes knowledge-page-slide-out/);
