@@ -968,7 +968,7 @@
       height: rect.height + 'px',
     });
     main.style.visibility = 'hidden';
-    document.body.appendChild(previousPage);
+    shell.appendChild(previousPage);
 
     try {
       await updateRoute();
@@ -984,7 +984,7 @@
         width: rect.width + 'px',
         height: rect.height + 'px',
       });
-      document.body.appendChild(nextPage);
+      shell.appendChild(nextPage);
       previousPage.classList.add('knowledge-route-leaving');
       nextPage.classList.add('knowledge-route-entering');
       await Promise.all([waitForRouteSlide(nextPage), waitForRouteSlide(previousPage)]);
