@@ -988,7 +988,11 @@
     shell.appendChild(previousPage);
 
     try {
-      await updateRoute();
+      const hydrationPromise = updateRoute();
+      hydrationPromise.catch(function (error) {
+        if (error && error.name === 'AbortError') return;
+        console.error('Knowledge route hydration failed:', error);
+      });
       resetRouteScroll();
       await waitForRouteLayout();
       const nextRect = main.getBoundingClientRect();
@@ -1762,7 +1766,17 @@
   async function renderDetail(slug, controller) {
     homeView.hidden = true;
     routeView.hidden = false;
-    routeView.replaceChildren(makeLoadingState('正在加载正文…'));
+    const loadingLayout = element('div', 'knowledge-detail-layout');
+    const loadingArticle = element('article', 'knowledge-article');
+    const loadingHeader = element('header', 'knowledge-detail-header');
+    const loadingBody = element('div', 'knowledge-detail-body');
+    const loadingAside = element('aside', 'knowledge-detail-aside');
+    loadingHeader.appendChild(makeLoadingState('正在加载文章信息…'));
+    loadingBody.appendChild(makeLoadingState('正在加载正文…'));
+    loadingAside.appendChild(makeLoadingState('正在生成目录…'));
+    loadingArticle.append(loadingHeader, loadingBody);
+    loadingLayout.append(loadingArticle, loadingAside);
+    routeView.replaceChildren(loadingLayout);
     let post;
     try {
       post = await repository.getPostBySlug(slug, { signal: controller.signal });
