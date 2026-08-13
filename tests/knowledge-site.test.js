@@ -219,6 +219,7 @@ assert.match(css, /hero-04\.webp/);
 assert.match(site, /function setupHeroCarousel/);
 assert.match(site, /window\.setInterval/);
 assert.match(html, /data-knowledge-route="games">小游戏/);
+assert.match(html, /data-knowledge-action="desktop">My OS/);
 assert.match(site, /function renderGameGallery/);
 assert.match(site, /routeNeedsTransition/);
 assert.match(site, /runFallbackRouteTransition/);

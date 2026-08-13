@@ -5,8 +5,10 @@ const vm = require('vm');
 
 const rootDir = path.resolve(__dirname, '..');
 const authPath = path.join(rootDir, 'auth.js');
+const bridgePath = path.join(rootDir, 'login-mikutap-bridge.js');
 const indexPath = path.join(rootDir, 'index.html');
 const source = fs.readFileSync(authPath, 'utf8');
+const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
 
 function loadAuthModule() {
   const listeners = {};
@@ -197,27 +199,26 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="loginForm"/);
   assert.match(indexHtml, /id="loginMikutapFrame"/);
   assert.match(indexHtml, /id="guestButton"/);
-  assert.match(indexHtml, /id="versionSelector"/);
-  assert.match(indexHtml, /id="osVersionButton"/);
-  assert.match(indexHtml, /id="elegantVersionButton"/);
   assert.match(indexHtml, /id="elegantShell"/);
-  assert.match(indexHtml, /id="elegantVersionSwitch"/);
+  assert.match(indexHtml, /data-knowledge-action="desktop">My OS/);
+  assert.doesNotMatch(indexHtml, /id="versionSelector"/);
+  assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
-  assert.match(indexHtml, /<script src="auth\.js"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20260813-1"><\/script>/);
   assert.match(indexHtml, /assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /background\?auto=1&amp;v=20260807-17/);
-  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260807-mikutap-7"><\/script>/);
+  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260813-1"><\/script>/);
   assert.match(indexHtml, /Mikutap by daniwell/);
-  assert.match(source, /showVersionSelector\(user\)/);
+  assert.doesNotMatch(bridgeSource, /versionSelector/);
   assert.match(source, /function isPublicKnowledgeEntry/);
   assert.match(source, /PUBLIC_KNOWLEDGE_ROUTES/);
   assert.match(source, /showElegantVersion\(auth\.enterAsGuest\(\)\)/);
-  assert.match(source, /if \(publicKnowledgeEntry\) showElegantVersion\(result\.user\)/);
+  assert.match(source, /showElegantVersion\(result\.user\)/);
   assert.match(source, /function showElegantLogin/);
   assert.match(source, /showAuthenticatedDestination\(auth\.enterAsGuest\(\)\)/);
-  assert.match(source, /typeof window\.elegantShell\.closeNavigation === 'function'/);
   assert.match(source, /typeof window\.elegantShell\.refreshIdentity === 'function'/);
   assert.match(source, /showElegantVersion\(user\)/);
+  assert.doesNotMatch(source, /showVersionSelector/);
   assert.doesNotMatch(source, /localStorage/);
   assert.doesNotMatch(source, /console\.(log|debug).*password/i);
 

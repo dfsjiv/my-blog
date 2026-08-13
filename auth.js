@@ -266,10 +266,6 @@
       loginButton: document.getElementById('loginButton'),
       guestButton: document.getElementById('guestButton'),
       loginMessage: document.getElementById('loginMessage'),
-      versionSelector: document.getElementById('versionSelector'),
-      osVersionButton: document.getElementById('osVersionButton'),
-      elegantVersionButton: document.getElementById('elegantVersionButton'),
-      elegantVersionSwitch: document.getElementById('elegantVersionSwitch'),
       elegantShell: document.getElementById('elegantShell'),
       desktopShell: document.getElementById('desktopShell'),
       blogFrame: document.getElementById('blogFrame'),
@@ -277,14 +273,10 @@
       startUserRole: document.getElementById('startUserRole'),
       logoutButton: document.getElementById('logoutButton'),
     };
-    if (!elements.loginForm || !elements.versionSelector
-      || !elements.osVersionButton || !elements.elegantVersionButton
-      || !elements.elegantVersionSwitch || !elements.elegantShell
-      || !elements.desktopShell) return;
+    if (!elements.loginForm || !elements.elegantShell || !elements.desktopShell) return;
 
     const auth = createAuthManager();
     let loginPending = false;
-    let loginDestination = 'version';
     window.authState = auth.state;
     window.authManager = auth;
 
@@ -336,13 +328,11 @@
       elements.startUserRole.textContent = roleLabel;
     }
 
-    function showLoginScreen(message, destination) {
-      loginDestination = destination === 'elegant' ? 'elegant' : 'version';
-      document.body.classList.remove('auth-pending', 'auth-version', 'auth-elegant', 'auth-desktop');
+    function showLoginScreen(message) {
+      document.body.classList.remove('auth-pending', 'auth-elegant', 'auth-desktop');
       document.body.classList.add('auth-login');
       elements.desktopShell.setAttribute('aria-hidden', 'true');
       elements.loginScreen.removeAttribute('aria-hidden');
-      elements.versionSelector.setAttribute('aria-hidden', 'true');
       elements.elegantShell.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
       setLoginPending(false, '');
@@ -353,43 +343,19 @@
     }
 
     function showElegantLogin(message) {
-      showLoginScreen(message || '', 'elegant');
+      showLoginScreen(message || '');
     }
 
     function showAuthenticatedDestination(user) {
-      if (loginDestination === 'elegant') {
-        showElegantVersion(user);
-        return;
-      }
-      showVersionSelector(user);
-    }
-
-    function showVersionSelector(user) {
-      updateUserIdentityUI(user);
-      document.body.classList.remove('auth-pending', 'auth-login', 'auth-elegant', 'auth-desktop');
-      document.body.classList.add('auth-version');
-      elements.desktopShell.setAttribute('aria-hidden', 'true');
-      elements.loginScreen.setAttribute('aria-hidden', 'true');
-      elements.versionSelector.setAttribute('aria-hidden', 'false');
-      elements.elegantShell.setAttribute('aria-hidden', 'true');
-      if (window.elegantShell
-        && typeof window.elegantShell.closeNavigation === 'function') {
-        window.elegantShell.closeNavigation();
-      }
-      elements.password.value = '';
-      setLoginPending(false, '');
-      elements.osVersionButton.focus();
-      notifyBlogAuthChanged();
-      if (window.aiChat) window.aiChat.refreshAccess();
+      showElegantVersion(user);
     }
 
     function showDesktop(user) {
       updateUserIdentityUI(user);
-      document.body.classList.remove('auth-pending', 'auth-login', 'auth-version', 'auth-elegant');
+      document.body.classList.remove('auth-pending', 'auth-login', 'auth-elegant');
       document.body.classList.add('auth-desktop');
       elements.desktopShell.setAttribute('aria-hidden', 'false');
       elements.loginScreen.setAttribute('aria-hidden', 'true');
-      elements.versionSelector.setAttribute('aria-hidden', 'true');
       elements.elegantShell.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
       setLoginPending(false, '');
@@ -399,11 +365,10 @@
 
     function showElegantVersion(user) {
       updateUserIdentityUI(user);
-      document.body.classList.remove('auth-pending', 'auth-login', 'auth-version', 'auth-desktop');
+      document.body.classList.remove('auth-pending', 'auth-login', 'auth-desktop');
       document.body.classList.add('auth-elegant');
       elements.desktopShell.setAttribute('aria-hidden', 'true');
       elements.loginScreen.setAttribute('aria-hidden', 'true');
-      elements.versionSelector.setAttribute('aria-hidden', 'true');
       elements.elegantShell.setAttribute('aria-hidden', 'false');
       elements.password.value = '';
       setLoginPending(false, '');
@@ -449,8 +414,7 @@
         showAuthenticatedDestination(user);
       } catch (error) {
         showLoginScreen(
-          error && error.message ? error.message : '无法连接服务器，请稍后重试',
-          loginDestination
+          error && error.message ? error.message : '无法连接服务器，请稍后重试'
         );
       }
     });
@@ -458,21 +422,6 @@
     elements.guestButton.addEventListener('click', function () {
       if (loginPending) return;
       showAuthenticatedDestination(auth.enterAsGuest());
-    });
-
-    elements.osVersionButton.addEventListener('click', function () {
-      const user = auth.getCurrentUser();
-      if (user) showDesktop(user);
-    });
-
-    elements.elegantVersionButton.addEventListener('click', function () {
-      const user = auth.getCurrentUser();
-      if (user) showElegantVersion(user);
-    });
-
-    elements.elegantVersionSwitch.addEventListener('click', function () {
-      const user = auth.getCurrentUser();
-      if (user) showVersionSelector(user);
     });
 
     elements.logoutButton.addEventListener('click', async function () {
@@ -494,8 +443,7 @@
       setLoginPending(true, '正在验证登录状态...');
       const result = await auth.restoreSession();
       if (result.success) {
-        if (publicKnowledgeEntry) showElegantVersion(result.user);
-        else showVersionSelector(result.user);
+        showElegantVersion(result.user);
       } else {
         if (publicKnowledgeEntry) {
           showElegantVersion(auth.enterAsGuest());
@@ -509,7 +457,6 @@
 
     window.authUi = {
       showLoginScreen,
-      showVersionSelector,
       showDesktop,
       showElegantVersion,
       showElegantLogin,

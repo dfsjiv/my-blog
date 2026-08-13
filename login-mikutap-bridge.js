@@ -3,14 +3,12 @@
 
   const frame = document.getElementById('loginMikutapFrame');
   const loginScreen = document.getElementById('loginScreen');
-  const versionSelector = document.getElementById('versionSelector');
-  if (!frame || !loginScreen || !versionSelector) return;
+  if (!frame || !loginScreen) return;
 
   let forwardingPointer = false;
 
   function isMikutapVisible() {
-    return loginScreen.getAttribute('aria-hidden') !== 'true'
-      || versionSelector.getAttribute('aria-hidden') !== 'true';
+    return loginScreen.getAttribute('aria-hidden') !== 'true';
   }
 
   function callFrame(method, ...args) {
@@ -39,11 +37,6 @@
     attributes: true,
     attributeFilter: ['aria-hidden'],
   });
-  visibilityObserver.observe(versionSelector, {
-    attributes: true,
-    attributeFilter: ['aria-hidden'],
-  });
-
   frame.addEventListener('load', syncMikutapState);
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) pauseFrameAudio();
@@ -60,10 +53,8 @@
     callFrame('loginMikutapPointerMove', event.clientX, event.clientY);
   }
 
-  [loginScreen, versionSelector].forEach(function (surface) {
-    surface.addEventListener('pointerdown', handlePointerDown, true);
-    surface.addEventListener('pointermove', handlePointerMove, true);
-  });
+  loginScreen.addEventListener('pointerdown', handlePointerDown, true);
+  loginScreen.addEventListener('pointermove', handlePointerMove, true);
 
   window.addEventListener('pointerup', function () {
     if (!forwardingPointer) return;

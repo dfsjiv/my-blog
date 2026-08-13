@@ -67,81 +67,12 @@ body.is-desktop.auth-desktop .desktop-shell {
   background: #88cccc;
 }
 
-body.auth-login .login-mikutap-frame,
-body.auth-version .login-mikutap-frame {
+body.auth-login .login-mikutap-frame {
   display: block;
 }
 
 .auth-desktop .login-screen {
   display: none;
-}
-
-.version-selector {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: #ffffff;
-  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-  background: transparent;
-}
-
-body.auth-version .login-screen {
-  display: none;
-}
-
-body.auth-version .version-selector {
-  display: flex;
-}
-
-.version-selector-content {
-  position: relative;
-  z-index: 3;
-  width: min(420px, calc(100vw - 40px));
-  text-align: center;
-}
-
-.version-selector-content h1 {
-  margin: 0 0 28px;
-  font-size: 28px;
-  font-weight: 400;
-}
-
-.version-selector-actions {
-  display: grid;
-  gap: 10px;
-}
-
-.version-selector-button {
-  width: 100%;
-  min-height: 54px;
-  padding: 0 18px;
-  color: #ffffff;
-  background: rgba(18, 43, 62, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.52);
-  border-radius: 0;
-  font: 16px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-  text-align: left;
-}
-
-.version-selector-button:hover:not(:disabled),
-.version-selector-button:focus-visible {
-  background: #0067b8;
-  border-color: #72b9e8;
-  outline: none;
-}
-
-.version-selector-button:active:not(:disabled) {
-  background: #005a9e;
-}
-
-.version-selector-button:disabled {
-  color: rgba(255, 255, 255, 0.48);
-  background: rgba(18, 43, 62, 0.58);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .login-panel {

@@ -66,8 +66,7 @@
   }
 }
 
-body.auth-elegant .login-screen,
-body.auth-elegant .version-selector {
+body.auth-elegant .login-screen {
   display: none;
 }
 

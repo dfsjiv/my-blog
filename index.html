@@ -91,17 +91,6 @@
     <a class="login-mikutap-credit" href="https://aidn.jp/mikutap/" target="_blank" rel="noopener noreferrer">Mikutap by daniwell</a>
   </main>
 
-  <main class="version-selector" id="versionSelector" aria-label="版本选择" aria-hidden="true">
-    <div class="version-selector-content">
-      <h1>选择版本</h1>
-      <div class="version-selector-actions">
-        <button class="version-selector-button" id="osVersionButton" type="button">OS 版本</button>
-        <button class="version-selector-button" id="elegantVersionButton" type="button">高雅人士版本</button>
-        <button class="version-selector-button" type="button" disabled>正经版本</button>
-      </div>
-    </div>
-  </main>
-
   <section class="knowledge-site" id="elegantShell" aria-label="Lee Ethan 个人知识站" aria-hidden="true">
     <div class="knowledge-backdrop" data-knowledge-background aria-hidden="true"></div>
 
@@ -147,6 +136,7 @@
             </div>
           </div>
           <button type="button" data-knowledge-route="games">小游戏</button>
+          <button type="button" data-knowledge-action="desktop">My OS</button>
           <div class="knowledge-nav-menu" data-knowledge-nav-menu="links">
             <button class="knowledge-nav-menu-trigger" type="button"
               aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeLinkMenu">
@@ -220,7 +210,6 @@
               <strong id="knowledgeAccountName">当前用户</strong>
               <small>已登录账户</small>
               <button type="button" data-knowledge-action="desktop">返回 Web OS</button>
-              <button type="button" id="elegantVersionSwitch">切换版本</button>
               <button type="button" id="knowledgeLogoutButton">退出登录</button>
             </div>
           </details>
@@ -771,11 +760,11 @@ Camera: --, --, --</pre>
   </section>
 
   <script src="home-device.js"></script>
-  <script src="login-mikutap-bridge.js?v=20260807-mikutap-7"></script>
+  <script src="login-mikutap-bridge.js?v=20260813-1"></script>
   <script src="night-rain-city-3d.js"></script>
   <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
-  <script src="auth.js"></script>
+  <script src="auth.js?v=20260813-1"></script>
   <script src="knowledge-data.js"></script>
   <script src="knowledge-i18n.js?v=20260804-2"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
