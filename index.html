@@ -42,6 +42,72 @@
     body.auth-pending > .login-mikutap-frame {
       display: none;
     }
+
+    .site-entry-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: #26272a;
+      color: #f5f7fa;
+      opacity: 1;
+      transition: opacity 360ms ease, visibility 360ms ease;
+    }
+
+    .site-entry-loader[hidden] {
+      display: none;
+    }
+
+    .site-entry-loader.is-leaving {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .site-entry-loader__content {
+      position: relative;
+      width: min(78vw, 920px);
+      aspect-ratio: 5 / 1;
+    }
+
+    .site-entry-loader__canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .site-entry-loader__label {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      margin: 0;
+      color: #f5f7fa;
+      font: 800 clamp(52px, 10vw, 132px)/1 "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .site-entry-loader.is-canvas-ready .site-entry-loader__label {
+      visibility: hidden;
+    }
+
+    .site-entry-loader__progress {
+      position: absolute;
+      top: 100%;
+      right: 1.5%;
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, 0.82);
+      font: 500 clamp(12px, 1.25vw, 17px)/1.4 "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .site-entry-loader {
+        transition-duration: 100ms;
+      }
+    }
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260807-mikutap-3" />
   <link rel="stylesheet" href="knowledge-site.css?v=20260813-2" />
@@ -59,6 +125,13 @@
   </script>
 </head>
 <body class="auth-pending">
+  <div class="site-entry-loader" id="siteEntryLoader" role="status" aria-label="Loading Lee's Site">
+    <div class="site-entry-loader__content">
+      <canvas class="site-entry-loader__canvas" id="siteEntryLoaderCanvas" aria-hidden="true"></canvas>
+      <p class="site-entry-loader__label" id="siteEntryLoaderLabel" aria-hidden="true">LEE'S SITE</p>
+      <p class="site-entry-loader__progress">loading... <span id="siteEntryLoaderProgress">0</span>%</p>
+    </div>
+  </div>
   <iframe
     class="login-mikutap-frame"
     id="loginMikutapFrame"
@@ -764,6 +837,7 @@ Camera: --, --, --</pre>
     </div>
   </section>
 
+  <script src="site-entry-loader.js?v=20260814-1"></script>
   <script src="home-device.js"></script>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="night-rain-city-3d.js"></script>
@@ -782,7 +856,7 @@ Camera: --, --, --</pre>
   <script src="knowledge-writer.js"></script>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
-  <script src="knowledge-site.js?v=20260813-3"></script>
+  <script src="knowledge-site.js?v=20260814-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>

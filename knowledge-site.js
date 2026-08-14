@@ -2106,7 +2106,12 @@
     }
     if (actionTarget?.dataset.knowledgeAction === 'desktop') {
       const user = currentUser();
-      if (user && window.authUi) window.authUi.showDesktop(user);
+      if (user && window.authUi) {
+        if (window.siteEntryLoader) {
+          window.siteEntryLoader.play({ force: true, label: 'MY OS' });
+        }
+        window.authUi.showDesktop(user);
+      }
     }
   });
 
