@@ -204,6 +204,7 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="versionSelector"/);
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
+  assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
   assert.match(indexHtml, /<script src="auth\.js\?v=20260814-1"><\/script>/);
   assert.match(indexHtml, /assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /background\?auto=1&amp;v=20260807-17/);
