@@ -2,9 +2,6 @@
   const API_BASE_URL = '';
   const TOKEN_KEY = 'blog_session_token';
   const ACCOUNT_ROLES = new Set(['admin', 'user']);
-  const PUBLIC_KNOWLEDGE_ROUTES = new Set([
-    'home', 'post', 'all', 'categories', 'tags', 'archives', 'about',
-  ]);
 
   class AuthError extends Error {
     constructor(code, message, status) {
@@ -280,12 +277,6 @@
     window.authState = auth.state;
     window.authManager = auth;
 
-    function isPublicKnowledgeEntry() {
-      const params = new URLSearchParams(window.location.search);
-      const route = params.get('knowledge');
-      return Boolean(route && PUBLIC_KNOWLEDGE_ROUTES.has(route));
-    }
-
     function setMessage(message, isStatus) {
       elements.loginMessage.textContent = message || '';
       elements.loginMessage.classList.toggle('is-status', Boolean(isStatus));
@@ -429,14 +420,9 @@
     });
 
     (async function restoreOnStartup() {
-      const publicKnowledgeEntry = isPublicKnowledgeEntry();
       const hadToken = auth.hasStoredToken();
       if (!hadToken) {
-        if (publicKnowledgeEntry) {
-          showElegantVersion(auth.enterAsGuest());
-        } else {
-          showLoginScreen('');
-        }
+        showElegantVersion(auth.enterAsGuest());
         return;
       }
 
@@ -445,13 +431,7 @@
       if (result.success) {
         showElegantVersion(result.user);
       } else {
-        if (publicKnowledgeEntry) {
-          showElegantVersion(auth.enterAsGuest());
-        } else {
-          showLoginScreen(result.reason === 'expired'
-            ? '登录状态已失效，请重新登录'
-            : '无法连接服务器，请稍后重试');
-        }
+        showElegantVersion(auth.enterAsGuest());
       }
     }());
 
