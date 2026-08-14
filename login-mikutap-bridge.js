@@ -6,6 +6,7 @@
   if (!frame || !loginScreen) return;
 
   let forwardingPointer = false;
+  const frameSource = frame.dataset.src || frame.getAttribute('src') || '';
 
   function isMikutapVisible() {
     return loginScreen.getAttribute('aria-hidden') !== 'true';
@@ -23,11 +24,17 @@
     if (typeof pause === 'function') pause();
   }
 
+  function ensureFrameLoaded() {
+    if (frame.getAttribute('src') || !frameSource) return;
+    frame.setAttribute('src', frameSource);
+  }
+
   function syncMikutapState() {
     if (!isMikutapVisible()) {
       pauseFrameAudio();
       return;
     }
+    ensureFrameLoaded();
     const activateVisuals = frame.contentWindow && frame.contentWindow.setMikutapVisualActive;
     if (typeof activateVisuals === 'function') activateVisuals(true);
   }

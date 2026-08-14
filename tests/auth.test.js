@@ -206,9 +206,12 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
   assert.match(indexHtml, /<script src="auth\.js\?v=20260814-1"><\/script>/);
-  assert.match(indexHtml, /assets\/vendor\/mikutap\/background\?auto=1/);
-  assert.match(indexHtml, /background\?auto=1&amp;v=20260807-17/);
-  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260813-1"><\/script>/);
+  assert.match(indexHtml, /data-src="assets\/vendor\/mikutap\/background\?auto=1&amp;v=20260807-17"/);
+  assert.doesNotMatch(indexHtml, /\ssrc="assets\/vendor\/mikutap\/background\?auto=1/);
+  assert.match(indexHtml, /id="loginScreen"[^>]*aria-hidden="true"/);
+  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260814-1"><\/script>/);
+  assert.match(bridgeSource, /function ensureFrameLoaded/);
+  assert.match(bridgeSource, /frame\.setAttribute\('src', frameSource\)/);
   assert.match(indexHtml, /Mikutap by daniwell/);
   assert.doesNotMatch(bridgeSource, /versionSelector/);
   assert.match(source, /showElegantVersion\(auth\.enterAsGuest\(\)\)/);
