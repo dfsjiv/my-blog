@@ -202,6 +202,7 @@ assert.match(editorAdapter, /paragraph: false/);
 assert.match(editorAdapter, /vendor\.AlignedParagraph/);
 assert.match(markdown, /knowledge-align-center/);
 assert.match(markdown, /expandLegacyCenteredTextBlocks/);
+assert.match(markdown, /encodedCenteredProse/);
 assert.match(editorAdapter, /insertContentAt/);
 assert.match(css, /\.knowledge-detail-body \.knowledge-align-center/);
 assert.match(writerCss, /\.knowledge-writer-bubble-types/);

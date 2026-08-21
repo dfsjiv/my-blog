@@ -122,9 +122,16 @@
       function (block, fence, body) {
         const lines = body.split('\n');
         const content = lines.filter(function (line) { return line.trim(); });
-        const centeredProse = content.length > 0 && content.every(function (line) {
+        const wrappedProse = content.length > 0 && content.every(function (line) {
           return /^\s*(?:\*{1,3}|_{1,3}).+(?:\*{1,3}|_{1,3})\s*$/.test(line);
         });
+        const encodedCenteredProse = content.length > 0
+          && content.some(function (line) { return /&(?:lt|gt);/i.test(line); })
+          && content.every(function (line) { return /^(?: {2,}|\t)/.test(line); })
+          && content.every(function (line) {
+            return !/[{};]|^\s*#\s*include\b/.test(restoreLegacyEntities(line));
+          });
+        const centeredProse = wrappedProse || encodedCenteredProse;
         if (!centeredProse) return block;
         return content.map(function (line) {
           return '{center} ' + restoreLegacyEntities(line.trim());
