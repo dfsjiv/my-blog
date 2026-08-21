@@ -227,6 +227,10 @@
   margin: 0 0 1.05em;
 }
 
+.knowledge-tiptap-editor p[data-align="center"] {
+  text-align: center;
+}
+
 .knowledge-tiptap-editor h1,
 .knowledge-tiptap-editor h2,
 .knowledge-tiptap-editor h3 {

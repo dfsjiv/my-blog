@@ -904,6 +904,14 @@
           ? languageSelect.value
           : 'paragraph';
         setBubbleFormatOptions(bubbleFormatSelect, bubbleModeSelect.value, current);
+        if (!state.editor || state.editor.state.selection.empty) return;
+        const changed = bubbleModeSelect.value === 'selection-code'
+          ? adapter.selectionToCodeBlock(state.editor, languageSelect.value)
+          : adapter.selectionToText(state.editor);
+        if (changed) {
+          markDirty();
+          updateEditorUi();
+        }
         return;
       }
       if (

@@ -72,6 +72,28 @@ assert.deepEqual(
   ]
 );
 
+let restoredParagraphs = null;
+const escapedTextEditor = fakeEditor(
+  '    Vector&lt;0,P&gt; = ( x , y ).    \n\tVector&lt;0,A&gt; = ( Ax , Ay ).',
+  (content) => { restoredParagraphs = content; }
+);
+assert.equal(adapter.selectionToText(escapedTextEditor), true);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(restoredParagraphs)),
+  [
+    {
+      type: 'paragraph',
+      attrs: { textAlign: 'center' },
+      content: [{ type: 'text', text: 'Vector<0,P> = ( x , y ).' }],
+    },
+    {
+      type: 'paragraph',
+      attrs: { textAlign: 'center' },
+      content: [{ type: 'text', text: 'Vector<0,A> = ( Ax , Ay ).' }],
+    },
+  ]
+);
+
 function fakeEditor(text, capture) {
   const chain = {
     focus() { return chain; },

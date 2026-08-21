@@ -33,11 +33,13 @@
     let editorRef = null;
     const extensions = [
       vendor.StarterKit.configure({
+        paragraph: false,
         link: false,
         codeBlock: {
           HTMLAttributes: { class: 'knowledge-writer-code-block' },
         },
       }),
+      vendor.AlignedParagraph,
       vendor.Link.configure({
         openOnClick: false,
         autolink: true,
@@ -231,13 +233,23 @@
   function selectionToText(editor) {
     if (!editor || editor.state.selection.empty) return false;
     const selection = editor.state.selection;
-    const text = editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n');
+    const text = restoreEscapedCode(
+      editor.state.doc.textBetween(selection.from, selection.to, '\n', '\n')
+    );
     if (!text) return false;
-    const paragraphs = normalizeCode(text).split('\n').map(function (line) {
-      return {
+    const lines = normalizeCode(text).split('\n');
+    const nonEmptyLines = lines.filter(function (line) { return line.trim(); });
+    const centered = nonEmptyLines.length > 0 && nonEmptyLines.every(function (line) {
+      return /^(?: {2,}|\t)/.test(line);
+    });
+    const paragraphs = lines.map(function (line) {
+      const paragraphText = line.trim();
+      const paragraph = {
         type: 'paragraph',
-        content: line ? [{ type: 'text', text: line }] : [],
+        content: paragraphText ? [{ type: 'text', text: paragraphText }] : [],
       };
+      if (centered && paragraphText) paragraph.attrs = { textAlign: 'center' };
+      return paragraph;
     });
     return editor.chain()
       .focus()

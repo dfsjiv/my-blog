@@ -1958,6 +1958,10 @@ body.auth-elegant .knowledge-site {
   color: color-mix(in srgb, var(--knowledge-text) 88%, var(--knowledge-muted));
 }
 
+.knowledge-detail-body .knowledge-align-center {
+  text-align: center;
+}
+
 .knowledge-detail-body blockquote,
 .knowledge-callout {
   margin: 18px 0;

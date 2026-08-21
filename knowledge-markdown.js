@@ -107,6 +107,21 @@
     });
   }
 
+  function expandAlignedParagraphs(markdown) {
+    let fence = null;
+    return String(markdown || '').split('\n').map(function (line) {
+      const fenceMatch = line.match(/^\s*(```+|~~~+)/);
+      if (fenceMatch) {
+        fence = fence ? null : fenceMatch[1][0];
+        return line;
+      }
+      if (fence) return line;
+      const match = line.match(/^\{center\}\s+(.+)$/);
+      if (!match) return line;
+      return '<p class="knowledge-align-center">' + markedApi.parseInline(match[1]) + '</p>';
+    }).join('\n');
+  }
+
   async function copyCode(button) {
     const code = button.closest('.knowledge-code-block')?.querySelector('code');
     if (!code || !navigator.clipboard || !navigator.clipboard.writeText) return false;
@@ -127,7 +142,7 @@
   }
 
   function render(markdown, container) {
-    const html = markedApi.parse(String(markdown || ''), {
+    const html = markedApi.parse(expandAlignedParagraphs(markdown), {
       gfm: true,
       breaks: false,
     });
