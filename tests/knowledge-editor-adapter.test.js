@@ -94,6 +94,22 @@ assert.deepEqual(
   ]
 );
 
+let replacedRange = null;
+const codeBlockText = '    **Vector&lt;0,P&gt; = ( x , y ).**\n    ***Vector&lt;0,A&gt; = ( Ax , Ay ).***';
+const blockEditor = fakeCodeBlockEditor(codeBlockText, (range, content) => {
+  replacedRange = { range, content };
+});
+assert.equal(adapter.selectionToText(blockEditor), true);
+assert.deepEqual(JSON.parse(JSON.stringify(replacedRange.range)), { from: 0, to: codeBlockText.length + 2 });
+assert.equal(replacedRange.content[0].type, 'paragraph');
+assert.equal(replacedRange.content[0].attrs.textAlign, 'center');
+assert.deepEqual(JSON.parse(JSON.stringify(replacedRange.content[0].content[0].marks)), [{ type: 'bold' }]);
+assert.equal(replacedRange.content[0].content[0].text, 'Vector<0,P> = ( x , y ).');
+assert.deepEqual(
+  JSON.parse(JSON.stringify(replacedRange.content[1].content[0].marks)),
+  [{ type: 'bold' }, { type: 'italic' }]
+);
+
 function fakeEditor(text, capture) {
   const chain = {
     focus() { return chain; },
@@ -104,6 +120,29 @@ function fakeEditor(text, capture) {
   return {
     state: {
       selection: { empty: false, from: 1, to: text.length + 1 },
+      doc: { textBetween: () => text },
+    },
+    chain: () => chain,
+  };
+}
+
+function fakeCodeBlockEditor(text, capture) {
+  const codeNode = { type: { name: 'codeBlock' }, attrs: { language: 'text' }, textContent: text };
+  const resolved = {
+    depth: 1,
+    node: () => codeNode,
+    start: () => 1,
+    before: () => 0,
+    after: () => text.length + 2,
+  };
+  const chain = {
+    focus() { return chain; },
+    insertContentAt(range, content) { capture(range, content); return chain; },
+    run() { return true; },
+  };
+  return {
+    state: {
+      selection: { empty: false, from: 1, to: text.length + 1, $from: resolved, $to: resolved },
       doc: { textBetween: () => text },
     },
     chain: () => chain,

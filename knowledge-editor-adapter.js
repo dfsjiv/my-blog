@@ -246,16 +246,66 @@
       const paragraphText = line.trim();
       const paragraph = {
         type: 'paragraph',
-        content: paragraphText ? [{ type: 'text', text: paragraphText }] : [],
+        content: paragraphText ? inlineTextContent(paragraphText) : [],
       };
       if (centered && paragraphText) paragraph.attrs = { textAlign: 'center' };
       return paragraph;
     });
-    return editor.chain()
-      .focus()
-      .deleteSelection()
-      .insertContent(paragraphs)
-      .run();
+    const codeRange = selectedCodeBlockRange(editor, selection);
+    const replacement = codeRange
+      ? codeRange.before.concat(paragraphs, codeRange.after)
+      : paragraphs;
+    const chain = editor.chain().focus();
+    if (codeRange && typeof chain.insertContentAt === 'function') {
+      return chain.insertContentAt(
+        { from: codeRange.from, to: codeRange.to },
+        replacement
+      ).run();
+    }
+    return chain.deleteSelection().insertContent(replacement).run();
+  }
+
+  function selectedCodeBlockRange(editor, selection) {
+    const from = selection.$from;
+    const to = selection.$to;
+    if (!from || !to) return null;
+    for (let depth = from.depth; depth > 0; depth -= 1) {
+      const node = from.node(depth);
+      if (node?.type?.name !== 'codeBlock' || to.node(depth) !== node) continue;
+      const contentStart = from.start(depth);
+      const selectedFrom = Math.max(0, selection.from - contentStart);
+      const selectedTo = Math.max(selectedFrom, selection.to - contentStart);
+      const source = String(node.textContent || '');
+      const language = node.attrs?.language || 'text';
+      const beforeText = source.slice(0, selectedFrom).replace(/\n+$/, '');
+      const afterText = source.slice(selectedTo).replace(/^\n+/, '');
+      return {
+        from: from.before(depth),
+        to: from.after(depth),
+        before: beforeText ? [codeBlockNode(beforeText, language)] : [],
+        after: afterText ? [codeBlockNode(afterText, language)] : [],
+      };
+    }
+    return null;
+  }
+
+  function inlineTextContent(value) {
+    let text = String(value || '');
+    const marks = [];
+    let match = text.match(/^\*\*\*(.+)\*\*\*$/s);
+    if (match) {
+      text = match[1];
+      marks.push({ type: 'bold' }, { type: 'italic' });
+    } else if ((match = text.match(/^\*\*(.+)\*\*$/s))) {
+      text = match[1];
+      marks.push({ type: 'bold' });
+    } else if ((match = text.match(/^\*(.+)\*$/s))) {
+      text = match[1];
+      marks.push({ type: 'italic' });
+    }
+    const node = { type: 'text', text };
+    if (marks.length) node.marks = marks;
+    return [node];
   }
 
   function codeBlockNode(value, language) {

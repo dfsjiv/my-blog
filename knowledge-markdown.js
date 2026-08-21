@@ -107,9 +107,35 @@
     });
   }
 
+  function restoreLegacyEntities(value) {
+    return String(value || '')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#(?:39|x27);/gi, "'")
+      .replace(/&amp;/gi, '&');
+  }
+
+  function expandLegacyCenteredTextBlocks(markdown) {
+    return String(markdown || '').replace(
+      /^\s*(```+|~~~+)\s*(?:text|plaintext)\s*\n([\s\S]*?)\n\s*\1\s*$/gim,
+      function (block, fence, body) {
+        const lines = body.split('\n');
+        const content = lines.filter(function (line) { return line.trim(); });
+        const centeredProse = content.length > 0 && content.every(function (line) {
+          return /^\s*(?:\*{1,3}|_{1,3}).+(?:\*{1,3}|_{1,3})\s*$/.test(line);
+        });
+        if (!centeredProse) return block;
+        return content.map(function (line) {
+          return '{center} ' + restoreLegacyEntities(line.trim());
+        }).join('\n\n');
+      }
+    );
+  }
+
   function expandAlignedParagraphs(markdown) {
     let fence = null;
-    return String(markdown || '').split('\n').map(function (line) {
+    return expandLegacyCenteredTextBlocks(markdown).split('\n').map(function (line) {
       const fenceMatch = line.match(/^\s*(```+|~~~+)/);
       if (fenceMatch) {
         fence = fence ? null : fenceMatch[1][0];
@@ -190,5 +216,6 @@
     copyCode,
     headingSlug,
     safeUrl,
+    expandLegacyCenteredTextBlocks,
   };
 }());
