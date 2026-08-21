@@ -854,7 +854,7 @@
           previewOverlay.solution.appendChild(item);
         });
       }
-      markdownRenderer.render(payload.contentMarkdown, previewOverlay.body);
+      markdownRenderer.renderHtml(state.editor.getHTML(), previewOverlay.body);
       previewOverlay.root.hidden = false;
       previewOverlay.close.focus();
     }

@@ -124,8 +124,37 @@
     return /^Vector\s*<\s*[^,<>{};]+\s*,\s*[^,<>{};]+\s*>\s*=\s*\([^(){};]+\)\s*\.?$/i.test(text);
   }
 
+  function expandLegacyIndentedVectorBlocks(markdown) {
+    const lines = String(markdown || '').split('\n');
+    const output = [];
+    let index = 0;
+    while (index < lines.length) {
+      if (!/^(?: {4,}|\t)/.test(lines[index])) {
+        output.push(lines[index]);
+        index += 1;
+        continue;
+      }
+      const block = [];
+      let cursor = index;
+      while (cursor < lines.length && (/^(?: {4,}|\t)/.test(lines[cursor]) || !lines[cursor].trim())) {
+        block.push(lines[cursor]);
+        cursor += 1;
+      }
+      const content = block.filter(function (line) { return line.trim(); });
+      if (content.length > 0 && content.every(isVectorNotationLine)) {
+        output.push(content.map(function (line) {
+          return '{center} ' + restoreLegacyEntities(line.trim());
+        }).join('\n\n'));
+      } else {
+        output.push(block.join('\n'));
+      }
+      index = cursor;
+    }
+    return output.join('\n');
+  }
+
   function expandLegacyCenteredTextBlocks(markdown) {
-    return String(markdown || '').replace(
+    const expandedFences = String(markdown || '').replace(
       /^\s*(```+|~~~+)\s*(?:text|plaintext)\s*\n([\s\S]*?)\n\s*\1\s*$/gim,
       function (block, fence, body) {
         const lines = body.split('\n');
@@ -148,6 +177,7 @@
         }).join('\n\n');
       }
     );
+    return expandLegacyIndentedVectorBlocks(expandedFences);
   }
 
   function expandAlignedParagraphs(markdown) {
@@ -211,7 +241,12 @@
       USE_PROFILES: { html: true },
       FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'style', 'svg', 'math'],
       FORBID_ATTR: ['style'],
+      ADD_ATTR: ['data-align'],
       ALLOW_DATA_ATTR: false,
+    });
+    fragment.querySelectorAll('[data-align="center"]').forEach(function (node) {
+      node.classList.add('knowledge-align-center');
+      node.removeAttribute('data-align');
     });
     container.replaceChildren(fragment);
     secureLinks(container);
@@ -234,5 +269,6 @@
     headingSlug,
     safeUrl,
     expandLegacyCenteredTextBlocks,
+    expandLegacyIndentedVectorBlocks,
   };
 }());

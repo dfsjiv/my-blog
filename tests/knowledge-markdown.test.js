@@ -60,4 +60,22 @@ assert.equal(
   ].join('\n')
 );
 
+const indentedVectorNotation = [
+  '    **Vector&lt;O,P&gt; = ( x , y )**',
+  '',
+  '    **Vector&lt;O,A&gt; = ( Ax , Ay )**',
+  '',
+  '    **Vector&lt;O,B&gt; = ( Bx , By )**',
+].join('\n');
+assert.equal(
+  markdown.expandLegacyCenteredTextBlocks(indentedVectorNotation),
+  [
+    '{center} **Vector<O,P> = ( x , y )**',
+    '',
+    '{center} **Vector<O,A> = ( Ax , Ay )**',
+    '',
+    '{center} **Vector<O,B> = ( Bx , By )**',
+  ].join('\n')
+);
+
 console.log('knowledge markdown tests passed');
