@@ -40,4 +40,24 @@ assert.equal(
 const realCode = ['```text', '  value &lt; limit;', '  count++;', '```'].join('\n');
 assert.equal(markdown.expandLegacyCenteredTextBlocks(realCode), realCode);
 
+const vectorNotation = [
+  '```text',
+  'Vector&lt;O,P&gt; = ( x , y )',
+  '',
+  'Vector&lt;O,A&gt; = ( Ax , Ay )',
+  '',
+  'Vector&lt;O,B&gt; = ( Bx , By )',
+  '```',
+].join('\n');
+assert.equal(
+  markdown.expandLegacyCenteredTextBlocks(vectorNotation),
+  [
+    '{center} Vector<O,P> = ( x , y )',
+    '',
+    '{center} Vector<O,A> = ( Ax , Ay )',
+    '',
+    '{center} Vector<O,B> = ( Bx , By )',
+  ].join('\n')
+);
+
 console.log('knowledge markdown tests passed');

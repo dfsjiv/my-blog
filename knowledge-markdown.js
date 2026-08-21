@@ -116,6 +116,14 @@
       .replace(/&amp;/gi, '&');
   }
 
+  function isVectorNotationLine(value) {
+    const text = restoreLegacyEntities(value).trim()
+      .replace(/^(?:\*{1,3}|_{1,3})/, '')
+      .replace(/(?:\*{1,3}|_{1,3})$/, '')
+      .trim();
+    return /^Vector\s*<\s*[^,<>{};]+\s*,\s*[^,<>{};]+\s*>\s*=\s*\([^(){};]+\)\s*\.?$/i.test(text);
+  }
+
   function expandLegacyCenteredTextBlocks(markdown) {
     return String(markdown || '').replace(
       /^\s*(```+|~~~+)\s*(?:text|plaintext)\s*\n([\s\S]*?)\n\s*\1\s*$/gim,
@@ -131,7 +139,9 @@
           && content.every(function (line) {
             return !/[{};]|^\s*#\s*include\b/.test(restoreLegacyEntities(line));
           });
-        const centeredProse = wrappedProse || encodedCenteredProse;
+        const vectorNotationProse = content.length > 0
+          && content.every(isVectorNotationLine);
+        const centeredProse = wrappedProse || encodedCenteredProse || vectorNotationProse;
         if (!centeredProse) return block;
         return content.map(function (line) {
           return '{center} ' + restoreLegacyEntities(line.trim());
