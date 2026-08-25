@@ -107,6 +107,22 @@
     });
   }
 
+  function enhanceMath(container) {
+    if (typeof window.renderMathInElement !== 'function') return;
+    window.renderMathInElement(container, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false },
+      ],
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+      throwOnError: false,
+      strict: 'ignore',
+      trust: false,
+    });
+  }
+
   function restoreLegacyEntities(value) {
     return String(value || '')
       .replace(/&lt;/gi, '<')
@@ -229,6 +245,7 @@
     container.replaceChildren(fragment);
     secureLinks(container);
     secureImages(container);
+    enhanceMath(container);
     enhanceCodeBlocks(container);
     return {
       headings: addHeadingAnchors(container),
@@ -251,6 +268,7 @@
     container.replaceChildren(fragment);
     secureLinks(container);
     secureImages(container);
+    enhanceMath(container);
     enhanceCodeBlocks(container);
     return {
       headings: addHeadingAnchors(container),
@@ -268,6 +286,7 @@
     copyCode,
     headingSlug,
     safeUrl,
+    enhanceMath,
     expandLegacyCenteredTextBlocks,
     expandLegacyIndentedVectorBlocks,
   };

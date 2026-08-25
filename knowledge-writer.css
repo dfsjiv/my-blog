@@ -320,6 +320,160 @@
   outline: none;
 }
 
+.knowledge-writer-formula-picker {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-trigger {
+  min-width: 88px;
+  color: var(--knowledge-primary);
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-trigger::after {
+  content: " ▾";
+}
+
+.knowledge-writer-formula-panel[hidden] {
+  display: none;
+}
+
+.knowledge-writer-formula-panel {
+  position: fixed;
+  z-index: 90;
+  top: 158px;
+  left: 50%;
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(680px, calc(100vh - 180px));
+  padding: 15px;
+  overflow: auto;
+  transform: translateX(-50%);
+  color: var(--knowledge-text);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border-strong);
+  border-radius: 6px;
+  box-shadow: var(--knowledge-shadow);
+}
+
+.knowledge-writer-formula-panel > header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.knowledge-writer-formula-panel > header strong {
+  font-size: 16px;
+}
+
+.knowledge-writer-formula-panel > header small,
+.knowledge-writer-formula-hint {
+  color: var(--knowledge-muted);
+  font-size: 11px;
+}
+
+.knowledge-writer-formula-panel > input {
+  width: 100%;
+  height: 36px;
+  margin: 12px 0 10px;
+  padding: 0 11px;
+  color: var(--knowledge-text);
+  background: var(--knowledge-bg);
+  border: 1px solid var(--knowledge-border);
+  border-radius: 3px;
+  outline: none;
+}
+
+.knowledge-writer-formula-panel > input:focus {
+  border-color: var(--knowledge-primary);
+}
+
+.knowledge-writer-formula-groups {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--knowledge-border);
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-groups button {
+  height: 29px;
+  color: var(--knowledge-muted);
+  background: transparent;
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-groups button.is-active {
+  color: var(--knowledge-primary);
+  background: var(--knowledge-primary-soft);
+  border-color: var(--knowledge-primary);
+}
+
+.knowledge-writer-formula-catalog {
+  display: grid;
+  gap: 15px;
+  padding-top: 12px;
+}
+
+.knowledge-writer-formula-section[hidden] {
+  display: none;
+}
+
+.knowledge-writer-formula-section h4 {
+  margin: 0 0 7px;
+  color: var(--knowledge-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.knowledge-writer-formula-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-item {
+  width: 100%;
+  height: 64px;
+  min-width: 0;
+  padding: 7px 8px;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  overflow: hidden;
+  color: var(--knowledge-text);
+  background: var(--knowledge-bg);
+  font-weight: 400;
+}
+
+.knowledge-writer-source-tools .knowledge-writer-formula-item:hover,
+.knowledge-writer-source-tools .knowledge-writer-formula-item:focus-visible {
+  background: var(--knowledge-primary-soft);
+}
+
+.knowledge-writer-formula-preview {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--knowledge-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 17px;
+}
+
+.knowledge-writer-formula-preview .katex {
+  font-size: 1em;
+}
+
+.knowledge-writer-formula-item small {
+  color: var(--knowledge-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.knowledge-writer-formula-hint {
+  margin: 13px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--knowledge-border);
+}
+
 .knowledge-writer-source-input {
   width: 100%;
   min-height: 496px;
@@ -340,6 +494,17 @@
   min-height: 538px;
   padding: 20px;
   overflow: auto;
+}
+
+@media (max-width: 640px) {
+  .knowledge-writer-formula-panel {
+    top: 120px;
+    max-height: calc(100vh - 140px);
+  }
+
+  .knowledge-writer-formula-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .knowledge-tiptap-editor {

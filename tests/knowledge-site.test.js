@@ -52,6 +52,9 @@ assert.match(html, /data-about-link="manga" role="menuitem"/);
 assert.match(html, /data-about-link="novels" role="menuitem"/);
 assert.match(html, /assets\/vendor\/knowledge\/marked\.umd\.js/);
 assert.match(html, /assets\/vendor\/knowledge\/purify\.min\.js/);
+assert.match(html, /assets\/vendor\/katex\/katex\.min\.css/);
+assert.match(html, /assets\/vendor\/katex\/katex\.min\.js/);
+assert.match(html, /assets\/vendor\/katex\/auto-render\.min\.js/);
 assert.match(html, /knowledge-markdown\.js/);
 assert.match(html, /knowledge-writer\.css/);
 assert.match(html, /assets\/vendor\/knowledge-editor\/tiptap\.bundle\.js/);
@@ -146,6 +149,9 @@ assert.doesNotMatch(site, /\beval\(/);
 assert.doesNotMatch(site, /new Function/);
 
 assert.match(markdown, /markedApi\.parse/);
+assert.match(markdown, /window\.renderMathInElement/);
+assert.match(markdown, /left: '\$\$'/);
+assert.match(markdown, /left: '\$'/);
 assert.match(markdown, /function renderHtml/);
 assert.match(markdown, /purifier\.sanitize/);
 assert.match(markdown, /RETURN_DOM_FRAGMENT:\s*true/);
@@ -171,6 +177,11 @@ assert.match(repository, /function deletePost/);
 assert.match(repository, /function createEditableLegacyPost/);
 assert.match(writer, /knowledge-writer-draft:v1:/);
 assert.match(writer, /AUTO_SAVE_DELAY = 1500/);
+assert.match(writer, /FORMULA_GROUPS/);
+assert.match(writer, /\\overrightarrow\{AB\}/);
+assert.match(writer, /selectionTemplate:\s*'\\\\overrightarrow\{%s\}'/);
+assert.match(writer, /\\frac\{a\}\{b\}/);
+assert.match(writer, /knowledge-writer-formula-panel/);
 assert.match(writer, /editorDocumentToMarkdown/);
 assert.match(writer, /getAdminPost/);
 assert.match(writer, /createPost/);
@@ -283,6 +294,13 @@ assert.match(site, /user\.role !== 'guest'/);
     fs.existsSync(path.join(root, 'assets', 'vendor', 'knowledge', file)),
     true,
     `${file} should be vendored locally`
+  );
+});
+['katex.min.css', 'katex.min.js', 'auto-render.min.js', 'LICENSE'].forEach((file) => {
+  assert.equal(
+    fs.existsSync(path.join(root, 'assets', 'vendor', 'katex', file)),
+    true,
+    `${file} should be vendored locally for formula rendering`
   );
 });
 assert.equal(

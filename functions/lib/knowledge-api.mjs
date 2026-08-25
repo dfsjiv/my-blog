@@ -20,6 +20,10 @@ import {
     handleKnowledgeFavoriteRequest,
     isKnowledgeFavoritePath
 } from "./knowledge-favorites.mjs";
+import {
+    handleKnowledgeInvitationRequest,
+    isKnowledgeInvitationPath
+} from "./knowledge-invitations.mjs";
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -51,6 +55,9 @@ export async function handleKnowledgeRequest(context) {
     try {
         if (isKnowledgeFavoritePath(url.pathname)) {
             return await handleKnowledgeFavoriteRequest(context, requireAuthor);
+        }
+        if (isKnowledgeInvitationPath(url.pathname)) {
+            return await handleKnowledgeInvitationRequest(context, requireAuthor);
         }
         const publicPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/posts\/([^/]+)$/);
         const adminPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/admin\/posts\/(\d+)$/);

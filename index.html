@@ -110,8 +110,9 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260807-mikutap-3" />
-  <link rel="stylesheet" href="knowledge-site.css?v=20260813-2" />
-  <link rel="stylesheet" href="knowledge-writer.css?v=20260825-1" />
+  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
+  <link rel="stylesheet" href="knowledge-site.css?v=20260825-3" />
+  <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
   <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
@@ -264,6 +265,19 @@
               <button type="button" data-about-link="novels" role="menuitem">
                 <span class="knowledge-nav-menu-icon" data-icon-zh="文" data-icon-en="NV" aria-hidden="true"></span>
                 <span>小说</span>
+              </button>
+            </div>
+          </div>
+          <div class="knowledge-nav-menu knowledge-admin-settings" id="knowledgeSettingsMenu"
+            data-knowledge-nav-menu="settings" hidden>
+            <button class="knowledge-nav-menu-trigger" type="button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeSettingsSubmenu">
+              设置 <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="knowledge-nav-submenu" id="knowledgeSettingsSubmenu" role="menu" hidden>
+              <button type="button" data-knowledge-route="invitations" role="menuitem">
+                <span class="knowledge-nav-menu-icon" data-icon-zh="邀" data-icon-en="IC" aria-hidden="true"></span>
+                <span>邀请码</span>
               </button>
             </div>
           </div>
@@ -845,18 +859,20 @@ Camera: --, --, --</pre>
   <script src="home-desktop.js"></script>
   <script src="auth.js?v=20260814-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n.js?v=20260804-2"></script>
+  <script src="knowledge-i18n.js?v=20260825-invitations-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
-  <script src="knowledge-markdown.js?v=20260821-2"></script>
-  <script src="knowledge-repository.js"></script>
+  <script src="assets/vendor/katex/katex.min.js"></script>
+  <script src="assets/vendor/katex/auto-render.min.js"></script>
+  <script src="knowledge-markdown.js?v=20260825-3"></script>
+  <script src="knowledge-repository.js?v=20260825-invitations-1"></script>
   <script src="knowledge-favorites.js"></script>
   <script src="assets/vendor/knowledge-editor/tiptap.bundle.js"></script>
   <script src="knowledge-editor-adapter.js?v=20260810-1"></script>
-  <script src="knowledge-writer.js?v=20260825-1"></script>
+  <script src="knowledge-writer.js?v=20260825-3"></script>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
-  <script src="knowledge-site.js?v=20260814-1"></script>
+  <script src="knowledge-site.js?v=20260825-invitations-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>

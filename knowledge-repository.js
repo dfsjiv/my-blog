@@ -363,6 +363,26 @@
     return adaptPost(data && data.post);
   }
 
+  async function getInvitations(options) {
+    const data = await apiRequest(API_ROOT + '/admin/invitations', options);
+    return Array.isArray(data && data.items) ? data.items : [];
+  }
+
+  async function createInvitation(input, options) {
+    const settings = Object.assign({}, options || {}, { method: 'POST', body: input });
+    const data = await apiRequest(API_ROOT + '/admin/invitations', settings);
+    return data && data.invitation;
+  }
+
+  async function revokeInvitation(id, options) {
+    const settings = Object.assign({}, options || {}, { method: 'DELETE' });
+    const data = await apiRequest(
+      API_ROOT + '/admin/invitations/' + encodeURIComponent(String(id)),
+      settings
+    );
+    return data && data.invitation;
+  }
+
   async function uploadImage(file, options) {
     const settings = options || {};
     const requestSignal = createRequestSignal(settings.signal, UPLOAD_TIMEOUT_MS);
@@ -505,6 +525,9 @@
     createEditableLegacyPost,
     changePostState,
     deletePost,
+    getInvitations,
+    createInvitation,
+    revokeInvitation,
     uploadImage,
     searchPosts,
     getArchivePosts,

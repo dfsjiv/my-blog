@@ -580,6 +580,105 @@ body.auth-elegant .knowledge-site {
   gap: 10px;
 }
 
+.knowledge-invitation-workspace,
+.knowledge-invitation-list {
+  display: grid;
+  gap: 14px;
+}
+
+.knowledge-invitation-form {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  background: var(--knowledge-surface);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+}
+
+.knowledge-invitation-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+.knowledge-invitation-form input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  color: var(--knowledge-text);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+  font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.knowledge-invitation-message,
+.knowledge-invitation-reveal {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.knowledge-invitation-message.is-error {
+  color: #ef8e8e;
+}
+
+.knowledge-invitation-reveal {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--knowledge-surface-solid);
+  border: 1px solid color-mix(in srgb, var(--knowledge-accent) 55%, var(--knowledge-border));
+}
+
+.knowledge-invitation-reveal[hidden] {
+  display: none;
+}
+
+.knowledge-invitation-reveal code {
+  overflow-wrap: anywhere;
+  color: var(--knowledge-accent);
+  font-size: 18px;
+}
+
+.knowledge-invitation-row {
+  padding: 15px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--knowledge-surface);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+}
+
+.knowledge-invitation-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.knowledge-invitation-row p {
+  margin: 7px 0 0;
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 820px) {
+  .knowledge-invitation-form {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-invitation-message,
+  .knowledge-invitation-reveal {
+    grid-column: 1;
+  }
+}
+
 .knowledge-admin-row {
   padding: 16px;
   display: grid;
@@ -1960,6 +2059,19 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-detail-body .knowledge-align-center {
   text-align: center;
+}
+
+.knowledge-detail-body .katex-display {
+  margin: 1.35em 0;
+  padding: 4px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+
+.knowledge-detail-body .katex {
+  color: var(--knowledge-text);
+  font-size: 1.05em;
 }
 
 .knowledge-detail-body blockquote,

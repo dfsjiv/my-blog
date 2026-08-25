@@ -26,6 +26,82 @@
     ['csharp', 'C#'],
     ['rust', 'Rust'],
   ];
+  const FORMULA_GROUPS = [
+    ['vector', '向量'],
+    ['function', '函数'],
+    ['calculus', '微积分'],
+    ['set', '集合与逻辑'],
+    ['science', '科学符号'],
+    ['icon', '图标'],
+  ];
+  const FORMULA_ITEMS = [
+    {
+      id: 'vector-arrow',
+      group: 'vector',
+      name: '上方箭头向量',
+      latex: '\\overrightarrow{AB}',
+      selectionTemplate: '\\overrightarrow{%s}',
+    },
+    {
+      id: 'vector-short',
+      group: 'vector',
+      name: '短箭头向量',
+      latex: '\\vec{v}',
+      selectionTemplate: '\\vec{%s}',
+    },
+    { id: 'vector-unit', group: 'vector', name: '单位向量', latex: '\\hat{\\mathbf{n}}' },
+    { id: 'vector-bold', group: 'vector', name: '粗体向量', latex: '\\mathbf{v}' },
+    { id: 'vector-length', group: 'vector', name: '向量长度', latex: '\\left|\\vec{v}\\right|' },
+    { id: 'vector-norm', group: 'vector', name: '向量范数', latex: '\\lVert\\vec{v}\\rVert' },
+    { id: 'vector-dot', group: 'vector', name: '点积', latex: '\\vec{a}\\cdot\\vec{b}' },
+    { id: 'vector-cross', group: 'vector', name: '叉积', latex: '\\vec{a}\\times\\vec{b}' },
+    { id: 'function-value', group: 'function', name: '函数', latex: 'f(x)' },
+    { id: 'function-sin', group: 'function', name: '正弦', latex: '\\sin x' },
+    { id: 'function-cos', group: 'function', name: '余弦', latex: '\\cos x' },
+    { id: 'function-tan', group: 'function', name: '正切', latex: '\\tan x' },
+    { id: 'function-log', group: 'function', name: '对数', latex: '\\log_a x' },
+    { id: 'function-ln', group: 'function', name: '自然对数', latex: '\\ln x' },
+    { id: 'function-exp', group: 'function', name: '指数', latex: 'e^{x}' },
+    { id: 'function-abs', group: 'function', name: '绝对值', latex: '\\left|x\\right|' },
+    { id: 'fraction', group: 'calculus', name: '分式', latex: '\\frac{a}{b}' },
+    { id: 'sqrt', group: 'calculus', name: '平方根', latex: '\\sqrt{x}' },
+    { id: 'root', group: 'calculus', name: 'n 次根', latex: '\\sqrt[n]{x}' },
+    { id: 'sum', group: 'calculus', name: '求和', latex: '\\sum_{i=1}^{n} a_i', display: true },
+    { id: 'product', group: 'calculus', name: '连乘', latex: '\\prod_{i=1}^{n} a_i', display: true },
+    { id: 'integral', group: 'calculus', name: '定积分', latex: '\\int_{a}^{b} f(x)\\,dx', display: true },
+    { id: 'limit', group: 'calculus', name: '极限', latex: '\\lim_{x\\to a} f(x)', display: true },
+    { id: 'derivative', group: 'calculus', name: '导数', latex: '\\frac{d}{dx}f(x)' },
+    { id: 'partial', group: 'calculus', name: '偏导数', latex: '\\frac{\\partial f}{\\partial x}' },
+    { id: 'matrix', group: 'calculus', name: '矩阵', latex: '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}', display: true },
+    { id: 'element', group: 'set', name: '属于', latex: 'x\\in A' },
+    { id: 'not-element', group: 'set', name: '不属于', latex: 'x\\notin A' },
+    { id: 'subset', group: 'set', name: '子集', latex: 'A\\subseteq B' },
+    { id: 'union', group: 'set', name: '并集', latex: 'A\\cup B' },
+    { id: 'intersection', group: 'set', name: '交集', latex: 'A\\cap B' },
+    { id: 'forall', group: 'set', name: '任意', latex: '\\forall x' },
+    { id: 'exists', group: 'set', name: '存在', latex: '\\exists x' },
+    { id: 'implies', group: 'set', name: '推出', latex: 'P\\Rightarrow Q' },
+    { id: 'iff', group: 'set', name: '等价', latex: 'P\\Leftrightarrow Q' },
+    { id: 'logic', group: 'set', name: '且 / 或', latex: 'P\\land Q\\quad P\\lor Q' },
+    { id: 'greek', group: 'science', name: '希腊字母', latex: '\\alpha,\\beta,\\gamma,\\theta,\\lambda,\\mu,\\pi,\\Delta' },
+    { id: 'relation', group: 'science', name: '关系符号', latex: '\\leq,\\geq,\\neq,\\approx,\\propto' },
+    { id: 'infinity', group: 'science', name: '无穷', latex: '\\infty' },
+    { id: 'plus-minus', group: 'science', name: '正负', latex: '\\pm' },
+    { id: 'angle', group: 'science', name: '角度', latex: '\\angle ABC=90^{\\circ}' },
+    { id: 'parallel', group: 'science', name: '平行 / 垂直', latex: 'a\\parallel b\\quad a\\perp c' },
+    { id: 'scientific', group: 'science', name: '科学计数法', latex: '6.02\\times10^{23}' },
+    { id: 'unit', group: 'science', name: '单位', latex: '9.8\\,\\mathrm{m/s^2}' },
+    { id: 'icon-check', group: 'icon', name: '完成', text: '✓' },
+    { id: 'icon-cross', group: 'icon', name: '错误', text: '✕' },
+    { id: 'icon-info', group: 'icon', name: '信息', text: 'ⓘ' },
+    { id: 'icon-warning', group: 'icon', name: '警告', text: '⚠' },
+    { id: 'icon-star', group: 'icon', name: '星标', text: '★' },
+    { id: 'icon-heart', group: 'icon', name: '喜欢', text: '♥' },
+    { id: 'icon-circle', group: 'icon', name: '圆点', text: '●' },
+    { id: 'icon-square', group: 'icon', name: '方块', text: '■' },
+    { id: 'icon-arrow', group: 'icon', name: '箭头', text: '→' },
+    { id: 'icon-double-arrow', group: 'icon', name: '双向箭头', text: '↔' },
+  ];
   const adapter = window.KnowledgeEditorAdapter;
   const repository = window.KnowledgeRepository;
   const markdownRenderer = window.KnowledgeMarkdown;
@@ -180,6 +256,9 @@
       element('span', '', '可直接输入任意 Markdown 和特殊符号')
     );
     const sourceTools = buildSourceToolbar();
+    const formulaPicker = sourceTools.querySelector('[data-formula-picker]');
+    const formulaPanel = sourceTools.querySelector('[data-formula-panel]');
+    const formulaSearch = sourceTools.querySelector('[data-formula-search]');
     const sourceInput = document.createElement('textarea');
     sourceInput.className = 'knowledge-writer-source-input';
     sourceInput.placeholder = '在这里编辑 Markdown 原文…';
@@ -413,6 +492,51 @@
       }
       const parts = actions[action];
       if (parts) insertSourceText(parts[0], parts[1], parts[2]);
+    }
+
+    function insertFormula(item) {
+      if (!item) return;
+      const start = sourceInput.selectionStart;
+      const end = sourceInput.selectionEnd;
+      const selected = sourceInput.value.slice(start, end).trim();
+      const latex = item.selectionTemplate && selected
+        ? item.selectionTemplate.replace('%s', selected)
+        : item.latex;
+      if (item.text) {
+        insertSourceText(item.text, '', '');
+      } else if (item.display) {
+        insertSourceText('\n$$\n' + latex + '\n$$\n', '', '');
+      } else if (item.selectionTemplate && selected) {
+        sourceInput.setRangeText('$' + latex + '$', start, end, 'end');
+        sourceInput.focus();
+        handleSourceChange();
+      } else {
+        insertSourceText('$' + latex + '$', '', '');
+      }
+      formulaPanel.hidden = true;
+      formulaPicker.setAttribute('aria-expanded', 'false');
+    }
+
+    function filterFormulaItems(group, query) {
+      const selectedGroup = group || 'all';
+      const keyword = String(query || '').trim().toLocaleLowerCase();
+      sourceTools.querySelectorAll('[data-formula-group]').forEach(function (button) {
+        button.classList.toggle('is-active', button.dataset.formulaGroup === selectedGroup);
+      });
+      sourceTools.querySelectorAll('[data-formula-item]').forEach(function (button) {
+        const item = FORMULA_ITEMS.find(function (entry) {
+          return entry.id === button.dataset.formulaItem;
+        });
+        const groupMatches = selectedGroup === 'all' || item?.group === selectedGroup;
+        const searchText = [item?.name, item?.latex, item?.text]
+          .filter(Boolean).join(' ').toLocaleLowerCase();
+        button.hidden = !groupMatches || Boolean(keyword && !searchText.includes(keyword));
+      });
+      sourceTools.querySelectorAll('[data-formula-section]').forEach(function (section) {
+        section.hidden = !Array.from(section.querySelectorAll('[data-formula-item]')).some(function (button) {
+          return !button.hidden;
+        });
+      });
     }
 
     function handleSourceChange() {
@@ -954,6 +1078,8 @@
 
     function closeTransientMenus() {
       linkPopover.hidden = true;
+      if (formulaPanel) formulaPanel.hidden = true;
+      if (formulaPicker) formulaPicker.setAttribute('aria-expanded', 'false');
       closeSlashMenu();
       if (state.editor) {
         state.editor.view.dispatch(
@@ -1033,6 +1159,11 @@
       const modifier = event.ctrlKey || event.metaKey;
       if (!modifier) {
         if (event.key === 'Escape' && !previewOverlay.root.hidden) closePreview();
+        else if (event.key === 'Escape' && formulaPanel && !formulaPanel.hidden) {
+          formulaPanel.hidden = true;
+          formulaPicker.setAttribute('aria-expanded', 'false');
+          formulaPicker.focus();
+        }
         return;
       }
       if (event.key.toLowerCase() === 's') {
@@ -1126,14 +1257,37 @@
       }
     });
     sourceTools.addEventListener('click', function (event) {
+      const formulaToggle = event.target.closest('[data-formula-picker]');
+      if (formulaToggle) {
+        formulaPanel.hidden = !formulaPanel.hidden;
+        formulaToggle.setAttribute('aria-expanded', String(!formulaPanel.hidden));
+        if (!formulaPanel.hidden) formulaSearch.focus();
+        return;
+      }
+      const formulaItem = event.target.closest('[data-formula-item]');
+      if (formulaItem) {
+        insertFormula(FORMULA_ITEMS.find(function (item) {
+          return item.id === formulaItem.dataset.formulaItem;
+        }));
+        return;
+      }
+      const formulaGroup = event.target.closest('[data-formula-group]');
+      if (formulaGroup) {
+        filterFormulaItems(formulaGroup.dataset.formulaGroup, formulaSearch.value);
+        return;
+      }
       const button = event.target.closest('[data-source-action]');
       if (button) runSourceAction(button.dataset.sourceAction, button.dataset.sourceValue);
     });
-    sourceTools.addEventListener('change', function (event) {
-      if (event.target.matches('[data-source-symbol]') && event.target.value) {
-        runSourceAction('symbol', event.target.value);
-        event.target.value = '';
-      }
+    sourceTools.addEventListener('input', function (event) {
+      if (!event.target.matches('[data-formula-search]')) return;
+      const activeGroup = sourceTools.querySelector('[data-formula-group].is-active')?.dataset.formulaGroup;
+      filterFormulaItems(activeGroup, event.target.value);
+    });
+    page.addEventListener('click', function (event) {
+      if (formulaPanel.hidden || event.target.closest('.knowledge-writer-formula-picker')) return;
+      formulaPanel.hidden = true;
+      formulaPicker.setAttribute('aria-expanded', 'false');
     });
     languageSelect.addEventListener('change', function () {
       if (!state.editor) return;
@@ -1227,16 +1381,75 @@
     language.dataset.sourceLanguage = '';
     language.setAttribute('aria-label', '代码块语言');
     LANGUAGE_OPTIONS.forEach(function (value) { language.appendChild(new Option(value, value)); });
-    const symbols = document.createElement('select');
-    symbols.dataset.sourceSymbol = '';
-    symbols.setAttribute('aria-label', '插入常用符号');
-    symbols.appendChild(new Option('符号…', ''));
-    [
-      '→', '←', '↔', '⇒', '≤', '≥', '≠', '≈', '∞', '∑', '√', '×', '·',
-      '°', 'α', 'β', 'θ', 'π', 'Δ', '∈', '∉', '⊂', '⊆', '∪', '∩', '⃗',
-    ].forEach(function (value) { symbols.appendChild(new Option(value, value)); });
-    toolbar.append(language, symbols);
+    toolbar.append(language, buildFormulaPicker());
     return toolbar;
+  }
+
+  function buildFormulaPicker() {
+    const picker = element('div', 'knowledge-writer-formula-picker');
+    const trigger = element('button', 'knowledge-writer-formula-trigger', '公式与符号');
+    trigger.type = 'button';
+    trigger.dataset.formulaPicker = '';
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-haspopup', 'dialog');
+
+    const panel = element('section', 'knowledge-writer-formula-panel');
+    panel.hidden = true;
+    panel.dataset.formulaPanel = '';
+    panel.setAttribute('aria-label', '插入公式、符号或图标');
+    const header = element('header');
+    header.append(
+      element('strong', '', '公式与符号'),
+      element('small', '', '点击后插入 Markdown / LaTeX')
+    );
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = '搜索向量、函数、积分、符号…';
+    search.dataset.formulaSearch = '';
+    search.setAttribute('aria-label', '搜索公式和符号');
+    const groups = element('nav', 'knowledge-writer-formula-groups');
+    [['all', '全部']].concat(FORMULA_GROUPS).forEach(function (entry, index) {
+      const button = element('button', index === 0 ? 'is-active' : '', entry[1]);
+      button.type = 'button';
+      button.dataset.formulaGroup = entry[0];
+      groups.appendChild(button);
+    });
+    const catalog = element('div', 'knowledge-writer-formula-catalog');
+    FORMULA_GROUPS.forEach(function (group) {
+      const section = element('section', 'knowledge-writer-formula-section');
+      section.dataset.formulaSection = group[0];
+      section.appendChild(element('h4', '', group[1]));
+      const grid = element('div', 'knowledge-writer-formula-grid');
+      FORMULA_ITEMS.filter(function (item) { return item.group === group[0]; }).forEach(function (item) {
+        const button = element('button', 'knowledge-writer-formula-item');
+        button.type = 'button';
+        button.dataset.formulaItem = item.id;
+        button.title = item.latex || item.text;
+        const preview = element('span', 'knowledge-writer-formula-preview');
+        if (item.latex && window.katex) {
+          window.katex.render(item.latex, preview, {
+            throwOnError: false,
+            displayMode: false,
+            strict: 'ignore',
+            trust: false,
+          });
+        } else {
+          preview.textContent = item.text || item.latex;
+        }
+        button.append(preview, element('small', '', item.name));
+        grid.appendChild(button);
+      });
+      section.appendChild(grid);
+      catalog.appendChild(section);
+    });
+    const hint = element(
+      'p',
+      'knowledge-writer-formula-hint',
+      '先选中 AB 再点“上方箭头向量”，可得到真正的向量公式。文章中保存的仍是 Markdown / LaTeX 原文。'
+    );
+    panel.append(header, search, groups, catalog, hint);
+    picker.append(trigger, panel);
+    return picker;
   }
 
   function buildRecoveryBanner() {

@@ -32,6 +32,7 @@
   const languageButton = document.getElementById('knowledgeLanguageButton');
   const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
+  const settingsMenu = document.getElementById('knowledgeSettingsMenu');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
   const accountSummary = accountMenu ? accountMenu.querySelector('summary') : null;
@@ -318,6 +319,7 @@
       accountSummary.title = label;
     }
     authorTools.hidden = !(activeUser && activeUser.role === 'admin');
+    if (settingsMenu) settingsMenu.hidden = !(activeUser && activeUser.role === 'admin');
   }
 
   function applyTheme() {
@@ -870,7 +872,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'all', 'categories', 'tags', 'archives', 'about',
-      'writer', 'drafts', 'manage', 'mover'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1088,6 +1090,7 @@
     if (route === 'mover') return renderArticleMover();
     if (route === 'writer') return renderWriter(details);
     if (route === 'drafts' || route === 'manage') return renderAdminPosts(route, details, controller);
+    if (route === 'invitations') return renderInvitations(controller);
     return navigate('home', {}, { replace: true });
   }
 
@@ -1487,6 +1490,158 @@
       element('p', '', '页面只展示已经发布且未删除的知识文章。')
     );
     shellNode.appendChild(content);
+  }
+
+  async function renderInvitations(controller) {
+    if (!isAuthor()) return navigate('home', {}, { replace: true });
+    const node = showRouteShell(
+      'ADMIN',
+      t('邀请码'),
+      t('创建一次性邀请码并设置有效时间。邀请码明文只在创建成功时显示一次。')
+    );
+    const workspace = element('div', 'knowledge-invitation-workspace');
+    const form = element('form', 'knowledge-invitation-form');
+    const codeLabel = element('label');
+    codeLabel.append(element('span', '', t('邀请码')));
+    const codeInput = element('input');
+    codeInput.name = 'code';
+    codeInput.type = 'text';
+    codeInput.inputMode = 'text';
+    codeInput.autocomplete = 'off';
+    codeInput.maxLength = 64;
+    codeInput.pattern = '[A-Za-z0-9]+';
+    codeInput.placeholder = t('仅限英文字母和数字');
+    codeLabel.appendChild(codeInput);
+
+    const expiryLabel = element('label');
+    expiryLabel.append(element('span', '', t('有效时间')));
+    const expiryInput = element('input');
+    expiryInput.name = 'expiresAt';
+    expiryInput.type = 'datetime-local';
+    const defaultExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    expiryInput.value = localDateTimeValue(defaultExpiry);
+    expiryLabel.appendChild(expiryInput);
+
+    const createButton = button(t('创建邀请码'), 'knowledge-route-button is-primary');
+    createButton.type = 'submit';
+    const message = element('p', 'knowledge-invitation-message');
+    message.setAttribute('role', 'status');
+    const reveal = element('div', 'knowledge-invitation-reveal');
+    reveal.hidden = true;
+    form.append(codeLabel, expiryLabel, createButton, message, reveal);
+
+    const heading = element('div', 'knowledge-section-heading');
+    heading.append(element('h2', '', t('邀请码记录')));
+    const list = element('div', 'knowledge-invitation-list');
+    list.appendChild(makeLoadingState(t('正在加载邀请码…')));
+    workspace.append(form, heading, list);
+    node.appendChild(workspace);
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (createButton.disabled) return;
+      const code = codeInput.value.trim();
+      const expiry = new Date(expiryInput.value);
+      if (!/^[A-Za-z0-9]{1,64}$/.test(code)) {
+        message.textContent = t('邀请码只能包含英文字母和数字');
+        message.classList.add('is-error');
+        return;
+      }
+      if (Number.isNaN(expiry.getTime()) || expiry.getTime() <= Date.now()) {
+        message.textContent = t('请选择晚于当前时间的有效期');
+        message.classList.add('is-error');
+        return;
+      }
+      createButton.disabled = true;
+      message.classList.remove('is-error');
+      message.textContent = t('正在创建…');
+      try {
+        const invitation = await repository.createInvitation({
+          code,
+          expiresAt: expiry.toISOString(),
+        }, { token: currentToken(), signal: controller.signal });
+        if (controller.signal.aborted) return;
+        message.textContent = t('邀请码已创建，请立即保存。');
+        reveal.replaceChildren();
+        const value = element('code', '', invitation.code);
+        const copyButton = button(t('复制'), 'knowledge-route-button');
+        copyButton.addEventListener('click', function () {
+          navigator.clipboard?.writeText(invitation.code);
+          copyButton.textContent = t('已复制');
+        });
+        reveal.append(value, copyButton);
+        reveal.hidden = false;
+        codeInput.value = '';
+        await loadInvitationList();
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        message.textContent = error.message || t('邀请码创建失败');
+        message.classList.add('is-error');
+      } finally {
+        createButton.disabled = false;
+      }
+    });
+
+    async function loadInvitationList() {
+      list.replaceChildren(makeLoadingState(t('正在加载邀请码…')));
+      try {
+        const items = await repository.getInvitations({
+          token: currentToken(),
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        list.replaceChildren();
+        if (!items.length) {
+          list.appendChild(makeEmptyState(t('暂无邀请码'), t('创建的邀请码会显示在这里。')));
+          return;
+        }
+        items.forEach(function (invitation) {
+          const row = element('article', 'knowledge-invitation-row');
+          const info = element('div');
+          const title = element('div', 'knowledge-invitation-title');
+          title.append(
+            element('code', '', invitation.codePreview),
+            element('span', 'knowledge-admin-status is-' + invitation.status, invitationStatus(invitation.status))
+          );
+          info.append(
+            title,
+            element('p', '', t('创建：') + formatDate(invitation.createdAt, true)
+              + ' · ' + t('过期：') + formatDate(invitation.expiresAt, true))
+          );
+          row.appendChild(info);
+          if (invitation.status === 'active') {
+            const revoke = button(t('作废'), 'knowledge-route-button is-danger');
+            revoke.addEventListener('click', async function () {
+              revoke.disabled = true;
+              try {
+                await repository.revokeInvitation(invitation.id, { token: currentToken() });
+                await loadInvitationList();
+              } catch (error) {
+                message.textContent = error.message || t('邀请码作废失败');
+                message.classList.add('is-error');
+                revoke.disabled = false;
+              }
+            });
+            row.appendChild(revoke);
+          }
+          list.appendChild(row);
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        list.replaceChildren(makeErrorState(loadInvitationList));
+      }
+    }
+
+    await loadInvitationList();
+  }
+
+  function localDateTimeValue(date) {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  }
+
+  function invitationStatus(status) {
+    return t({ active: '有效', used: '已使用', expired: '已过期', revoked: '已作废' }[status] || status);
   }
 
   async function renderAdminPosts(route, initialFilters, controller) {
