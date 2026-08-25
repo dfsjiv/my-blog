@@ -62,6 +62,37 @@
   font-size: 12px;
 }
 
+.knowledge-writer-view-modes {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  gap: 2px;
+  background: var(--knowledge-bg);
+  border: 1px solid var(--knowledge-border);
+  border-radius: 5px;
+}
+
+.knowledge-writer-view-modes button {
+  min-height: 28px;
+  padding: 0 10px;
+  color: var(--knowledge-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font: 600 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.knowledge-writer-view-modes button:hover,
+.knowledge-writer-view-modes button:focus-visible {
+  color: var(--knowledge-text);
+  outline: 1px solid var(--knowledge-border);
+}
+
+.knowledge-writer-view-modes button.is-active {
+  color: #fff;
+  background: var(--knowledge-primary);
+}
+
 .knowledge-writer-toolbar {
   min-height: 54px;
   padding: 7px 20px;
@@ -208,6 +239,107 @@
 
 .knowledge-writer-editor-host {
   margin-top: 28px;
+}
+
+.knowledge-writer-toolbar[hidden],
+.knowledge-writer-source-workspace[hidden],
+.knowledge-writer-source-preview[hidden] {
+  display: none;
+}
+
+.knowledge-writer-source-workspace {
+  min-height: 580px;
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 1px solid var(--knowledge-border);
+  background: var(--knowledge-bg);
+}
+
+.knowledge-writer-page[data-editor-mode="split"] .knowledge-writer-source-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.knowledge-writer-source-pane,
+.knowledge-writer-source-preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-writer-source-preview {
+  border-left: 1px solid var(--knowledge-border);
+  background: var(--knowledge-surface-solid);
+}
+
+.knowledge-writer-source-pane > header,
+.knowledge-writer-source-preview > header {
+  min-height: 42px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--knowledge-text);
+  border-bottom: 1px solid var(--knowledge-border);
+  font-size: 12px;
+}
+
+.knowledge-writer-source-pane > header span {
+  margin-left: auto;
+  color: var(--knowledge-muted);
+  font-size: 11px;
+}
+
+.knowledge-writer-source-tools {
+  min-height: 42px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--knowledge-border);
+}
+
+.knowledge-writer-source-tools button,
+.knowledge-writer-source-tools select {
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0 9px;
+  color: var(--knowledge-muted);
+  background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border);
+  border-radius: 3px;
+  font: 600 12px/1 "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.knowledge-writer-source-tools button:hover,
+.knowledge-writer-source-tools button:focus-visible,
+.knowledge-writer-source-tools select:focus-visible {
+  color: var(--knowledge-text);
+  border-color: var(--knowledge-primary);
+  outline: none;
+}
+
+.knowledge-writer-source-input {
+  width: 100%;
+  min-height: 496px;
+  flex: 1;
+  resize: vertical;
+  padding: 20px;
+  color: var(--knowledge-text);
+  background: var(--knowledge-bg);
+  border: 0;
+  outline: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  font: 14px/1.75 Consolas, "Cascadia Code", monospace;
+}
+
+.knowledge-writer-source-preview > article {
+  min-height: 538px;
+  padding: 20px;
+  overflow: auto;
 }
 
 .knowledge-tiptap-editor {
@@ -852,6 +984,15 @@
     display: none;
   }
 
+  .knowledge-writer-view-modes {
+    margin-left: auto;
+  }
+
+  .knowledge-writer-view-modes button {
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+
   .knowledge-writer-toolbar {
     padding: 6px 8px;
   }
@@ -872,6 +1013,16 @@
   .knowledge-tiptap-editor {
     min-height: 440px;
     font-size: 16px;
+  }
+
+  .knowledge-writer-page[data-editor-mode="split"] .knowledge-writer-source-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .knowledge-writer-page[data-editor-mode="split"] .knowledge-writer-source-preview {
+    min-height: 440px;
+    border-top: 1px solid var(--knowledge-border);
+    border-left: 0;
   }
 
   .knowledge-writer-bottom {
@@ -918,6 +1069,19 @@
 
   .knowledge-writer-top-status {
     display: none;
+  }
+
+  .knowledge-writer-view-modes button {
+    padding-inline: 6px;
+  }
+
+  .knowledge-writer-view-modes button:nth-child(2) {
+    font-size: 0;
+  }
+
+  .knowledge-writer-view-modes button:nth-child(2)::after {
+    content: "MD";
+    font-size: 11px;
   }
 
   .knowledge-writer-paper {

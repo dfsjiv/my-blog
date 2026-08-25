@@ -84,6 +84,9 @@
       settingsOpen: false,
       bodyImageUploading: false,
       coverUploading: false,
+      editorMode: 'rich',
+      sourceSyncing: false,
+      sourcePreviewTimer: null,
     };
 
     const page = element('section', 'knowledge-writer-page');
@@ -98,7 +101,20 @@
       window.authManager?.getCurrentUser?.().username || 'Lee Ethan'
     );
     const panelToggle = iconButton('文章设置', '☰', 'toggle-panel');
-    primaryBar.append(backButton, mode, topStatus, author, panelToggle);
+    const viewModes = element('div', 'knowledge-writer-view-modes');
+    [
+      ['rich', '富文本'],
+      ['markdown', 'Markdown'],
+      ['split', '分屏'],
+    ].forEach(function (entry) {
+      const button = element('button', '', entry[1]);
+      button.type = 'button';
+      button.dataset.writerMode = entry[0];
+      button.setAttribute('aria-pressed', String(entry[0] === 'rich'));
+      if (entry[0] === 'rich') button.classList.add('is-active');
+      viewModes.appendChild(button);
+    });
+    primaryBar.append(backButton, mode, topStatus, viewModes, author, panelToggle);
 
     const toolbar = element('div', 'knowledge-writer-toolbar');
     const toolbarMain = element('div', 'knowledge-writer-toolbar-scroll');
@@ -155,6 +171,26 @@
     const titleError = element('span', 'knowledge-writer-title-error');
     titleWrap.append(titleInput, titleCount, titleError);
     const editorHost = element('div', 'knowledge-writer-editor-host');
+    const sourceWorkspace = element('div', 'knowledge-writer-source-workspace');
+    sourceWorkspace.hidden = true;
+    const sourcePane = element('section', 'knowledge-writer-source-pane');
+    const sourceHeader = element('header');
+    sourceHeader.append(
+      element('strong', '', 'Markdown'),
+      element('span', '', '可直接输入任意 Markdown 和特殊符号')
+    );
+    const sourceTools = buildSourceToolbar();
+    const sourceInput = document.createElement('textarea');
+    sourceInput.className = 'knowledge-writer-source-input';
+    sourceInput.placeholder = '在这里编辑 Markdown 原文…';
+    sourceInput.spellcheck = false;
+    sourceInput.setAttribute('aria-label', 'Markdown 原文');
+    sourcePane.append(sourceHeader, sourceTools, sourceInput);
+    const sourcePreview = element('section', 'knowledge-writer-source-preview');
+    const sourcePreviewHeader = element('header', '', '实时预览');
+    const sourcePreviewBody = element('article', 'knowledge-detail-body');
+    sourcePreview.append(sourcePreviewHeader, sourcePreviewBody);
+    sourceWorkspace.append(sourcePane, sourcePreview);
     const bodyImageInput = document.createElement('input');
     bodyImageInput.type = 'file';
     bodyImageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
@@ -175,6 +211,7 @@
       recovery,
       titleWrap,
       editorHost,
+      sourceWorkspace,
       bodyImageInput,
       bubble,
       slashMenu,
@@ -245,6 +282,7 @@
         handleMenuKey: handleEditorMenuKey,
         onEscape: closeTransientMenus,
       });
+      sourceInput.value = initialMarkdown;
       titleCount.textContent = titleInput.value.length + ' / 100';
       updateMetrics();
       updateToc();
@@ -287,7 +325,105 @@
       return input.type === 'checkbox' ? input.checked : input.value.trim();
     }
 
+    function currentMarkdown() {
+      if (state.editorMode !== 'rich') return sourceInput.value;
+      return state.editor ? adapter.editorDocumentToMarkdown(state.editor) : '';
+    }
+
+    function currentPlainText() {
+      if (state.editorMode === 'rich') {
+        return state.editor ? state.editor.getText({ blockSeparator: '\n' }) : '';
+      }
+      const scratch = document.createElement('div');
+      markdownRenderer.render(sourceInput.value, scratch);
+      return scratch.textContent || '';
+    }
+
+    function renderSourcePreview() {
+      window.clearTimeout(state.sourcePreviewTimer);
+      if (state.editorMode !== 'split') return;
+      state.sourcePreviewTimer = window.setTimeout(function () {
+        markdownRenderer.render(sourceInput.value, sourcePreviewBody);
+      }, 100);
+    }
+
+    function setEditorMode(nextMode) {
+      if (!['rich', 'markdown', 'split'].includes(nextMode) || nextMode === state.editorMode) return;
+      if (state.editorMode === 'rich') {
+        sourceInput.value = adapter.editorDocumentToMarkdown(state.editor);
+      }
+      if (nextMode === 'rich') {
+        state.sourceSyncing = true;
+        state.editor.commands.setContent(sourceInput.value, { contentType: 'markdown' });
+        state.sourceSyncing = false;
+      }
+      state.editorMode = nextMode;
+      editorHost.hidden = nextMode !== 'rich';
+      sourceWorkspace.hidden = nextMode === 'rich';
+      page.dataset.editorMode = nextMode;
+      toolbar.hidden = nextMode !== 'rich';
+      sourcePreview.hidden = nextMode !== 'split';
+      viewModes.querySelectorAll('[data-writer-mode]').forEach(function (button) {
+        const active = button.dataset.writerMode === nextMode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      editMode.textContent = nextMode === 'rich'
+        ? '富文本模式'
+        : nextMode === 'split' ? 'Markdown 分屏模式' : 'Markdown 模式';
+      closeTransientMenus();
+      renderSourcePreview();
+      updateMetrics();
+      updateToc();
+      if (nextMode === 'rich') state.editor.commands.focus();
+      else sourceInput.focus();
+    }
+
+    function insertSourceText(before, after, fallback) {
+      const start = sourceInput.selectionStart;
+      const end = sourceInput.selectionEnd;
+      const selected = sourceInput.value.slice(start, end) || fallback || '';
+      const replacement = before + selected + after;
+      sourceInput.setRangeText(replacement, start, end, 'end');
+      if (!selected && !fallback) sourceInput.setSelectionRange(start + before.length, start + before.length);
+      sourceInput.focus();
+      handleSourceChange();
+    }
+
+    function runSourceAction(action, value) {
+      const sourceLanguage = sourceTools.querySelector('[data-source-language]')?.value || 'text';
+      const actions = {
+        bold: ['**', '**', '加粗文字'],
+        italic: ['*', '*', '斜体文字'],
+        h2: ['## ', '', '二级标题'],
+        quote: ['> ', '', '引用内容'],
+        code: ['`', '`', 'code'],
+        'code-block': ['```' + (value || sourceLanguage) + '\n', '\n```', '在这里输入代码'],
+        link: ['[', '](https://)', '链接文字'],
+        image: ['![', '](https://)', '图片描述'],
+        center: ['{center} ', '', '居中文本'],
+      };
+      if (action === 'upload-image') {
+        bodyImageInput.click();
+        return;
+      }
+      if (action === 'symbol') {
+        insertSourceText(value || '', '', '');
+        return;
+      }
+      const parts = actions[action];
+      if (parts) insertSourceText(parts[0], parts[1], parts[2]);
+    }
+
+    function handleSourceChange() {
+      markDirty();
+      updateMetrics();
+      updateToc();
+      renderSourcePreview();
+    }
+
     function handleDocumentChange() {
+      if (state.sourceSyncing) return;
       markDirty();
       updateMetrics();
       updateToc();
@@ -311,7 +447,8 @@
         postId: state.postId,
         title: titleInput.value,
         document: state.editor.getJSON(),
-        markdown: adapter.editorDocumentToMarkdown(state.editor),
+        markdown: currentMarkdown(),
+        editorMode: state.editorMode,
         settings: collectSettings(),
         lastEditedAt: new Date().toISOString(),
       };
@@ -335,15 +472,18 @@
       } catch (error) {
         draft = null;
       }
-      if (!draft || !draft.document || !draft.lastEditedAt) return;
+      if (!draft || (!draft.document && !draft.markdown) || !draft.lastEditedAt) return;
       recovery.hidden = false;
       recovery.querySelector('[data-recovery-time]').textContent =
         '最后编辑：' + formatTime(new Date(draft.lastEditedAt));
       recovery.querySelector('[data-recovery-restore]').onclick = function () {
         titleInput.value = String(draft.title || '').slice(0, 100);
-        state.editor.commands.setContent(draft.document);
+        if (draft.document) state.editor.commands.setContent(draft.document);
+        else state.editor.commands.setContent(draft.markdown || '', { contentType: 'markdown' });
+        sourceInput.value = draft.markdown || adapter.editorDocumentToMarkdown(state.editor);
         applyDraftSettings(draft.settings || {});
         recovery.hidden = true;
+        setEditorMode(draft.editorMode === 'split' ? 'split' : draft.editorMode === 'markdown' ? 'markdown' : 'rich');
         markDirty();
       };
       recovery.querySelector('[data-recovery-discard]').onclick = function () {
@@ -388,7 +528,7 @@
         title: titleInput.value.trim(),
         slug: values.slug,
         summary: values.summary,
-        contentMarkdown: adapter.editorDocumentToMarkdown(state.editor),
+        contentMarkdown: currentMarkdown(),
         category: values.category,
         tags,
         status: status || values.status,
@@ -425,7 +565,8 @@
       }
       if (!payload.contentMarkdown.trim()) {
         showNotice('正文不能为空。', true);
-        state.editor.commands.focus();
+        if (state.editorMode === 'rich') state.editor.commands.focus();
+        else sourceInput.focus();
         return false;
       }
       if (publishing && payload.type === 'solution') {
@@ -496,8 +637,8 @@
 
     function updateMetrics() {
       if (!state.editor) return;
-      const markdown = adapter.editorDocumentToMarkdown(state.editor);
-      const text = state.editor.getText({ blockSeparator: '\n' });
+      const markdown = currentMarkdown();
+      const text = currentPlainText();
       const chinese = (text.match(/[\u3400-\u9fff]/g) || []).length;
       const words = (text.match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g) || []).length;
       const count = chinese + words;
@@ -510,11 +651,18 @@
       if (!state.editor) return;
       sidePanel.tocList.replaceChildren();
       const headings = [];
-      state.editor.state.doc.descendants(function (node, pos) {
-        if (node.type.name === 'heading' && node.attrs.level <= 3) {
-          headings.push({ level: node.attrs.level, text: node.textContent || '未命名标题', pos });
-        }
-      });
+      if (state.editorMode === 'rich') {
+        state.editor.state.doc.descendants(function (node, pos) {
+          if (node.type.name === 'heading' && node.attrs.level <= 3) {
+            headings.push({ level: node.attrs.level, text: node.textContent || '未命名标题', pos });
+          }
+        });
+      } else {
+        sourceInput.value.split('\n').forEach(function (line, lineIndex) {
+          const match = /^(#{1,3})\s+(.+)$/.exec(line);
+          if (match) headings.push({ level: match[1].length, text: match[2].replace(/[*_`]/g, '').trim(), lineIndex });
+        });
+      }
       if (!headings.length) {
         sidePanel.tocList.appendChild(element('p', 'knowledge-writer-toc-empty', '正文中还没有标题。'));
         return;
@@ -524,7 +672,16 @@
         item.type = 'button';
         item.dataset.level = String(heading.level);
         item.addEventListener('click', function () {
-          state.editor.chain().focus(heading.pos + 1).scrollIntoView().run();
+          if (state.editorMode === 'rich') {
+            state.editor.chain().focus(heading.pos + 1).scrollIntoView().run();
+          } else {
+            const lines = sourceInput.value.split('\n');
+            const offset = lines.slice(0, heading.lineIndex).reduce(function (total, line) {
+              return total + line.length + 1;
+            }, 0);
+            sourceInput.focus();
+            sourceInput.setSelectionRange(offset, offset + lines[heading.lineIndex].length);
+          }
           if (window.innerWidth <= 768) closePanel();
         });
         sidePanel.tocList.appendChild(item);
@@ -624,11 +781,15 @@
       showNotice('正在上传图片…');
       try {
         const image = await repository.uploadImage(file, { token: currentToken() });
-        state.editor.chain().focus().setImage({
-          src: image.url,
-          alt: file.name || '文章图片',
-          title: file.name || null,
-        }).run();
+        if (state.editorMode === 'rich') {
+          state.editor.chain().focus().setImage({
+            src: image.url,
+            alt: file.name || '文章图片',
+            title: file.name || null,
+          }).run();
+        } else {
+          insertSourceText('![', '](' + image.url + ')', file.name || '文章图片');
+        }
         markDirty();
         showNotice('图片已插入正文。');
       } catch (error) {
@@ -854,7 +1015,11 @@
           previewOverlay.solution.appendChild(item);
         });
       }
-      markdownRenderer.renderHtml(state.editor.getHTML(), previewOverlay.body);
+      if (state.editorMode === 'rich') {
+        markdownRenderer.renderHtml(state.editor.getHTML(), previewOverlay.body);
+      } else {
+        markdownRenderer.render(payload.contentMarkdown, previewOverlay.body);
+      }
       previewOverlay.root.hidden = false;
       previewOverlay.close.focus();
     }
@@ -876,7 +1041,8 @@
         saveLocalDraft();
       } else if (event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        openLinkPopover();
+        if (state.editorMode === 'rich') openLinkPopover();
+        else runSourceAction('link');
       }
     }
 
@@ -891,6 +1057,11 @@
       if (target && !target.disabled) runAction(target.dataset.editorAction);
     });
     primaryBar.addEventListener('click', function (event) {
+      const modeButton = event.target.closest('[data-writer-mode]');
+      if (modeButton) {
+        setEditorMode(modeButton.dataset.writerMode);
+        return;
+      }
       const target = event.target.closest('[data-editor-action]');
       if (target && !target.disabled) runAction(target.dataset.editorAction);
     });
@@ -943,7 +1114,25 @@
     titleInput.addEventListener('keydown', function (event) {
       if (event.key === 'Enter') {
         event.preventDefault();
-        state.editor?.commands.focus('start');
+        if (state.editorMode === 'rich') state.editor?.commands.focus('start');
+        else sourceInput.focus();
+      }
+    });
+    sourceInput.addEventListener('input', handleSourceChange);
+    sourceInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        insertSourceText('  ', '', '');
+      }
+    });
+    sourceTools.addEventListener('click', function (event) {
+      const button = event.target.closest('[data-source-action]');
+      if (button) runSourceAction(button.dataset.sourceAction, button.dataset.sourceValue);
+    });
+    sourceTools.addEventListener('change', function (event) {
+      if (event.target.matches('[data-source-symbol]') && event.target.value) {
+        runSourceAction('symbol', event.target.value);
+        event.target.value = '';
       }
     });
     languageSelect.addEventListener('change', function () {
@@ -1002,6 +1191,7 @@
       if (state.dirty && state.editor) saveLocalDraft();
       state.destroyed = true;
       window.clearTimeout(state.saveTimer);
+      window.clearTimeout(state.sourcePreviewTimer);
       window.clearTimeout(noticeTimer);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('beforeunload', beforeUnload);
@@ -1010,6 +1200,43 @@
     }
 
     return { initialize, destroy: destroySession, state };
+  }
+
+  function buildSourceToolbar() {
+    const toolbar = element('div', 'knowledge-writer-source-tools');
+    [
+      ['二级标题', 'H2', 'h2'],
+      ['加粗', 'B', 'bold'],
+      ['斜体', 'I', 'italic'],
+      ['行内代码', '</>', 'code'],
+      ['引用', '❝', 'quote'],
+      ['链接', '🔗', 'link'],
+      ['图片语法', '图', 'image'],
+      ['上传图片', '↑图', 'upload-image'],
+      ['居中段落', '居中', 'center'],
+      ['代码块', '{ }', 'code-block'],
+    ].forEach(function (entry) {
+      const button = element('button', '', entry[1]);
+      button.type = 'button';
+      button.title = entry[0];
+      button.setAttribute('aria-label', entry[0]);
+      button.dataset.sourceAction = entry[2];
+      toolbar.appendChild(button);
+    });
+    const language = document.createElement('select');
+    language.dataset.sourceLanguage = '';
+    language.setAttribute('aria-label', '代码块语言');
+    LANGUAGE_OPTIONS.forEach(function (value) { language.appendChild(new Option(value, value)); });
+    const symbols = document.createElement('select');
+    symbols.dataset.sourceSymbol = '';
+    symbols.setAttribute('aria-label', '插入常用符号');
+    symbols.appendChild(new Option('符号…', ''));
+    [
+      '→', '←', '↔', '⇒', '≤', '≥', '≠', '≈', '∞', '∑', '√', '×', '·',
+      '°', 'α', 'β', 'θ', 'π', 'Δ', '∈', '∉', '⊂', '⊆', '∪', '∩', '⃗',
+    ].forEach(function (value) { symbols.appendChild(new Option(value, value)); });
+    toolbar.append(language, symbols);
+    return toolbar;
   }
 
   function buildRecoveryBanner() {
