@@ -182,6 +182,38 @@ body.auth-login .login-mikutap-frame {
   grid-template-columns: minmax(0, 1fr) 38px;
 }
 
+.register-invitation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+}
+
+.register-invitation-row[hidden] {
+  display: none;
+}
+
+.register-invitation-field input {
+  border-right-width: 0;
+}
+
+.register-verify {
+  height: 38px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 0;
+  background: rgba(32, 32, 32, 0.76);
+  color: #fff;
+  font: 12px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.register-verify:hover:not(:disabled) {
+  border-color: #4aa9e9;
+  background: #0067b8;
+}
+
+.register-verify:disabled {
+  color: rgba(255, 255, 255, 0.48);
+}
+
 .login-password-field {
   min-width: 0;
 }
@@ -258,6 +290,23 @@ body.auth-login .login-mikutap-frame {
 .login-guest:focus-visible {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.09);
+  outline: none;
+}
+
+.login-mode-switch {
+  align-self: center;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: 12px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+
+.login-mode-switch:hover:not(:disabled),
+.login-mode-switch:focus-visible {
+  color: #fff;
+  text-decoration: underline;
   outline: none;
 }
 

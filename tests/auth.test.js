@@ -111,6 +111,39 @@ function response(status, data, jsonError) {
 
   {
     const storage = createStorage();
+    const requests = [];
+    const auth = BlogAuth.createAuthManager({
+      storage,
+      fetch: async (url, options) => {
+        requests.push({ url, options });
+        if (url.endsWith('/api/register/invitation')) {
+          return response(200, { success: true, valid: true });
+        }
+        return response(201, {
+          success: true,
+          user: { id: 3, username: 'new_user', role: 'user' },
+          sessionToken: 'register-token',
+          expiresAt: '2026-08-26T00:00:00Z',
+        });
+      },
+    });
+    await auth.verifyInvitation(' Invite123 ');
+    const user = await auth.register(' new_user ', 'register-secret', ' Invite123 ');
+    assert.strictEqual(user.role, 'user');
+    assert.strictEqual(storage.values.blog_session_token, 'register-token');
+    assert.strictEqual(requests[0].url, BlogAuth.API_BASE_URL + '/api/register/invitation');
+    assert.deepStrictEqual(JSON.parse(requests[0].options.body), { invitationCode: 'Invite123' });
+    assert.strictEqual(requests[1].url, BlogAuth.API_BASE_URL + '/api/register');
+    assert.deepStrictEqual(JSON.parse(requests[1].options.body), {
+      username: 'new_user',
+      password: 'register-secret',
+      invitationCode: 'Invite123',
+    });
+    assert.ok(!Object.values(storage.values).some((value) => value.includes('register-secret')));
+  }
+
+  {
+    const storage = createStorage();
     const auth = BlogAuth.createAuthManager({
       storage,
       fetch: async () => response(401, { success: false, message: 'invalid' }),
@@ -199,13 +232,16 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="loginForm"/);
   assert.match(indexHtml, /id="loginMikutapFrame"/);
   assert.match(indexHtml, /id="guestButton"/);
+  assert.match(indexHtml, /id="registerInvitation"/);
+  assert.match(indexHtml, /id="registerVerifyButton"/);
+  assert.match(indexHtml, /id="loginModeSwitch"/);
   assert.match(indexHtml, /id="elegantShell"/);
   assert.match(indexHtml, /data-knowledge-action="desktop">My OS/);
   assert.doesNotMatch(indexHtml, /id="versionSelector"/);
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20260814-1"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20260825-register-1"><\/script>/);
   assert.match(indexHtml, /data-src="assets\/vendor\/mikutap\/background\?auto=1&amp;v=20260807-17"/);
   assert.doesNotMatch(indexHtml, /\ssrc="assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /id="loginScreen"[^>]*aria-hidden="true"/);

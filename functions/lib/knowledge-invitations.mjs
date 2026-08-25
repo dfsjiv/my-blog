@@ -116,6 +116,21 @@ export async function consumeInvitationCode(code, userId, env) {
     return Number(result.meta.changes) === 1;
 }
 
+export async function isInvitationCodeAvailable(code, env) {
+    if (typeof code !== "string" || !CODE_PATTERN.test(code.trim())) return false;
+    const codeHash = await hashInvitationCode(code.trim());
+    const invitation = await env.DB.prepare(`
+        SELECT id
+        FROM knowledge_invitation_codes
+        WHERE code_hash = ?
+          AND used_at IS NULL
+          AND revoked_at IS NULL
+          AND datetime(expires_at) > CURRENT_TIMESTAMP
+        LIMIT 1
+    `).bind(codeHash).first();
+    return Boolean(invitation);
+}
+
 async function getInvitation(id, env) {
     const row = await env.DB.prepare(`
         SELECT id, code_preview, expires_at, created_at, used_at, used_by, revoked_at

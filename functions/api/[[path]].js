@@ -1,5 +1,9 @@
 import { getContestsResponse } from "../lib/contests/index.mjs";
 import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
+import {
+    handleRegistrationRequest,
+    isRegistrationPath
+} from "../lib/registration.mjs";
 
 const ALLOWED_ORIGINS = new Set([
     "https://lilinzheng.top",
@@ -71,6 +75,15 @@ export async function onRequest(context) {
             request.method === "POST"
         ) {
             response = await handleLogin(request, env);
+        }
+
+        else if (isRegistrationPath(url.pathname)) {
+            response = await handleRegistrationRequest({
+                request,
+                env,
+                url,
+                jsonResponse
+            });
         }
 
         /* ==============================================
@@ -241,6 +254,7 @@ export async function onRequest(context) {
            ============================================== */
         else if (
             url.pathname === "/api/login" ||
+            isRegistrationPath(url.pathname) ||
             url.pathname === "/api/me" ||
             url.pathname === "/api/logout" ||
             url.pathname === "/api/chat/messages" ||

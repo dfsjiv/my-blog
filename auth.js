@@ -133,7 +133,12 @@
       }
 
       if (!response.ok || !data || data.success === false) {
-        throw new AuthError('api_error', '请求失败', response.status);
+        const apiMessage = data && typeof data.message === 'string'
+          ? data.message
+          : (data && data.error && typeof data.error.message === 'string'
+            ? data.error.message
+            : '请求失败');
+        throw new AuthError('api_error', apiMessage, response.status);
       }
 
       return data;
@@ -168,6 +173,34 @@
         throw new AuthError('invalid_response', '服务器返回了无法识别的数据');
       }
 
+      saveAccountSession(data.sessionToken, user, data.expiresAt);
+      return user;
+    }
+
+    async function verifyInvitation(invitationCode) {
+      const code = typeof invitationCode === 'string' ? invitationCode.trim() : '';
+      if (!code) throw new AuthError('invitation_required', '邀请码不能为空');
+      return apiRequest('/api/register/invitation', {
+        method: 'POST',
+        body: { invitationCode: code },
+      });
+    }
+
+    async function register(username, password, invitationCode) {
+      const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+      const code = typeof invitationCode === 'string' ? invitationCode.trim() : '';
+      if (!code) throw new AuthError('invitation_required', '请先输入并验证邀请码');
+      if (!normalizedUsername) throw new AuthError('username_required', '用户名不能为空');
+      if (!password) throw new AuthError('password_required', '密码不能为空');
+
+      const data = await apiRequest('/api/register', {
+        method: 'POST',
+        body: { username: normalizedUsername, password, invitationCode: code },
+      });
+      const user = normalizeAccountUser(data.user);
+      if (!user || typeof data.sessionToken !== 'string' || !data.sessionToken) {
+        throw new AuthError('invalid_response', '服务器返回了无法识别的数据');
+      }
       saveAccountSession(data.sessionToken, user, data.expiresAt);
       return user;
     }
@@ -241,6 +274,8 @@
       state,
       apiRequest,
       login,
+      verifyInvitation,
+      register,
       enterAsGuest,
       restoreSession,
       logout,
@@ -261,6 +296,10 @@
       username: document.getElementById('loginUsername'),
       password: document.getElementById('loginPassword'),
       loginButton: document.getElementById('loginButton'),
+      invitationRow: document.getElementById('registerInvitationRow'),
+      invitation: document.getElementById('registerInvitation'),
+      verifyButton: document.getElementById('registerVerifyButton'),
+      modeSwitch: document.getElementById('loginModeSwitch'),
       guestButton: document.getElementById('guestButton'),
       loginMessage: document.getElementById('loginMessage'),
       elegantShell: document.getElementById('elegantShell'),
@@ -274,6 +313,9 @@
 
     const auth = createAuthManager();
     let loginPending = false;
+    let authMode = 'login';
+    let invitationVerified = false;
+    let verificationPending = false;
     window.authState = auth.state;
     window.authManager = auth;
 
@@ -284,14 +326,42 @@
 
     function setLoginPending(pending, message) {
       loginPending = pending;
-      elements.username.disabled = pending;
-      elements.password.disabled = pending;
+      const credentialsLocked = authMode === 'register' && !invitationVerified;
+      elements.username.disabled = pending || credentialsLocked;
+      elements.password.disabled = pending || credentialsLocked;
+      elements.invitation.disabled = pending || authMode !== 'register';
+      elements.verifyButton.disabled = pending
+        || verificationPending
+        || authMode !== 'register'
+        || !elements.invitation.value.trim();
       elements.loginButton.disabled = pending;
       elements.guestButton.disabled = pending;
+      elements.modeSwitch.disabled = pending;
       elements.loginButton.textContent = pending ? '' : '→';
       elements.loginButton.classList.toggle('is-loading', pending);
-      elements.loginButton.setAttribute('aria-label', pending ? '正在登录' : '登录');
+      const actionLabel = authMode === 'register' ? '注册' : '登录';
+      elements.loginButton.setAttribute('aria-label', pending ? '正在' + actionLabel : actionLabel);
       setMessage(message || '', pending);
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === 'register' ? 'register' : 'login';
+      invitationVerified = false;
+      verificationPending = false;
+      elements.invitationRow.hidden = authMode !== 'register';
+      elements.loginScreen.querySelector('.login-panel h1').textContent = authMode === 'register'
+        ? '创建账户'
+        : '账户登录';
+      elements.modeSwitch.textContent = authMode === 'register'
+        ? '已有账号？去登录'
+        : '没有账号？去注册';
+      elements.username.autocomplete = authMode === 'register' ? 'new-username' : 'username';
+      elements.password.autocomplete = authMode === 'register' ? 'new-password' : 'current-password';
+      elements.username.value = '';
+      elements.password.value = '';
+      elements.invitation.value = '';
+      setLoginPending(false, '');
+      (authMode === 'register' ? elements.invitation : elements.username).focus();
     }
 
     function resetDesktopUi() {
@@ -326,6 +396,7 @@
       elements.loginScreen.removeAttribute('aria-hidden');
       elements.elegantShell.setAttribute('aria-hidden', 'true');
       elements.password.value = '';
+      setAuthMode('login');
       setLoginPending(false, '');
       setMessage(message || '', false);
       elements.username.focus();
@@ -388,6 +459,11 @@
 
       const username = elements.username.value.trim();
       const password = elements.password.value;
+      if (authMode === 'register' && !invitationVerified) {
+        setMessage('请先验证邀请码', false);
+        elements.invitation.focus();
+        return;
+      }
       if (!username) {
         setMessage('用户名不能为空', false);
         elements.username.focus();
@@ -401,12 +477,51 @@
 
       setLoginPending(true, '');
       try {
-        const user = await auth.login(username, password);
+        const user = authMode === 'register'
+          ? await auth.register(username, password, elements.invitation.value)
+          : await auth.login(username, password);
         showAuthenticatedDestination(user);
       } catch (error) {
-        showLoginScreen(
-          error && error.message ? error.message : '无法连接服务器，请稍后重试'
-        );
+        setLoginPending(false, '');
+        setMessage(error && error.message ? error.message : '无法连接服务器，请稍后重试', false);
+      }
+    });
+
+    elements.modeSwitch.addEventListener('click', function () {
+      if (loginPending) return;
+      setAuthMode(authMode === 'login' ? 'register' : 'login');
+    });
+
+    elements.invitation.addEventListener('input', function () {
+      invitationVerified = false;
+      setLoginPending(false, '');
+    });
+
+    elements.verifyButton.addEventListener('click', async function () {
+      if (loginPending || verificationPending || authMode !== 'register') return;
+      const code = elements.invitation.value.trim();
+      if (!code) {
+        setMessage('邀请码不能为空', false);
+        return;
+      }
+      verificationPending = true;
+      elements.verifyButton.disabled = true;
+      elements.verifyButton.textContent = '验证中';
+      setMessage('正在验证邀请码...', true);
+      try {
+        await auth.verifyInvitation(code);
+        invitationVerified = true;
+        setMessage('邀请码有效，请设置用户名和密码', true);
+        elements.username.disabled = false;
+        elements.password.disabled = false;
+        elements.username.focus();
+      } catch (error) {
+        invitationVerified = false;
+        setMessage(error && error.message ? error.message : '邀请码验证失败', false);
+      } finally {
+        verificationPending = false;
+        elements.verifyButton.textContent = invitationVerified ? '已验证' : '验证';
+        elements.verifyButton.disabled = invitationVerified || !elements.invitation.value.trim();
       }
     });
 

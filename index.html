@@ -109,7 +109,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="home-desktop.css?v=20260807-mikutap-3" />
+  <link rel="stylesheet" href="home-desktop.css?v=20260825-register-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <link rel="stylesheet" href="knowledge-site.css?v=20260825-3" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
@@ -147,6 +147,13 @@
       <img class="login-avatar" src="assets/blog-icon.png" alt="" draggable="false" />
       <h1>账户登录</h1>
       <form class="login-form" id="loginForm" novalidate>
+        <div class="register-invitation-row" id="registerInvitationRow" hidden>
+          <label class="login-field register-invitation-field">
+            <span>邀请码</span>
+            <input id="registerInvitation" name="invitationCode" type="text" autocomplete="off" placeholder="邀请码" disabled />
+          </label>
+          <button class="register-verify" id="registerVerifyButton" type="button" disabled>验证</button>
+        </div>
         <label class="login-field">
           <span>用户名</span>
           <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="用户名" />
@@ -160,6 +167,7 @@
         </div>
         <p class="login-message" id="loginMessage" role="alert" aria-live="polite"></p>
         <button class="login-guest" id="guestButton" type="button">以游客身份进入</button>
+        <button class="login-mode-switch" id="loginModeSwitch" type="button">没有账号？去注册</button>
       </form>
     </div>
     <div class="login-system-icons" aria-label="系统状态">
@@ -857,7 +865,7 @@ Camera: --, --, --</pre>
   <script src="night-rain-city-3d.js"></script>
   <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
-  <script src="auth.js?v=20260814-1"></script>
+  <script src="auth.js?v=20260825-register-1"></script>
   <script src="knowledge-data.js"></script>
   <script src="knowledge-i18n.js?v=20260825-invitations-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
