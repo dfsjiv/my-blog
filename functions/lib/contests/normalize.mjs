@@ -50,17 +50,18 @@ export function getContestStatus(startTime, endTime, now = Date.now()) {
 
 export function createContest(input, now = Date.now()) {
     const startTime = toIsoTime(input.startTime);
-    if (!startTime) return null;
+    const dateTba = input.dateTba === true && !startTime;
+    if (!startTime && !dateTba) return null;
 
     const duration = Number(input.durationSeconds);
     let durationSeconds = Number.isFinite(duration) && duration >= 0
         ? Math.round(duration)
         : null;
     let endTime = toIsoTime(input.endTime);
-    if (!endTime && durationSeconds !== null) {
+    if (startTime && !endTime && durationSeconds !== null) {
         endTime = toIsoTime(Date.parse(startTime) + durationSeconds * 1000);
     }
-    if (endTime && durationSeconds === null) {
+    if (startTime && endTime && durationSeconds === null) {
         durationSeconds = Math.max(0, Math.round((Date.parse(endTime) - Date.parse(startTime)) / 1000));
     }
 
@@ -78,6 +79,7 @@ export function createContest(input, now = Date.now()) {
         title: String(input.title || "未命名比赛").trim(),
         url: String(input.url),
         startTime,
+        dateTba,
         endTime,
         durationSeconds,
         registrationDeadline: toIsoTime(input.registrationDeadline),
@@ -92,7 +94,12 @@ export function createContest(input, now = Date.now()) {
         sourceConfidence: SOURCE_CONFIDENCE_LEVELS.has(input.sourceConfidence)
             ? input.sourceConfidence
             : "official-page",
-        status: getContestStatus(startTime, endTime, now),
+        series: input.series ? String(input.series).trim().toUpperCase() : null,
+        eventMode: ["online", "onsite", "hybrid", "unknown"].includes(input.eventMode)
+            ? input.eventMode
+            : "unknown",
+        location: input.location ? String(input.location).trim() : null,
+        status: dateTba ? "upcoming" : getContestStatus(startTime, endTime, now),
         sourceUpdatedAt: toIsoTime(input.sourceUpdatedAt || now)
     };
 }
@@ -104,6 +111,11 @@ export function sortContests(contests) {
         if (statusDifference) return statusDifference;
         const leftStart = Date.parse(left.startTime);
         const rightStart = Date.parse(right.startTime);
+        if (!Number.isFinite(leftStart) && !Number.isFinite(rightStart)) {
+            return left.title.localeCompare(right.title);
+        }
+        if (!Number.isFinite(leftStart)) return 1;
+        if (!Number.isFinite(rightStart)) return -1;
         return left.status === "finished"
             ? rightStart - leftStart
             : leftStart - rightStart;

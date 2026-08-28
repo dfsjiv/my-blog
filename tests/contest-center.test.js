@@ -28,6 +28,7 @@ const rootDir = path.resolve(__dirname, '..');
   const dmoj = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/dmoj.mjs')));
   const kattis = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/kattis.mjs')));
   const chinaEvents = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/china-events.mjs')));
+  const officialIcpc = await import(pathToFileURL(path.join(rootDir, 'functions/lib/contests/icpc.mjs')));
 
   const normalized = normalize.createContest({
     id: 'test-1',
@@ -45,6 +46,17 @@ const rootDir = path.resolve(__dirname, '..');
   assert.strictEqual(normalized.contestKind, 'competitive-programming');
   assert.strictEqual(normalized.importance, 'normal');
   assert.strictEqual(normalized.sourceConfidence, 'official-page');
+
+  const officialIcpcContests = officialIcpc.getOfficialIcpcContests(Date.parse('2026-08-28T00:00:00Z'));
+  const octoberIcpc = officialIcpcContests.find((contest) => contest.id === 'icpc-asia-west-preliminary-2026');
+  const tbaOnsiteIcpc = officialIcpcContests.find((contest) => contest.id === 'icpc-asia-east-nanchang-2026');
+  assert.ok(octoberIcpc);
+  assert.strictEqual(octoberIcpc.startTime, '2026-10-03T01:00:00.000Z');
+  assert.ok(tbaOnsiteIcpc);
+  assert.strictEqual(tbaOnsiteIcpc.startTime, null);
+  assert.strictEqual(tbaOnsiteIcpc.dateTba, true);
+  assert.strictEqual(tbaOnsiteIcpc.eventMode, 'onsite');
+  assert.strictEqual(tbaOnsiteIcpc.series, 'ICPC');
 
   const atCoderHtml = `
     <div id="contest-table-upcoming"><table><tbody><tr>

@@ -7,6 +7,7 @@ import { fetchCodeChefContests } from "./codechef.mjs";
 import { fetchHackerRankContests } from "./hackerrank.mjs";
 import { fetchDmojContests } from "./dmoj.mjs";
 import { fetchKattisContests } from "./kattis.mjs";
+import { fetchOfficialIcpcContests } from "./icpc.mjs";
 import {
     fetchLanqiaoCupContests,
     fetchBaiduStarContests,
@@ -21,6 +22,7 @@ export const CONTEST_CACHE_SECONDS = 10 * 60;
 const SOURCE_TIMEOUT_MS = 12 * 1000;
 
 const SOURCES = [
+    ["ICPC Official", fetchOfficialIcpcContests],
     ["Codeforces", fetchCodeforcesContests],
     ["AtCoder", fetchAtCoderContests],
     ["NowCoder", fetchNowCoderContests],
@@ -72,7 +74,7 @@ async function fetchAllContests(fetchImpl = fetch, now = Date.now()) {
 export async function getContestsResponse(request, context = {}) {
     const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?source-cache=v6";
+    cacheUrl.search = "?source-cache=v7";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
 
     if (cache) {
