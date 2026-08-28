@@ -1757,6 +1757,17 @@ body.auth-elegant .knowledge-site {
   background: var(--knowledge-surface-solid);
 }
 
+.knowledge-contest-scope-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--knowledge-accent);
+  background: color-mix(in srgb, var(--knowledge-accent) 18%, transparent);
+  color: var(--knowledge-text);
+  font-weight: 700;
+}
+
 .knowledge-contest-segments button,
 .knowledge-contest-refresh {
   min-height: 42px;

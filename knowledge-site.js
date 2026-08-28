@@ -1194,13 +1194,12 @@
     const node = showRouteShell(
       'XCPC CONTEST FEED',
       '竞赛中心',
-      '聚合 XCPC、ICPC、CCPC、多校与其他程序设计竞赛信息。'
+      '仅展示明确属于 XCPC、ICPC 或 CCPC 体系的正式赛事。'
     );
     node.classList.add('knowledge-contest-shell');
 
     const stateNode = {
       contests: [],
-      scope: 'xcpc',
       status: 'active',
       keyword: '',
       loading: true,
@@ -1208,9 +1207,7 @@
       warnings: [],
     };
     const toolbar = element('div', 'knowledge-contest-toolbar');
-    const scopeGroup = element('div', 'knowledge-contest-segments');
-    const xcpcButton = button('XCPC', 'is-active');
-    const allButton = button('全部竞赛');
+    const scopeLabel = element('div', 'knowledge-contest-scope-label', 'XCPC');
     const statusSelect = element('select', 'knowledge-contest-select');
     statusSelect.setAttribute('aria-label', t('比赛状态'));
     statusSelect.append(
@@ -1223,8 +1220,7 @@
     search.placeholder = t('搜索比赛或平台');
     search.setAttribute('aria-label', search.placeholder);
     const refresh = button('刷新', 'knowledge-contest-refresh');
-    scopeGroup.append(xcpcButton, allButton);
-    toolbar.append(scopeGroup, statusSelect, search, refresh);
+    toolbar.append(scopeLabel, statusSelect, search, refresh);
 
     const summary = element('div', 'knowledge-contest-summary');
     const notice = element('p', 'knowledge-contest-notice');
@@ -1242,9 +1238,13 @@
     }
 
     function isXcpc(contest) {
-      const source = [contest.title, contest.platform, contest.contestKind]
-        .filter(Boolean).join(' ');
-      return /\b(?:ICPC|CCPC|XCPC)\b|国际大学生程序设计竞赛|大学生程序设计竞赛|程序设计竞赛|高校程序设计|多校|区域赛|邀请赛|省赛|校赛/i.test(source);
+      const title = String(contest.title || '');
+      const platform = String(contest.platform || '');
+      const url = String(contest.url || '');
+      if (/洛谷|Luogu/i.test(platform) || /luogu\.com\.cn/i.test(url)) return false;
+      if (contest.contestKind === 'training') return false;
+      if (/复现赛|重现赛|复刻赛|练习赛|训练赛|practice|training|replay|mirror/i.test(title)) return false;
+      return /(?:ACM[\s-]*)?(?:ICPC|CCPC|XCPC)|国际大学生程序设计竞赛|中国大学生程序设计竞赛/i.test(title);
     }
 
     function formatContestTime(value) {
@@ -1277,7 +1277,7 @@
       const keyword = stateNode.keyword.toLocaleLowerCase();
       return stateNode.contests.filter(function (contest) {
         const status = contestStatus(contest);
-        if (stateNode.scope === 'xcpc' && !isXcpc(contest)) return false;
+        if (!isXcpc(contest)) return false;
         if (stateNode.status === 'active' && status === 'finished') return false;
         if (stateNode.status === 'upcoming' && status !== 'upcoming') return false;
         if (keyword && !(contest.title + ' ' + contest.platform).toLocaleLowerCase().includes(keyword)) return false;
@@ -1318,8 +1318,6 @@
     }
 
     function render() {
-      xcpcButton.classList.toggle('is-active', stateNode.scope === 'xcpc');
-      allButton.classList.toggle('is-active', stateNode.scope === 'all');
       list.replaceChildren();
       summary.replaceChildren();
       if (stateNode.loading) {
@@ -1345,8 +1343,8 @@
       if (!visible.length) {
         const empty = element('div', 'knowledge-contest-state');
         empty.append(
-          element('strong', '', stateNode.scope === 'xcpc' ? '暂未抓取到符合条件的 XCPC 赛事。' : '没有符合条件的比赛。'),
-          element('span', '', '可以切换范围或状态后重试。')
+          element('strong', '', '暂未抓取到符合条件的 XCPC 正式赛事。'),
+          element('span', '', '可以切换状态或稍后刷新重试。')
         );
         list.appendChild(empty);
         return;
@@ -1381,8 +1379,6 @@
       }
     }
 
-    xcpcButton.addEventListener('click', function () { stateNode.scope = 'xcpc'; render(); });
-    allButton.addEventListener('click', function () { stateNode.scope = 'all'; render(); });
     statusSelect.addEventListener('change', function () { stateNode.status = statusSelect.value; render(); });
     search.addEventListener('input', debounce(function () { stateNode.keyword = search.value.trim(); render(); }, 120));
     refresh.addEventListener('click', load);
