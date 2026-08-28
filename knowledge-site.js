@@ -56,6 +56,7 @@
     homeController: null,
     sectionObserver: null,
     gameCleanup: null,
+    contestCleanup: null,
     routeTransitionActive: false,
     pendingNavigation: null,
     facets: null,
@@ -871,7 +872,7 @@
     if (routeName === 'post') {
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
-    const route = ['home', 'games', 'all', 'categories', 'tags', 'archives', 'about',
+    const route = ['home', 'games', 'contests', 'all', 'categories', 'tags', 'archives', 'about',
       'writer', 'drafts', 'manage', 'mover', 'invitations'].includes(routeName) ? routeName : 'home';
     return {
       route,
@@ -924,6 +925,10 @@
     if (state.gameCleanup) {
       state.gameCleanup();
       state.gameCleanup = null;
+    }
+    if (state.contestCleanup) {
+      state.contestCleanup();
+      state.contestCleanup = null;
     }
     state.routeController = new AbortController();
     return state.routeController;
@@ -1081,6 +1086,7 @@
       return;
     }
     if (route === 'games') return renderGameGallery();
+    if (route === 'contests') return renderContestPage(controller);
     if (route === 'all') return renderPostIndex(details, controller);
     if (route === 'categories') return renderFacetIndex('categories', controller);
     if (route === 'tags') return renderFacetIndex('tags', controller);
@@ -1182,6 +1188,206 @@
       }, { root: rail, threshold: [0.55, 0.8] });
       slides.forEach(function (slide) { state.sectionObserver.observe(slide); });
     }
+  }
+
+  function renderContestPage(controller) {
+    const node = showRouteShell(
+      'XCPC CONTEST FEED',
+      '竞赛中心',
+      '聚合 XCPC、ICPC、CCPC、多校与其他程序设计竞赛信息。'
+    );
+    node.classList.add('knowledge-contest-shell');
+
+    const stateNode = {
+      contests: [],
+      scope: 'xcpc',
+      status: 'active',
+      keyword: '',
+      loading: true,
+      error: false,
+      warnings: [],
+    };
+    const toolbar = element('div', 'knowledge-contest-toolbar');
+    const scopeGroup = element('div', 'knowledge-contest-segments');
+    const xcpcButton = button('XCPC', 'is-active');
+    const allButton = button('全部竞赛');
+    const statusSelect = element('select', 'knowledge-contest-select');
+    statusSelect.setAttribute('aria-label', t('比赛状态'));
+    statusSelect.append(
+      new Option(t('进行中与即将开始'), 'active'),
+      new Option(t('仅即将开始'), 'upcoming'),
+      new Option(t('全部状态'), 'all')
+    );
+    const search = element('input', 'knowledge-contest-search');
+    search.type = 'search';
+    search.placeholder = t('搜索比赛或平台');
+    search.setAttribute('aria-label', search.placeholder);
+    const refresh = button('刷新', 'knowledge-contest-refresh');
+    scopeGroup.append(xcpcButton, allButton);
+    toolbar.append(scopeGroup, statusSelect, search, refresh);
+
+    const summary = element('div', 'knowledge-contest-summary');
+    const notice = element('p', 'knowledge-contest-notice');
+    const list = element('div', 'knowledge-contest-list');
+    list.setAttribute('aria-live', 'polite');
+    node.append(toolbar, summary, notice, list);
+
+    function contestStatus(contest) {
+      const now = Date.now();
+      const start = Date.parse(contest.startTime);
+      const end = contest.endTime ? Date.parse(contest.endTime) : NaN;
+      if (now < start) return 'upcoming';
+      if (!Number.isFinite(end) || now < end) return 'running';
+      return 'finished';
+    }
+
+    function isXcpc(contest) {
+      const source = [contest.title, contest.platform, contest.contestKind]
+        .filter(Boolean).join(' ');
+      return /\b(?:ICPC|CCPC|XCPC)\b|国际大学生程序设计竞赛|大学生程序设计竞赛|程序设计竞赛|高校程序设计|多校|区域赛|邀请赛|省赛|校赛/i.test(source);
+    }
+
+    function formatContestTime(value) {
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return t('时间待定');
+      return new Intl.DateTimeFormat(state.language === 'zh' ? 'zh-CN' : 'en-GB', {
+        timeZone: 'Asia/Shanghai',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).format(date);
+    }
+
+    function formatContestDuration(seconds) {
+      const minutes = Math.round(Number(seconds) / 60);
+      if (!Number.isFinite(minutes) || minutes < 1) return t('时长待定');
+      const hours = Math.floor(minutes / 60);
+      const rest = minutes % 60;
+      return hours ? hours + 'h' + (rest ? ' ' + rest + 'm' : '') : rest + 'm';
+    }
+
+    function statusLabel(status) {
+      return t({ upcoming: '即将开始', running: '进行中', finished: '已结束' }[status]);
+    }
+
+    function filteredContests() {
+      const keyword = stateNode.keyword.toLocaleLowerCase();
+      return stateNode.contests.filter(function (contest) {
+        const status = contestStatus(contest);
+        if (stateNode.scope === 'xcpc' && !isXcpc(contest)) return false;
+        if (stateNode.status === 'active' && status === 'finished') return false;
+        if (stateNode.status === 'upcoming' && status !== 'upcoming') return false;
+        if (keyword && !(contest.title + ' ' + contest.platform).toLocaleLowerCase().includes(keyword)) return false;
+        return true;
+      });
+    }
+
+    function makeContestCard(contest) {
+      const status = contestStatus(contest);
+      const card = element('article', 'knowledge-contest-card');
+      card.dataset.status = status;
+      const date = element('div', 'knowledge-contest-date');
+      date.append(
+        element('strong', '', formatContestTime(contest.startTime).split(' ')[0]),
+        element('span', '', formatContestTime(contest.startTime).split(' ').slice(1).join(' '))
+      );
+      const body = element('div', 'knowledge-contest-card-body');
+      const meta = element('div', 'knowledge-contest-meta');
+      meta.append(
+        element('span', 'knowledge-contest-platform', contest.platform),
+        element('span', 'knowledge-contest-status', statusLabel(status)),
+        isXcpc(contest) ? element('span', 'knowledge-contest-xcpc', 'XCPC') : document.createDocumentFragment()
+      );
+      body.append(meta, element('h2', '', contest.title));
+      const details = element('p', '', formatContestTime(contest.startTime) + ' · ' + formatContestDuration(contest.durationSeconds));
+      body.appendChild(details);
+      const link = element('a', 'knowledge-contest-link', '查看官网');
+      const safeUrl = safeExternalUrl(contest.url);
+      if (safeUrl) {
+        link.href = safeUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      } else {
+        link.hidden = true;
+      }
+      card.append(date, body, link);
+      return card;
+    }
+
+    function render() {
+      xcpcButton.classList.toggle('is-active', stateNode.scope === 'xcpc');
+      allButton.classList.toggle('is-active', stateNode.scope === 'all');
+      list.replaceChildren();
+      summary.replaceChildren();
+      if (stateNode.loading) {
+        list.appendChild(element('div', 'knowledge-contest-state', '正在获取竞赛信息……'));
+        return;
+      }
+      if (stateNode.error) {
+        list.appendChild(element('div', 'knowledge-contest-state is-error', '竞赛信息加载失败，请稍后重试。'));
+        return;
+      }
+      const visible = filteredContests();
+      const activeCount = stateNode.contests.filter(function (contest) {
+        return contestStatus(contest) !== 'finished';
+      }).length;
+      summary.append(
+        element('div', '', String(visible.length) + '\n' + t('当前结果')),
+        element('div', '', String(activeCount) + '\n' + t('活跃竞赛')),
+        element('div', '', String(stateNode.contests.filter(isXcpc).length) + '\nXCPC')
+      );
+      notice.textContent = stateNode.warnings.length
+        ? t('部分数据源暂时不可用，已展示其余来源。')
+        : '';
+      if (!visible.length) {
+        const empty = element('div', 'knowledge-contest-state');
+        empty.append(
+          element('strong', '', stateNode.scope === 'xcpc' ? '暂未抓取到符合条件的 XCPC 赛事。' : '没有符合条件的比赛。'),
+          element('span', '', '可以切换范围或状态后重试。')
+        );
+        list.appendChild(empty);
+        return;
+      }
+      visible.forEach(function (contest) { list.appendChild(makeContestCard(contest)); });
+    }
+
+    async function load() {
+      stateNode.loading = true;
+      stateNode.error = false;
+      render();
+      try {
+        const response = await fetch('/api/contests', {
+          cache: 'no-cache',
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+        const payload = await response.json();
+        if (!response.ok || payload?.success !== true || !Array.isArray(payload.contests)) {
+          throw new Error('invalid contest response');
+        }
+        stateNode.contests = payload.contests.filter(function (contest) {
+          return contest && contest.id && contest.platform && contest.title && contest.startTime;
+        });
+        stateNode.warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        stateNode.error = true;
+      } finally {
+        stateNode.loading = false;
+        render();
+      }
+    }
+
+    xcpcButton.addEventListener('click', function () { stateNode.scope = 'xcpc'; render(); });
+    allButton.addEventListener('click', function () { stateNode.scope = 'all'; render(); });
+    statusSelect.addEventListener('change', function () { stateNode.status = statusSelect.value; render(); });
+    search.addEventListener('input', debounce(function () { stateNode.keyword = search.value.trim(); render(); }, 120));
+    refresh.addEventListener('click', load);
+    state.contestCleanup = function () { stateNode.contests = []; };
+    load();
   }
 
   function selectControl(label, values, selected) {
