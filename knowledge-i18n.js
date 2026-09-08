@@ -62,6 +62,7 @@
     '时间索引': 'Timeline',
     '关于': 'About',
     '关于阿臻': 'About Zhen',
+    '了解 Zheng': 'Meet Zheng',
     'B站': 'Bilibili',
     '知乎': 'Zhihu',
     '牛客': 'Nowcoder',

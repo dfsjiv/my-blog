@@ -19,7 +19,7 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site\.css\?v=20260909-nav-i18n-1/);
-assert.match(html, /knowledge-i18n\.js\?v=20260909-nav-i18n-1/);
+assert.match(html, /knowledge-i18n\.js\?v=20260909-nav-i18n-2/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
@@ -52,6 +52,8 @@ assert.match(html, /data-social-link="nowcoder" role="menuitem" target="_blank" 
 assert.match(html, /data-knowledge-route="articles" role="menuitem">[\s\S]*?<span>技术文章<\/span>/);
 assert.match(html, /data-knowledge-route="all" role="menuitem"/);
 assert.match(html, /data-about-link="games" role="menuitem"/);
+assert.match(html, /data-knowledge-route="about" role="menuitem">[\s\S]*?<span>了解 Zheng<\/span>/);
+assert.match(i18n, /'了解 Zheng': 'Meet Zheng'/);
 assert.match(html, /data-about-link="anime" role="menuitem"/);
 assert.match(html, /data-about-link="manga" role="menuitem"/);
 assert.match(html, /data-about-link="novels" role="menuitem"/);
