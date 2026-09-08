@@ -5,6 +5,8 @@
     '首页': 'Home',
     '小游戏': 'Mini Games',
     '竞赛中心': 'Contest Center',
+    '我的系统': 'My OS',
+    '链接': 'Link',
     '聚合原有竞赛，并单独标记官方 XCPC 线上与线下赛事。': 'All existing contests are aggregated, with official online and onsite XCPC events clearly marked.',
     '全部竞赛': 'All Contests',
     '赛事范围': 'Contest scope',
