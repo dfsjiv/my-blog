@@ -18,6 +18,8 @@ const game2048 = fs.readFileSync(path.join(root, 'knowledge-game-2048.js'), 'utf
 const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
+assert.match(html, /knowledge-site\.css\?v=20260909-nav-i18n-1/);
+assert.match(html, /knowledge-i18n\.js\?v=20260909-nav-i18n-1/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
