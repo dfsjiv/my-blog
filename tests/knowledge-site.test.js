@@ -33,6 +33,8 @@ assert.match(html, /knowledge-article-mover\.css/);
 assert.match(html, /knowledge-article-mover\.js/);
 assert.match(html, /data-knowledge-nav-menu="links"/);
 assert.match(html, /data-knowledge-nav-menu="about"/);
+assert.match(html, /data-knowledge-nav-menu="about"[\s\S]*?关于阿臻 <span aria-hidden="true">⌄<\/span>/);
+assert.match(i18n, /'关于阿臻': 'About Zhen'/);
 assert.match(html, /data-knowledge-nav-menu="articles"/);
 assert.match(html, /aria-haspopup="menu"/);
 assert.match(html, /id="knowledgeArticleMenu" role="menu" hidden/);

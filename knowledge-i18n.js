@@ -61,7 +61,7 @@
     '归档': 'Archives',
     '时间索引': 'Timeline',
     '关于': 'About',
-    '关于我': 'About Me',
+    '关于阿臻': 'About Zhen',
     'B站': 'Bilibili',
     '知乎': 'Zhihu',
     '牛客': 'Nowcoder',
