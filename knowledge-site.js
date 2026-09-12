@@ -680,6 +680,7 @@
 
   function updateHomeLoadMoreButton() {
     const control = document.getElementById('knowledgeLoadMore');
+    if (!control) return;
     control.hidden = !state.homeLatestHasNext;
     control.disabled = state.homeLatestLoading;
     control.textContent = t(
@@ -730,19 +731,21 @@
     if (state.homeController) state.homeController.abort();
     const controller = new AbortController();
     state.homeController = controller;
-    renderHomeTypeLinks();
     const featured = document.getElementById('knowledgeFeaturedList');
     const latest = document.getElementById('knowledgeLatestList');
     const solutions = document.getElementById('knowledgeSolutionList');
+    if (!featured || !latest || !solutions) return;
+    featured.closest('.knowledge-feed-section').hidden = true;
+    [latest, solutions].forEach(function (container) {
+      container.replaceChildren(makeLoadingState('正在加载…'));
+    });
+    renderHomeTypeLinks();
     state.homeLatestPage = 1;
     state.homeLatestHasNext = false;
     state.homeLatestLoading = false;
     state.homeLatestError = false;
     state.homeLatestSlugs = new Set();
     updateHomeLoadMoreButton();
-    [featured, latest, solutions].forEach(function (container) {
-      container.replaceChildren(makeLoadingState('正在加载…'));
-    });
 
     const settings = { signal: controller.signal, refresh: Boolean(options && options.refresh) };
     const jobs = [
@@ -786,6 +789,35 @@
     if (results[3].status === 'fulfilled') {
       renderCollection(solutions, results[3].value.items, makeSolutionCard);
     } else solutions.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+  }
+
+  function renderHomeFailure(error) {
+    if (error && error.name === 'AbortError') return;
+    console.error('Knowledge home rendering failed:', error);
+    const featured = document.getElementById('knowledgeFeaturedList');
+    const latest = document.getElementById('knowledgeLatestList');
+    const solutions = document.getElementById('knowledgeSolutionList');
+    if (featured) featured.closest('.knowledge-feed-section').hidden = true;
+    [latest, solutions].filter(Boolean).forEach(function (container) {
+      container.replaceChildren(makeErrorState(function () {
+        repository.clearCache();
+        loadHome({ refresh: true }).catch(renderHomeFailure);
+      }));
+    });
+    renderFacetError();
+  }
+
+  function recoverEmptyHome() {
+    if (state.route !== 'home' || document.hidden) return;
+    const latest = document.getElementById('knowledgeLatestList');
+    if (!latest || latest.childElementCount > 0) return;
+    repository.clearCache();
+    loadHome({ refresh: true }).catch(renderHomeFailure);
+  }
+
+  function scheduleEmptyHomeRecovery() {
+    window.setTimeout(recoverEmptyHome, 1200);
+    window.setTimeout(recoverEmptyHome, 5000);
   }
 
   function applyViewMode() {
@@ -2606,6 +2638,12 @@
     const parsed = routeFromUrl();
     navigate(parsed.route, parsed.payload, { fromHistory: true });
   });
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) scheduleEmptyHomeRecovery();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) scheduleEmptyHomeRecovery();
+  });
 
   configureNavigationLinks();
   setupNavigationMenus();
@@ -2618,7 +2656,9 @@
   state.route = initialRoute.route;
   state.routePayload = initialRoute.payload;
   updateActiveNav(state.route, state.routePayload);
-  renderCurrentRoute({ replace: true });
+  renderCurrentRoute({ replace: true })
+    .catch(renderHomeFailure)
+    .finally(scheduleEmptyHomeRecovery);
 
   window.elegantShell = {
     closeNavigation,

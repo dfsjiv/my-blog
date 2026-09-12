@@ -19,8 +19,8 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-20260809.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
-assert.match(html, /knowledge-site\.css\?v=20260913-meet-page-1/);
-assert.match(html, /knowledge-site\.js\?v=20260913-meet-page-1/);
+assert.match(html, /knowledge-site\.css\?v=20260913-home-recovery-1/);
+assert.match(html, /knowledge-site\.js\?v=20260913-home-recovery-1/);
 assert.match(html, /knowledge-i18n\.js\?v=20260913-meet-page-1/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
@@ -125,6 +125,9 @@ assert.match(site, /featured\.closest\('\.knowledge-feed-section'\)\.hidden = !f
 assert.match(site, /repository\.getFacets/);
 assert.match(site, /repository\.getPostBySlug/);
 assert.match(site, /function loadMoreLatest/);
+assert.match(site, /function renderHomeFailure/);
+assert.match(site, /function recoverEmptyHome/);
+assert.match(site, /window\.addEventListener\('pageshow'/);
 assert.match(site, /result\.pagination\.hasNext/);
 assert.match(site, /function detailCoverNode/);
 assert.match(site, /repository\.getRelatedPosts/);
