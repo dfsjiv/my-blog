@@ -19,7 +19,7 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-20260809.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
-assert.match(html, /knowledge-site\.css\?v=20260909-nav-i18n-1/);
+assert.match(html, /knowledge-site\.css\?v=20260912-hero-focus-1/);
 assert.match(html, /knowledge-i18n\.js\?v=20260909-nav-i18n-2/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
@@ -266,6 +266,9 @@ assert.match(css, /@keyframes knowledge-wave-drift/);
 assert.equal((html.match(/data-knowledge-hero-slide/g) || []).length, 4);
 assert.match(css, /hero-01\.webp/);
 assert.match(css, /hero-04\.webp/);
+assert.match(css, /min-height:\s*clamp\(680px, 88svh, 920px\)/);
+assert.match(css, /\.knowledge-hero-slide[\s\S]*?transform:\s*scale\(1\.08\)/);
+assert.match(css, /linear-gradient\(90deg,[\s\S]*?rgba\(7, 14, 22, 0\.16\)/);
 assert.match(site, /function setupHeroCarousel/);
 assert.match(site, /window\.setInterval/);
 assert.match(html, /data-knowledge-route="games">小游戏/);
