@@ -116,10 +116,18 @@
 
   function iconButton(label, glyph, action, lowFrequency) {
     const item = element('button', 'knowledge-writer-tool', glyph);
+    const shortcuts = {
+      undo: 'Ctrl+Z',
+      redo: 'Ctrl+Y',
+      bold: 'Ctrl+B',
+      italic: 'Ctrl+I',
+      link: 'Ctrl+K',
+    };
+    const accessibleLabel = shortcuts[action] ? label + '（' + shortcuts[action] + '）' : label;
     item.type = 'button';
     item.dataset.editorAction = action;
-    item.title = label;
-    item.setAttribute('aria-label', label);
+    item.title = accessibleLabel;
+    item.setAttribute('aria-label', accessibleLabel);
     if (lowFrequency) item.classList.add('is-low-frequency');
     return item;
   }
@@ -215,7 +223,6 @@
       ['链接', '🔗', 'link', true],
       ['图片', '▧', 'image', true],
       ['表格', '▦', 'table', true],
-      ['提示块', '!', 'callout', true],
     ];
     tools.forEach(function (tool) {
       toolbarMain.appendChild(iconButton(tool[0], tool[1], tool[2], tool[3]));
@@ -227,7 +234,9 @@
     LANGUAGE_OPTIONS.forEach(function (language) {
       languageSelect.appendChild(new Option(language, language));
     });
-    const moreButton = iconButton('更多格式', '•••', 'more');
+    const moreButton = iconButton('插入更多内容', '+ 插入', 'more');
+    moreButton.classList.add('knowledge-writer-more-tool');
+    moreButton.setAttribute('aria-expanded', 'false');
     toolbar.append(toolbarMain, languageSelect, moreButton);
     topbar.append(primaryBar, toolbar);
 
@@ -308,7 +317,12 @@
     const wordCount = element('span', '', '0 字');
     const readingTime = element('span', '', '约 1 分钟');
     const editMode = element('span', '', '富文本模式');
-    bottomLeft.append(settingButton, wordCount, readingTime, editMode);
+    const storageHint = element(
+      'span',
+      'knowledge-writer-storage-hint',
+      '自动备份到本机 · Ctrl+S 保存到服务器'
+    );
+    bottomLeft.append(settingButton, wordCount, readingTime, editMode, storageHint);
     const bottomRight = element('div');
     const saveStatus = element('span', 'knowledge-writer-save-status', '未保存');
     const savedAt = element('time', '', '尚未保存');
@@ -558,7 +572,7 @@
     function markDirty() {
       state.dirty = true;
       state.localSaved = false;
-      setSaveState('未保存');
+      setSaveState('未同步');
       window.clearTimeout(state.saveTimer);
       state.saveTimer = window.setTimeout(saveLocalDraft, AUTO_SAVE_DELAY);
     }
@@ -578,12 +592,11 @@
       };
       try {
         window.localStorage.setItem(localKey(), JSON.stringify(draft));
-        state.dirty = false;
         state.localSaved = true;
         const time = new Date();
-        setSaveState('已保存');
+        setSaveState(state.dirty ? '本机已备份' : '服务器已保存');
         savedAt.dateTime = time.toISOString();
-        savedAt.textContent = '本地保存于 ' + formatTime(time);
+        savedAt.textContent = '本机备份于 ' + formatTime(time);
       } catch (error) {
         setSaveState('保存失败', true);
       }
@@ -733,7 +746,7 @@
         window.localStorage.removeItem(localKey());
         state.dirty = false;
         state.localSaved = true;
-        setSaveState(publishing ? '已发布' : '已保存');
+        setSaveState(publishing ? '已发布' : '服务器已保存');
         savedAt.dateTime = new Date().toISOString();
         savedAt.textContent = (publishing ? '发布于 ' : '服务器保存于 ') + formatTime(new Date());
         mode.textContent = '编辑文章';
@@ -828,6 +841,8 @@
       });
       const language = editor.getAttributes('codeBlock').language;
       if (language && LANGUAGE_OPTIONS.includes(language)) languageSelect.value = language;
+      languageSelect.hidden = !editor.isActive('codeBlock')
+        && !toolbar.classList.contains('show-all-tools');
       syncBubbleFormatControls(editor);
       updateSlashMenu();
     }
@@ -880,12 +895,15 @@
       else if (action === 'link') openLinkPopover();
       else if (action === 'image') {
         if (!state.bodyImageUploading) bodyImageInput.click();
-      } else if (action === 'callout') {
-        showNotice('提示块将在下一阶段接入。');
       } else if (action === 'more') {
-        toolbar.classList.toggle('show-all-tools');
+        const expanded = toolbar.classList.toggle('show-all-tools');
+        moreButton.setAttribute('aria-expanded', String(expanded));
       } else if (action === 'back') {
-        saveLocalDraft();
+        if (state.dirty) {
+          saveLocalDraft();
+          const shouldLeave = window.confirm('修改已备份到本机，但尚未保存到服务器。确定返回吗？');
+          if (!shouldLeave) return;
+        }
         options.onBack?.();
       } else if (action === 'toggle-panel' || action === 'toggle-panel-bottom') {
         state.settingsOpen ? closePanel() : openPanel();
@@ -1170,6 +1188,7 @@
         event.preventDefault();
         window.clearTimeout(state.saveTimer);
         saveLocalDraft();
+        void saveToServer('draft');
       } else if (event.key.toLowerCase() === 'k') {
         event.preventDefault();
         if (state.editorMode === 'rich') openLinkPopover();

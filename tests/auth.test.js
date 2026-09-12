@@ -236,7 +236,7 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /id="registerVerifyButton"/);
   assert.match(indexHtml, /id="loginModeSwitch"/);
   assert.match(indexHtml, /id="elegantShell"/);
-  assert.match(indexHtml, /data-knowledge-action="desktop">My OS/);
+  assert.match(indexHtml, /data-knowledge-action="desktop">我的系统/);
   assert.doesNotMatch(indexHtml, /id="versionSelector"/);
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);

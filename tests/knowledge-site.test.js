@@ -16,6 +16,7 @@ const writer = fs.readFileSync(path.join(root, 'knowledge-writer.js'), 'utf8');
 const writerCss = fs.readFileSync(path.join(root, 'knowledge-writer.css'), 'utf8');
 const game2048 = fs.readFileSync(path.join(root, 'knowledge-game-2048.js'), 'utf8');
 const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.js'), 'utf8');
+const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-20260809.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site\.css\?v=20260909-nav-i18n-1/);
@@ -246,6 +247,19 @@ assert.match(writerCss, /\.knowledge-writer-cover-preview/);
 assert.match(writerCss, /\.knowledge-writer-view-modes/);
 assert.match(writerCss, /\.knowledge-writer-source-workspace/);
 assert.match(writerCss, /\.knowledge-writer-source-input/);
+assert.match(writer, /setSaveState\('未同步'\)/);
+assert.match(writer, /setSaveState\(state\.dirty \? '本机已备份' : '服务器已保存'\)/);
+assert.doesNotMatch(writer, /saveLocalDraft[\s\S]{0,900}state\.dirty = false/);
+assert.match(writer, /saveLocalDraft\(\);\s*void saveToServer\('draft'\)/);
+assert.match(writer, /修改已备份到本机，但尚未保存到服务器/);
+assert.doesNotMatch(writer, /提示块将在下一阶段接入/);
+assert.match(writerCss, /\.knowledge-writer-toolbar \.is-low-frequency\s*\{\s*display:\s*none/);
+assert.doesNotMatch(
+  writerCss,
+  /\.knowledge-writer-bottom \.knowledge-writer-secondary:first-of-type\s*\{\s*display:\s*none/
+);
+assert.match(live2d, /!shell\.classList\.contains\('knowledge-writing-mode'\)/);
+assert.match(live2d, /attributeFilter:\s*\['aria-hidden', 'data-language', 'class'\]/);
 assert.match(writerCss, /@media \(max-width:\s*768px\)/);
 assert.match(html, /class="knowledge-hero-waves"/);
 assert.match(css, /@keyframes knowledge-wave-drift/);

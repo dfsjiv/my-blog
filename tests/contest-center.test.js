@@ -97,7 +97,10 @@ const rootDir = path.resolve(__dirname, '..');
     { ok: true, async text() { return paidIndexHtml; } },
     { ok: true, async text() { return '<div>报名费用：<span>800元/队</span></div>'; } },
   ];
-  const paidContests = await nowcoder.fetchNowCoderContests(async () => paidResponses.shift());
+  const paidContests = await nowcoder.fetchNowCoderContests(
+    async () => paidResponses.shift(),
+    Date.parse('2026-07-15T00:00:00Z')
+  );
   assert.strictEqual(paidContests[0].feeType, 'paid');
   assert.strictEqual(paidContests[0].feeAmount, 800);
   assert.strictEqual(paidContests[0].feeUnit, 'team');

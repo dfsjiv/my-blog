@@ -15,7 +15,8 @@
   let syncQueue = Promise.resolve();
 
   function isKnowledgeSiteVisible() {
-    return shell.getAttribute('aria-hidden') !== 'true';
+    return shell.getAttribute('aria-hidden') !== 'true'
+      && !shell.classList.contains('knowledge-writing-mode');
   }
 
   function getLanguage() {
@@ -234,7 +235,7 @@
 
   new MutationObserver(scheduleSync).observe(shell, {
     attributes: true,
-    attributeFilter: ['aria-hidden', 'data-language'],
+    attributeFilter: ['aria-hidden', 'data-language', 'class'],
   });
 
   window.addEventListener('pagehide', function () {
