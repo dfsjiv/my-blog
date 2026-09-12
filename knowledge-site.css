@@ -820,7 +820,7 @@ body.auth-elegant .knowledge-site {
 .knowledge-layout {
   margin-top: 22px;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 270px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   align-items: start;
   gap: 20px;
 }
@@ -1738,6 +1738,139 @@ body.auth-elegant .knowledge-site {
 .knowledge-route-header p {
   margin: 0;
   color: var(--knowledge-muted);
+}
+
+.knowledge-about-shell {
+  overflow: hidden;
+}
+
+.knowledge-about-profile {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 70px);
+  align-items: center;
+  padding: clamp(8px, 2vw, 24px);
+}
+
+.knowledge-about-portrait {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  object-fit: cover;
+  border: 1px solid var(--knowledge-border);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .2);
+}
+
+.knowledge-about-introduction {
+  min-width: 0;
+}
+
+.knowledge-about-eyebrow {
+  color: var(--knowledge-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.knowledge-about-introduction h2 {
+  margin: 8px 0 14px;
+  font-size: clamp(42px, 7vw, 78px);
+  line-height: 1;
+}
+
+.knowledge-about-introduction > p {
+  max-width: 650px;
+  color: var(--knowledge-muted);
+  line-height: 1.8;
+}
+
+.knowledge-about-lead {
+  margin-bottom: 4px;
+  color: var(--knowledge-text) !important;
+  font-size: clamp(18px, 2vw, 24px);
+}
+
+.knowledge-about-stats {
+  margin: 28px 0 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--knowledge-border);
+}
+
+.knowledge-about-stats > div {
+  padding: 18px 12px;
+  text-align: center;
+}
+
+.knowledge-about-stats > div + div {
+  border-left: 1px solid var(--knowledge-border);
+}
+
+.knowledge-about-stats dd {
+  margin: 0 0 5px;
+  color: var(--knowledge-text);
+  font-size: 24px;
+  font-weight: 750;
+}
+
+.knowledge-about-stats dt {
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+.knowledge-about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knowledge-about-links a {
+  padding: 9px 12px;
+  color: var(--knowledge-primary);
+  background: var(--knowledge-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--knowledge-primary) 24%, transparent);
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.knowledge-about-links a:hover,
+.knowledge-about-links a:focus-visible {
+  color: #fff;
+  background: var(--knowledge-primary);
+  outline: none;
+}
+
+.knowledge-about-details {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.knowledge-about-card {
+  min-height: 190px;
+  padding: 24px;
+  background: var(--knowledge-bg);
+  border: 1px solid var(--knowledge-border);
+  border-radius: 10px;
+}
+
+.knowledge-about-card > span {
+  color: var(--knowledge-primary);
+  font: 700 12px/1 "Segoe UI", sans-serif;
+}
+
+.knowledge-about-card h3 {
+  margin: 24px 0 10px;
+  font-size: 22px;
+}
+
+.knowledge-about-card p {
+  margin: 0;
+  color: var(--knowledge-muted);
+  line-height: 1.8;
 }
 
 .knowledge-contest-shell { overflow: hidden; }
@@ -2850,6 +2983,48 @@ body.auth-elegant .knowledge-site {
   .knowledge-contest-summary > div { padding: 12px 6px; font-size: 11px; }
 }
 
+@media (max-width: 780px) {
+  .knowledge-about-profile {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .knowledge-about-portrait {
+    width: min(100%, 420px);
+    margin: 0 auto;
+  }
+
+  .knowledge-about-introduction {
+    text-align: center;
+  }
+
+  .knowledge-about-introduction > p {
+    margin-inline: auto;
+  }
+
+  .knowledge-about-links {
+    justify-content: center;
+  }
+
+  .knowledge-about-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .knowledge-about-introduction h2 {
+    font-size: 42px;
+  }
+
+  .knowledge-about-stats > div {
+    padding-inline: 6px;
+  }
+
+  .knowledge-about-card {
+    min-height: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .knowledge-loading-line {
     animation: none;
@@ -3224,7 +3399,7 @@ body.auth-elegant .knowledge-site {
   z-index: 3;
   width: min(var(--knowledge-content-width), calc(100% - 40px));
   margin: -62px auto 0;
-  grid-template-columns: 250px minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 18px;
 }
 

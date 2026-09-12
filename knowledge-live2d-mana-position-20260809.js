@@ -16,7 +16,8 @@
 
   function isKnowledgeSiteVisible() {
     return shell.getAttribute('aria-hidden') !== 'true'
-      && !shell.classList.contains('knowledge-writing-mode');
+      && !shell.classList.contains('knowledge-writing-mode')
+      && shell.dataset.route !== 'about';
   }
 
   function getLanguage() {
@@ -235,7 +236,7 @@
 
   new MutationObserver(scheduleSync).observe(shell, {
     attributes: true,
-    attributeFilter: ['aria-hidden', 'data-language', 'class'],
+    attributeFilter: ['aria-hidden', 'data-language', 'data-route', 'class'],
   });
 
   window.addEventListener('pagehide', function () {

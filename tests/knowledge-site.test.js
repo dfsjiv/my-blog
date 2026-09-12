@@ -19,17 +19,15 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-20260809.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
-assert.match(html, /knowledge-site\.css\?v=20260912-hero-focus-1/);
-assert.match(html, /knowledge-i18n\.js\?v=20260909-nav-i18n-2/);
+assert.match(html, /knowledge-site\.css\?v=20260913-meet-page-1/);
+assert.match(html, /knowledge-site\.js\?v=20260913-meet-page-1/);
+assert.match(html, /knowledge-i18n\.js\?v=20260913-meet-page-1/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
 assert.match(html, /id="knowledgeRouteView"/);
-assert.ok(
-  html.indexOf('class="knowledge-sidebar knowledge-left-sidebar"')
-    < html.indexOf('id="knowledgeUpdateList"')
-  && html.indexOf('id="knowledgeUpdateList"') < html.indexOf('class="knowledge-feed"')
-);
+assert.doesNotMatch(html, /class="knowledge-sidebar knowledge-left-sidebar"/);
+assert.doesNotMatch(html, /id="knowledgeUpdateList"/);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
 assert.match(html, /data-knowledge-route="mover">文章搬家/);
 assert.match(html, /knowledge-article-mover\.css/);
@@ -55,6 +53,13 @@ assert.match(html, /data-knowledge-route="all" role="menuitem"/);
 assert.match(html, /data-about-link="games" role="menuitem"/);
 assert.match(html, /data-knowledge-route="about" role="menuitem">[\s\S]*?<span>了解 Zheng<\/span>/);
 assert.match(i18n, /'了解 Zheng': 'Meet Zheng'/);
+assert.match(site, /async function renderAbout\(controller\)/);
+assert.match(site, /knowledge-about-profile/);
+assert.match(site, /assets\/knowledge\/avatar\.webp/);
+assert.match(site, /state\.facets \|\| await repository\.getFacets/);
+assert.match(css, /\.knowledge-about-profile/);
+assert.match(css, /\.knowledge-about-details/);
+assert.match(css, /grid-template-columns:\s*minmax\(0, 1fr\) 280px/);
 assert.match(html, /data-about-link="anime" role="menuitem"/);
 assert.match(html, /data-about-link="manga" role="menuitem"/);
 assert.match(html, /data-about-link="novels" role="menuitem"/);
@@ -259,7 +264,8 @@ assert.doesNotMatch(
   /\.knowledge-writer-bottom \.knowledge-writer-secondary:first-of-type\s*\{\s*display:\s*none/
 );
 assert.match(live2d, /!shell\.classList\.contains\('knowledge-writing-mode'\)/);
-assert.match(live2d, /attributeFilter:\s*\['aria-hidden', 'data-language', 'class'\]/);
+assert.match(live2d, /shell\.dataset\.route !== 'about'/);
+assert.match(live2d, /attributeFilter:\s*\['aria-hidden', 'data-language', 'data-route', 'class'\]/);
 assert.match(writerCss, /@media \(max-width:\s*768px\)/);
 assert.match(html, /class="knowledge-hero-waves"/);
 assert.match(css, /@keyframes knowledge-wave-drift/);

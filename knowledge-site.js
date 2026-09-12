@@ -590,22 +590,26 @@
     const tags = document.getElementById('knowledgeTagCloud');
     const archives = document.getElementById('knowledgeArchivePreview');
     const stats = document.getElementById('knowledgeStats');
-    [categories, domains, topics, tags, archives, stats].forEach(function (node) {
+    [categories, domains, topics, tags, archives, stats].filter(Boolean).forEach(function (node) {
       node.replaceChildren();
     });
 
-    facets.categories.forEach(function (category) {
-      const item = button('');
-      item.dataset.knowledgeRoute = 'all';
-      item.dataset.category = category.slug;
-      item.append(contentElement('span', '', category.name), contentElement('span', '', String(category.count)));
-      categories.appendChild(item);
-    });
+    if (categories) {
+      facets.categories.forEach(function (category) {
+        const item = button('');
+        item.dataset.knowledgeRoute = 'all';
+        item.dataset.category = category.slug;
+        item.append(contentElement('span', '', category.name), contentElement('span', '', String(category.count)));
+        categories.appendChild(item);
+      });
+    }
     facets.tags.slice(0, 12).forEach(function (tag, index) {
-      const domain = contentButton(tag.name);
-      domain.dataset.knowledgeRoute = 'all';
-      domain.dataset.tag = tag.slug;
-      domains.appendChild(domain);
+      if (domains) {
+        const domain = contentButton(tag.name);
+        domain.dataset.knowledgeRoute = 'all';
+        domain.dataset.tag = tag.slug;
+        domains.appendChild(domain);
+      }
       const cloudTag = contentButton(tag.name);
       cloudTag.dataset.knowledgeRoute = 'all';
       cloudTag.dataset.tag = tag.slug;
@@ -650,7 +654,7 @@
       'knowledgeTagCloud', 'knowledgeArchivePreview', 'knowledgeStats']
       .forEach(function (id) {
         const node = document.getElementById(id);
-        node.replaceChildren(element('span', 'knowledge-data-unavailable', '--'));
+        if (node) node.replaceChildren(element('span', 'knowledge-data-unavailable', '--'));
       });
   }
 
@@ -727,18 +731,16 @@
     const controller = new AbortController();
     state.homeController = controller;
     renderHomeTypeLinks();
-    renderExternalPlatforms();
     const featured = document.getElementById('knowledgeFeaturedList');
     const latest = document.getElementById('knowledgeLatestList');
     const solutions = document.getElementById('knowledgeSolutionList');
-    const updates = document.getElementById('knowledgeUpdateList');
     state.homeLatestPage = 1;
     state.homeLatestHasNext = false;
     state.homeLatestLoading = false;
     state.homeLatestError = false;
     state.homeLatestSlugs = new Set();
     updateHomeLoadMoreButton();
-    [featured, latest, solutions, updates].forEach(function (container) {
+    [featured, latest, solutions].forEach(function (container) {
       container.replaceChildren(makeLoadingState('正在加载…'));
     });
 
@@ -748,7 +750,6 @@
       repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
       repository.getPosts({ page: 1, pageSize: 5, sort: 'latest' }, settings),
       repository.getPosts({ page: 1, pageSize: 4, type: 'solution', sort: 'latest' }, settings),
-      repository.getPosts({ page: 1, pageSize: 5, sort: 'updated' }, settings),
     ];
     const results = await Promise.allSettled(jobs);
     if (controller.signal.aborted) return;
@@ -785,8 +786,6 @@
     if (results[3].status === 'fulfilled') {
       renderCollection(solutions, results[3].value.items, makeSolutionCard);
     } else solutions.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
-    if (results[4].status === 'fulfilled') renderRecentUpdates(results[4].value.items);
-    else updates.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
   }
 
   function applyViewMode() {
@@ -1091,7 +1090,7 @@
     if (route === 'categories') return renderFacetIndex('categories', controller);
     if (route === 'tags') return renderFacetIndex('tags', controller);
     if (route === 'archives') return renderFacetIndex('archives', controller);
-    if (route === 'about') return renderAbout();
+    if (route === 'about') return renderAbout(controller);
     if (route === 'detail') return renderDetail(details.slug, controller);
     if (route === 'mover') return renderArticleMover();
     if (route === 'writer') return renderWriter(details);
@@ -1693,18 +1692,92 @@
     }
   }
 
-  function renderAbout() {
-    const shellNode = showRouteShell('ABOUT', '关于 Lee Ethan', '作者介绍与知识站说明。');
-    const content = element('div', 'knowledge-detail-body');
-    content.append(
-      element('h2', '', '网站定位'),
-      element('p', '', '这里集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'),
-      element('h2', '', '作者信息'),
-      element('p', '', '作者：Lee Ethan。'),
-      element('h2', '', '内容声明'),
-      element('p', '', '页面只展示已经发布且未删除的知识文章。')
+  async function renderAbout(controller) {
+    const shellNode = showRouteShell(
+      'MEET ZHENG',
+      t('认识一下阿臻'),
+      t('关于我的经历、兴趣和这个知识站。')
     );
-    shellNode.appendChild(content);
+    shellNode.classList.add('knowledge-about-shell');
+
+    const profile = element('section', 'knowledge-about-profile');
+    const portrait = document.createElement('img');
+    portrait.className = 'knowledge-about-portrait';
+    portrait.src = 'assets/knowledge/avatar.webp';
+    portrait.alt = 'Lee Ethan';
+    portrait.width = 512;
+    portrait.height = 512;
+
+    const introduction = element('div', 'knowledge-about-introduction');
+    introduction.append(
+      element('span', 'knowledge-about-eyebrow', t('你好，我是')),
+      element('h2', '', 'Lee Ethan'),
+      element('p', 'knowledge-about-lead', t('个人简介内容待正式补充。')),
+      element(
+        'p',
+        '',
+        t('这里是我的个人介绍页，之后会继续补充经历、兴趣与正在做的事情。')
+      )
+    );
+
+    const stats = element('dl', 'knowledge-about-stats');
+    const statValues = {};
+    [
+      ['posts', '文章'],
+      ['categories', '内容分类'],
+      ['tags', '知识领域'],
+    ].forEach(function (entry) {
+      const item = element('div');
+      const value = element('dd', '', '--');
+      statValues[entry[0]] = value;
+      item.append(value, element('dt', '', t(entry[1])));
+      stats.appendChild(item);
+    });
+
+    const socialLinks = element('div', 'knowledge-about-links');
+    [
+      ['github', 'GitHub'],
+      ['bilibili', 'B站'],
+      ['zhihu', '知乎'],
+      ['nowcoder', '牛客'],
+    ].forEach(function (entry) {
+      const href = safeExternalUrl(navigationLinks.socialLinks[entry[0]]);
+      if (!href) return;
+      const link = element('a', '', t(entry[1]) + ' ↗');
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      socialLinks.appendChild(link);
+    });
+    introduction.append(stats, socialLinks);
+    profile.append(portrait, introduction);
+
+    const details = element('div', 'knowledge-about-details');
+    const aboutCard = element('article', 'knowledge-about-card');
+    aboutCard.append(
+      element('span', '', '01'),
+      element('h3', '', t('关于我')),
+      element('p', '', t('个人经历、兴趣方向和长期目标会在这里慢慢写下来。'))
+    );
+    const siteCard = element('article', 'knowledge-about-card');
+    siteCard.append(
+      element('span', '', '02'),
+      element('h3', '', t('这个知识站')),
+      element('p', '', t('这里集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'))
+    );
+    details.append(aboutCard, siteCard);
+    shellNode.append(profile, details);
+
+    try {
+      const facets = state.facets || await repository.getFacets({ signal: controller.signal });
+      if (controller.signal.aborted) return;
+      state.facets = facets;
+      statValues.posts.textContent = String(facets.stats.posts || 0);
+      statValues.categories.textContent = String(facets.categories.length || 0);
+      statValues.tags.textContent = String(facets.tags.length || 0);
+    } catch (error) {
+      if (!controller.signal.aborted) console.error('About page statistics failed:', error);
+    }
   }
 
   async function renderInvitations(controller) {
