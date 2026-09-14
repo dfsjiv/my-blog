@@ -2720,6 +2720,49 @@ body.auth-elegant .knowledge-site {
   background: transparent;
 }
 
+.knowledge-footer .knowledge-back-to-top {
+  position: fixed;
+  right: clamp(16px, 3vw, 42px);
+  bottom: clamp(16px, 3vw, 42px);
+  z-index: 70;
+  width: 88px;
+  height: 88px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  transform: translateY(16px) scale(0.9);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+
+.knowledge-footer .knowledge-back-to-top.is-visible {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.knowledge-footer .knowledge-back-to-top:hover,
+.knowledge-footer .knowledge-back-to-top:focus-visible {
+  transform: translateY(-3px) scale(1.04);
+  outline: 2px solid var(--knowledge-primary);
+  outline-offset: 3px;
+}
+
+.knowledge-back-to-top img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 @media (max-width: 1260px) {
   .knowledge-layout {
     grid-template-columns: 230px minmax(0, 1fr);
@@ -3808,6 +3851,11 @@ body.auth-elegant .knowledge-site {
 @media (max-width: 1040px) {
   .knowledge-nav {
     background: transparent;
+  }
+
+  .knowledge-footer .knowledge-back-to-top {
+    width: 70px;
+    height: 70px;
   }
 
   .knowledge-intro {

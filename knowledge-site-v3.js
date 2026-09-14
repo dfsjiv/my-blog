@@ -31,6 +31,7 @@
   const themeButton = document.getElementById('knowledgeThemeButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const guestAuth = document.getElementById('knowledgeGuestAuth');
+  const backToTopButton = document.getElementById('knowledgeBackToTop');
   const settingsMenu = document.getElementById('knowledgeSettingsMenu');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
@@ -379,6 +380,14 @@
       option.classList.toggle('is-active', isActive);
       option.setAttribute('aria-checked', String(isActive));
     });
+  }
+
+  function updateBackToTopVisibility() {
+    if (!backToTopButton) return;
+    const isVisible = shell.scrollTop > 160;
+    backToTopButton.classList.toggle('is-visible', isVisible);
+    backToTopButton.setAttribute('aria-hidden', String(!isVisible));
+    backToTopButton.tabIndex = isVisible ? 0 : -1;
   }
 
   async function setLanguage(language) {
@@ -2582,7 +2591,7 @@
       return;
     }
     if (actionTarget?.dataset.knowledgeAction === 'top') {
-      shell.scrollTo({ top: 0, behavior: 'smooth' });
+      shell.scrollTo({ top: 0, behavior: 'auto' });
     }
     if (actionTarget?.dataset.knowledgeAction === 'desktop') {
       const user = currentUser();
@@ -2649,6 +2658,7 @@
     closeNavMenus();
     if (window.innerWidth > 1040) setNavOpen(false);
   });
+  shell.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
   window.addEventListener('popstate', function () {
     const parsed = routeFromUrl();
     navigate(parsed.route, parsed.payload, { fromHistory: true });
@@ -2667,6 +2677,7 @@
   applyTheme();
   setupHeroCarousel();
   refreshIdentity();
+  updateBackToTopVisibility();
   const initialRoute = routeFromUrl();
   state.route = initialRoute.route;
   state.routePayload = initialRoute.payload;

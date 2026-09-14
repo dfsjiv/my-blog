@@ -29,6 +29,7 @@ assert.match(html, /id="knowledgeRouteView"/);
 assert.doesNotMatch(html, /class="knowledge-sidebar knowledge-left-sidebar"/);
 assert.doesNotMatch(html, /id="knowledgeUpdateList"/);
 assert.match(html, /id="knowledgeAuthorTools" hidden/);
+assert.match(html, /id="knowledgeBackToTop"[\s\S]*assets\/knowledge\/back-to-top\.gif/);
 assert.match(html, /data-knowledge-route="mover">文章搬家/);
 assert.match(html, /knowledge-article-mover\.css/);
 assert.match(html, /knowledge-article-mover\.js/);
@@ -337,6 +338,10 @@ assert.match(site, /typeof window\.authUi\.showElegantLogin === 'function'/);
 assert.match(site, /guestAuth\.hidden = !isGuest/);
 assert.match(site, /accountMenu\.hidden = isGuest/);
 assert.match(site, /target\.dataset\.authMode/);
+assert.match(site, /function updateBackToTopVisibility/);
+assert.match(site, /shell\.scrollTop > 160/);
+assert.match(site, /shell\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
+assert.match(site, /shell\.addEventListener\('scroll', updateBackToTopVisibility/);
 assert.match(site, /user\.role !== 'guest'/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {
