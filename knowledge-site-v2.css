@@ -3120,11 +3120,11 @@ body.auth-elegant .knowledge-site {
   padding: 0 16px;
   gap: 18px;
   color: #f5f8fc;
-  background: rgba(16, 23, 31, 0.64);
-  border-color: rgba(255, 255, 255, 0.13);
+  background: transparent;
+  border-color: transparent;
   border-radius: 14px;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(16px);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .knowledge-brand,
@@ -3746,7 +3746,7 @@ body.auth-elegant .knowledge-site {
 
 @media (max-width: 1040px) {
   .knowledge-nav {
-    background: rgba(16, 23, 31, 0.82);
+    background: transparent;
   }
 
   .knowledge-intro {
