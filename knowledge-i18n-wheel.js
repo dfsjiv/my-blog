@@ -2,6 +2,13 @@
   const english = {
     'Lee Ethan 个人知识站': 'Lee Ethan Personal Knowledge Site',
     '知识站主导航': 'Knowledge site navigation',
+    '轮盘导航': 'Wheel navigation',
+    '主菜单': 'Main menu',
+    '返回主菜单': 'Back to main menu',
+    '返回首页': 'Back to home',
+    '转动轮盘': 'Rotate wheel',
+    '上一个功能': 'Previous feature',
+    '下一个功能': 'Next feature',
     '首页': 'Home',
     '小游戏': 'Mini Games',
     '竞赛中心': 'Contest Center',

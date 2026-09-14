@@ -111,7 +111,7 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260825-register-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
-  <link rel="stylesheet" href="knowledge-site-v2.css" />
+  <link rel="stylesheet" href="knowledge-site-wheel.css" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
   <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
@@ -183,6 +183,22 @@
 
     <header class="knowledge-header">
       <nav class="knowledge-nav" aria-label="知识站主导航">
+        <section class="knowledge-wheel-viewport" id="knowledgeWheelViewport" aria-label="轮盘导航">
+          <div class="knowledge-wheel-disc" aria-hidden="true"></div>
+          <div class="knowledge-wheel-items" id="knowledgeWheelItems" role="menu"></div>
+          <button class="knowledge-wheel-hub" id="knowledgeWheelHub" type="button" aria-label="返回首页">
+            <span>LE</span>
+          </button>
+          <div class="knowledge-wheel-caption" aria-live="polite">
+            <small id="knowledgeWheelLevel">主菜单</small>
+            <strong id="knowledgeWheelLabel">首页</strong>
+          </div>
+          <div class="knowledge-wheel-controls" aria-label="转动轮盘">
+            <button id="knowledgeWheelPrevious" type="button" aria-label="上一个功能">‹</button>
+            <button id="knowledgeWheelNext" type="button" aria-label="下一个功能">›</button>
+          </div>
+        </section>
+
         <button class="knowledge-brand" type="button" data-knowledge-route="home">
           <span class="knowledge-brand-mark" aria-hidden="true">LE</span>
           <span><strong>Lee Ethan</strong><small>KNOWLEDGE</small></span>
@@ -835,7 +851,7 @@ Camera: --, --, --</pre>
   <script src="home-desktop.js"></script>
   <script src="auth.js?v=20260825-register-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v2.js"></script>
+  <script src="knowledge-i18n-wheel.js"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="assets/vendor/katex/katex.min.js"></script>
@@ -848,7 +864,7 @@ Camera: --, --, --</pre>
   <script src="knowledge-writer.js?v=20260825-3"></script>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
-  <script src="knowledge-site-v2.js"></script>
+  <script src="knowledge-site-wheel.js"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20260913-route-1"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
