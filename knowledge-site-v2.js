@@ -38,13 +38,6 @@
   const accountSummary = accountMenu ? accountMenu.querySelector('summary') : null;
   const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
   const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
-  const wheelViewport = document.getElementById('knowledgeWheelViewport');
-  const wheelItems = document.getElementById('knowledgeWheelItems');
-  const wheelHub = document.getElementById('knowledgeWheelHub');
-  const wheelLevel = document.getElementById('knowledgeWheelLevel');
-  const wheelLabel = document.getElementById('knowledgeWheelLabel');
-  const wheelPrevious = document.getElementById('knowledgeWheelPrevious');
-  const wheelNext = document.getElementById('knowledgeWheelNext');
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
   const data = window.KnowledgeMockData;
@@ -72,10 +65,7 @@
     homeLatestLoading: false,
     homeLatestError: false,
     homeLatestSlugs: new Set(),
-    wheelPanel: 'root',
-    wheelIndex: 0,
   };
-  let wheelReady = false;
   shell.dataset.language = state.language;
 
   function readStorage(key) {
@@ -293,184 +283,6 @@
     });
   }
 
-  function wheelRootEntries() {
-    const entries = [
-      { label: '首页', icon: '⌂', route: 'home' },
-      { label: '文章', icon: '文', panel: 'articles' },
-      { label: '小游戏', icon: '游', route: 'games' },
-      { label: '竞赛中心', icon: '赛', route: 'contests' },
-      { label: '我的系统', icon: 'OS', action: 'desktop' },
-      { label: '链接', icon: '↗', panel: 'links' },
-      { label: '关于阿臻', icon: '臻', panel: 'about' },
-    ];
-    if (isAuthor()) entries.push({ label: '设置', icon: '设', panel: 'settings' });
-    return entries;
-  }
-
-  function wheelPanelEntries(panel) {
-    const panels = {
-      articles: [
-        { label: '全部文章', icon: '全', route: 'all' },
-        { label: '技术文章', icon: '技', route: 'articles' },
-        { label: '算法题解', icon: '题', route: 'solutions' },
-        { label: '学习笔记', icon: '记', route: 'notes' },
-        { label: '项目记录', icon: '项', route: 'projects' },
-        { label: '归档', icon: '档', route: 'archives' },
-      ],
-      links: [
-        { label: 'B站', icon: 'B', href: navigationLinks.socialLinks.bilibili },
-        { label: 'GitHub', icon: 'GH', href: navigationLinks.socialLinks.github },
-        { label: '知乎', icon: '知', href: navigationLinks.socialLinks.zhihu },
-        { label: '牛客', icon: '牛', href: navigationLinks.socialLinks.nowcoder },
-      ],
-      about: [
-        { label: '了解 Zheng', icon: 'ME', route: 'about' },
-        { label: '游戏', icon: 'GM', route: 'all', channel: 'games' },
-        { label: '动漫', icon: 'AN', route: 'all', channel: 'anime' },
-        { label: '漫画', icon: 'MG', route: 'all', channel: 'manga' },
-        { label: '小说', icon: 'NV', route: 'all', channel: 'novels' },
-      ],
-      settings: [
-        { label: '邀请码', icon: '邀', route: 'invitations' },
-      ],
-    };
-    return panels[panel] || wheelRootEntries();
-  }
-
-  function wheelPanelTitle(panel) {
-    return {
-      root: '主菜单',
-      articles: '文章',
-      links: '链接',
-      about: '关于阿臻',
-      settings: '设置',
-    }[panel] || '主菜单';
-  }
-
-  function positionWheelItems() {
-    if (!wheelItems) return;
-    const nodes = Array.from(wheelItems.children);
-    const count = nodes.length;
-    if (!count) return;
-    const radius = window.matchMedia('(max-width: 780px)').matches ? 190 : 248;
-    const center = window.matchMedia('(max-width: 780px)').matches ? 12 : 18;
-    const step = 360 / count;
-    nodes.forEach(function (node, index) {
-      let delta = index - state.wheelIndex;
-      if (delta > count / 2) delta -= count;
-      if (delta < -count / 2) delta += count;
-      const angle = 45 + delta * step;
-      const radians = angle * Math.PI / 180;
-      node.style.left = center + Math.cos(radians) * radius + 'px';
-      node.style.top = center + Math.sin(radians) * radius + 'px';
-      const visible = angle >= -18 && angle <= 108;
-      node.classList.toggle('is-wheel-visible', visible);
-      node.classList.toggle('is-wheel-selected', index === state.wheelIndex);
-      node.tabIndex = index === state.wheelIndex ? 0 : -1;
-      node.setAttribute('aria-current', index === state.wheelIndex ? 'true' : 'false');
-    });
-    const selected = nodes[state.wheelIndex];
-    if (wheelLabel && selected) wheelLabel.textContent = selected.dataset.wheelLabel || '';
-  }
-
-  function createWheelItem(entry, index) {
-    const href = safeExternalUrl(entry.href);
-    const node = href ? document.createElement('a') : document.createElement('button');
-    node.className = 'knowledge-wheel-item';
-    node.dataset.wheelIndex = String(index);
-    node.dataset.wheelLabel = t(entry.label);
-    node.setAttribute('role', 'menuitem');
-    if (node.tagName === 'BUTTON') node.type = 'button';
-    if (entry.panel) node.dataset.wheelPanel = entry.panel;
-    if (entry.route) node.dataset.knowledgeRoute = entry.route;
-    if (entry.channel) node.dataset.channel = entry.channel;
-    if (entry.action) node.dataset.knowledgeAction = entry.action;
-    if (href) {
-      node.href = href;
-      node.target = '_blank';
-      node.rel = 'noopener noreferrer';
-    }
-    const icon = document.createElement('span');
-    icon.className = 'knowledge-wheel-item-icon';
-    icon.textContent = entry.icon;
-    const label = document.createElement('strong');
-    label.textContent = t(entry.label);
-    node.append(icon, label);
-    return node;
-  }
-
-  function renderWheelPanel(panel, preserveIndex) {
-    if (!wheelItems) return;
-    state.wheelPanel = panel || 'root';
-    const entries = state.wheelPanel === 'root'
-      ? wheelRootEntries()
-      : wheelPanelEntries(state.wheelPanel);
-    if (!preserveIndex || state.wheelIndex >= entries.length) state.wheelIndex = 0;
-    wheelItems.replaceChildren();
-    entries.forEach(function (entry, index) {
-      wheelItems.appendChild(createWheelItem(entry, index));
-    });
-    if (wheelLevel) wheelLevel.textContent = t(wheelPanelTitle(state.wheelPanel));
-    if (wheelHub) {
-      wheelHub.classList.toggle('is-back', state.wheelPanel !== 'root');
-      wheelHub.setAttribute('aria-label', t(state.wheelPanel === 'root' ? '返回首页' : '返回主菜单'));
-      wheelHub.querySelector('span').textContent = state.wheelPanel === 'root' ? 'LE' : '↩';
-    }
-    positionWheelItems();
-  }
-
-  function rotateWheel(direction) {
-    if (!wheelItems || !wheelItems.children.length) return;
-    const count = wheelItems.children.length;
-    state.wheelIndex = (state.wheelIndex + direction + count) % count;
-    positionWheelItems();
-  }
-
-  function setupWheelNavigation() {
-    if (!wheelViewport || !wheelItems || !wheelHub || !wheelPrevious || !wheelNext) return;
-    wheelReady = true;
-    renderWheelPanel('root');
-    wheelItems.addEventListener('click', function (event) {
-      const item = event.target.closest('.knowledge-wheel-item');
-      if (!item) return;
-      const index = Number(item.dataset.wheelIndex);
-      if (index !== state.wheelIndex) {
-        event.preventDefault();
-        event.stopPropagation();
-        state.wheelIndex = index;
-        positionWheelItems();
-        return;
-      }
-      if (item.dataset.wheelPanel) {
-        event.preventDefault();
-        event.stopPropagation();
-        renderWheelPanel(item.dataset.wheelPanel);
-      }
-    });
-    wheelPrevious.addEventListener('click', function (event) {
-      event.stopPropagation();
-      rotateWheel(-1);
-    });
-    wheelNext.addEventListener('click', function (event) {
-      event.stopPropagation();
-      rotateWheel(1);
-    });
-    wheelHub.addEventListener('click', function (event) {
-      event.stopPropagation();
-      if (state.wheelPanel !== 'root') renderWheelPanel('root');
-      else navigate('home', {});
-    });
-    wheelViewport.addEventListener('wheel', function (event) {
-      event.preventDefault();
-      rotateWheel(event.deltaY >= 0 ? 1 : -1);
-    }, { passive: false });
-    wheelViewport.addEventListener('keydown', function (event) {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      event.preventDefault();
-      rotateWheel(event.key === 'ArrowRight' ? 1 : -1);
-    });
-  }
-
   function closeNavigation() {
     setNavOpen(false);
     closeNavMenus();
@@ -509,10 +321,6 @@
     }
     authorTools.hidden = !(activeUser && activeUser.role === 'admin');
     if (settingsMenu) settingsMenu.hidden = !(activeUser && activeUser.role === 'admin');
-    if (wheelReady) {
-      if (state.wheelPanel === 'settings' && !isAuthor()) state.wheelPanel = 'root';
-      renderWheelPanel(state.wheelPanel, true);
-    }
   }
 
   function applyTheme() {
@@ -2825,7 +2633,6 @@
   window.addEventListener('resize', function () {
     closeNavMenus();
     if (window.innerWidth > 1040) setNavOpen(false);
-    positionWheelItems();
   });
   window.addEventListener('popstate', function () {
     const parsed = routeFromUrl();
@@ -2840,7 +2647,6 @@
 
   configureNavigationLinks();
   setupNavigationMenus();
-  setupWheelNavigation();
   translateStaticTree();
   updateLanguageButton();
   applyTheme();

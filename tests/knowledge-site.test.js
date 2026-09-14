@@ -4,9 +4,9 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'knowledge-site-wheel.css'), 'utf8');
-const site = fs.readFileSync(path.join(root, 'knowledge-site-wheel.js'), 'utf8');
-const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-wheel.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'knowledge-site-v2.css'), 'utf8');
+const site = fs.readFileSync(path.join(root, 'knowledge-site-v2.js'), 'utf8');
+const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-v2.js'), 'utf8');
 const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
 const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
 const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
@@ -19,12 +19,9 @@ const editorAdapter = fs.readFileSync(path.join(root, 'knowledge-editor-adapter.
 const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-20260809.js'), 'utf8');
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
-assert.match(html, /knowledge-site-wheel\.css/);
-assert.match(html, /knowledge-site-wheel\.js/);
-assert.match(html, /knowledge-i18n-wheel\.js/);
-assert.match(html, /id="knowledgeWheelViewport"/);
-assert.match(html, /id="knowledgeWheelItems"/);
-assert.match(html, /id="knowledgeWheelHub"/);
+assert.match(html, /knowledge-site-v2\.css/);
+assert.match(html, /knowledge-site-v2\.js/);
+assert.match(html, /knowledge-i18n-v2\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
@@ -83,7 +80,7 @@ assert.ok(
 assert.ok(
   html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
   && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
-  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-wheel.js')
+  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v2.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -102,7 +99,7 @@ assert.match(css, /max-height:\s*calc\(100vh - 92px\)/);
 
 assert.match(data, /placeholder:\s*true/);
 assert.match(html, /knowledge-data\.js/);
-assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-wheel.js'));
+assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v2.js'));
 assert.doesNotMatch(repository, /KnowledgeMockData/);
 assert.doesNotMatch(repository, /source\.posts/);
 assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
@@ -131,10 +128,6 @@ assert.match(site, /function loadMoreLatest/);
 assert.match(site, /function renderHomeFailure/);
 assert.match(site, /function recoverEmptyHome/);
 assert.match(site, /window\.addEventListener\('pageshow'/);
-assert.match(site, /function setupWheelNavigation/);
-assert.match(site, /function renderWheelPanel/);
-assert.match(css, /\.knowledge-wheel-viewport/);
-assert.match(css, /\.knowledge-wheel-item\.is-wheel-selected/);
 assert.match(site, /result\.pagination\.hasNext/);
 assert.match(site, /function detailCoverNode/);
 assert.match(site, /repository\.getRelatedPosts/);
