@@ -252,6 +252,22 @@
               </a>
             </div>
           </div>
+          <div class="knowledge-nav-menu" data-knowledge-nav-menu="language">
+            <button class="knowledge-nav-menu-trigger" type="button"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeLanguageMenu">
+              语言 <span aria-hidden="true">⌄</span>
+            </button>
+            <div class="knowledge-nav-submenu" id="knowledgeLanguageMenu" role="menu" hidden>
+              <button type="button" data-knowledge-language="en" role="menuitemradio" aria-checked="false">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">EN</span>
+                <span>英语</span>
+              </button>
+              <button type="button" data-knowledge-language="zh" role="menuitemradio" aria-checked="false">
+                <span class="knowledge-nav-menu-icon" aria-hidden="true">中</span>
+                <span>中文</span>
+              </button>
+            </div>
+          </div>
           <div class="knowledge-nav-menu" data-knowledge-nav-menu="about">
             <button class="knowledge-nav-menu-trigger" type="button"
               aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeAboutMenu">
@@ -296,8 +312,6 @@
         </div>
 
         <div class="knowledge-nav-actions">
-          <button class="knowledge-icon-button" id="knowledgeSearchButton" type="button" aria-label="打开搜索">⌕</button>
-          <button class="knowledge-language-button" id="knowledgeLanguageButton" type="button" aria-label="切换语言">中文</button>
           <button class="knowledge-icon-button" id="knowledgeThemeButton" type="button" aria-label="切换主题">◐</button>
           <details class="knowledge-author-tools" id="knowledgeAuthorTools" hidden>
             <summary>写文章</summary>
@@ -839,7 +853,7 @@ Camera: --, --, --</pre>
   <script src="home-desktop.js"></script>
   <script src="auth.js?v=20260914-guest-auth-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v2.js"></script>
+  <script src="knowledge-i18n-v2.js?v=20260914-language-menu-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="assets/vendor/katex/katex.min.js"></script>

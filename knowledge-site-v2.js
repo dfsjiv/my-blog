@@ -29,8 +29,6 @@
   const navLinks = document.getElementById('knowledgeNavLinks');
   const menuToggle = document.getElementById('knowledgeMenuToggle');
   const themeButton = document.getElementById('knowledgeThemeButton');
-  const languageButton = document.getElementById('knowledgeLanguageButton');
-  const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const guestAuth = document.getElementById('knowledgeGuestAuth');
   const settingsMenu = document.getElementById('knowledgeSettingsMenu');
@@ -38,6 +36,7 @@
   const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
   const accountSummary = accountMenu ? accountMenu.querySelector('summary') : null;
   const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
+  const languageOptions = Array.from(document.querySelectorAll('[data-knowledge-language]'));
   const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
@@ -374,21 +373,21 @@
       });
   }
 
-  function updateLanguageButton() {
-    languageButton.textContent = state.language === 'en' ? '中文' : 'EN';
-    languageButton.setAttribute(
-      'aria-label',
-      state.language === 'en' ? 'Switch to Chinese' : '切换到英文'
-    );
-    languageButton.title = languageButton.getAttribute('aria-label');
+  function updateLanguageOptions() {
+    languageOptions.forEach(function (option) {
+      const isActive = option.dataset.knowledgeLanguage === state.language;
+      option.classList.toggle('is-active', isActive);
+      option.setAttribute('aria-checked', String(isActive));
+    });
   }
 
-  async function toggleLanguage() {
-    state.language = state.language === 'en' ? 'zh' : 'en';
+  async function setLanguage(language) {
+    if (language !== 'en' && language !== 'zh') return;
+    state.language = language;
     writeStorage(LANGUAGE_KEY, state.language);
     shell.dataset.language = state.language;
     translateStaticTree();
-    updateLanguageButton();
+    updateLanguageOptions();
     applyTheme();
     refreshIdentity();
     await renderCurrentRoute({ replace: true, preserveScroll: true });
@@ -2617,9 +2616,12 @@
     setNavOpen(!navLinks.classList.contains('is-open'));
   });
   themeButton.addEventListener('click', cycleTheme);
-  languageButton.addEventListener('click', toggleLanguage);
-  searchButton.addEventListener('click', function () {
-    navigate('all', { q: '', page: 1, sort: 'latest' });
+  languageOptions.forEach(function (option) {
+    option.addEventListener('click', function () {
+      const menu = option.closest('[data-knowledge-nav-menu]');
+      if (menu) setNavMenuOpen(menu, false);
+      setLanguage(option.dataset.knowledgeLanguage);
+    });
   });
   if (accountSummary) {
     accountSummary.addEventListener('click', function (event) {
@@ -2661,7 +2663,7 @@
   configureNavigationLinks();
   setupNavigationMenus();
   translateStaticTree();
-  updateLanguageButton();
+  updateLanguageOptions();
   applyTheme();
   setupHeroCarousel();
   refreshIdentity();
