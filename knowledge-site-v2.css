@@ -176,6 +176,12 @@ body.auth-elegant .knowledge-site {
   text-align: left;
 }
 
+.knowledge-brand-logo {
+  width: 138px;
+  height: auto;
+  display: block;
+}
+
 .knowledge-brand-mark {
   width: 38px;
   height: 38px;
@@ -2828,6 +2834,10 @@ body.auth-elegant .knowledge-site {
   .knowledge-brand-mark {
     width: 34px;
     height: 34px;
+  }
+
+  .knowledge-brand-logo {
+    width: 108px;
   }
 
   #knowledgeSearchButton {
