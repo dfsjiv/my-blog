@@ -403,6 +403,49 @@ body.auth-elegant .knowledge-site {
   position: relative;
 }
 
+.knowledge-guest-auth {
+  position: relative;
+  width: 168px;
+  aspect-ratio: 942 / 265;
+  flex: 0 0 auto;
+}
+
+.knowledge-guest-auth[hidden] {
+  display: none;
+}
+
+.knowledge-guest-auth img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.knowledge-guest-auth button {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+}
+
+.knowledge-guest-auth button:first-of-type {
+  left: 0;
+}
+
+.knowledge-guest-auth button:last-of-type {
+  right: 0;
+}
+
+.knowledge-guest-auth button:focus-visible {
+  outline: 2px solid var(--knowledge-primary);
+  outline-offset: 2px;
+}
+
 .knowledge-author-tools summary,
 .knowledge-account-menu summary {
   min-height: 38px;
@@ -2837,7 +2880,11 @@ body.auth-elegant .knowledge-site {
   }
 
   .knowledge-brand-logo {
-    width: 108px;
+    width: 88px;
+  }
+
+  .knowledge-guest-auth {
+    width: 94px;
   }
 
   #knowledgeSearchButton {

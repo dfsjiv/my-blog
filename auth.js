@@ -404,8 +404,9 @@
       if (window.aiChat) window.aiChat.refreshAccess();
     }
 
-    function showElegantLogin(message) {
+    function showElegantLogin(message, mode) {
       showLoginScreen(message || '');
+      if (mode === 'register') setAuthMode('register');
     }
 
     function showAuthenticatedDestination(user) {

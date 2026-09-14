@@ -241,7 +241,8 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20260825-register-1"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20260914-guest-auth-1"><\/script>/);
+  assert.match(indexHtml, /id="knowledgeGuestAuth"[\s\S]*data-auth-mode="login"[\s\S]*data-auth-mode="register"/);
   assert.match(indexHtml, /data-src="assets\/vendor\/mikutap\/background\?auto=1&amp;v=20260807-17"/);
   assert.doesNotMatch(indexHtml, /\ssrc="assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /id="loginScreen"[^>]*aria-hidden="true"/);
@@ -253,6 +254,7 @@ function response(status, data, jsonError) {
   assert.match(source, /showElegantVersion\(auth\.enterAsGuest\(\)\)/);
   assert.match(source, /showElegantVersion\(result\.user\)/);
   assert.match(source, /function showElegantLogin/);
+  assert.match(source, /if \(mode === 'register'\) setAuthMode\('register'\)/);
   assert.match(source, /showAuthenticatedDestination\(auth\.enterAsGuest\(\)\)/);
   assert.match(source, /typeof window\.elegantShell\.refreshIdentity === 'function'/);
   assert.match(source, /showElegantVersion\(user\)/);

@@ -327,6 +327,9 @@ assert.match(game2048, /touchstart/);
 assert.match(css, /scroll-snap-type:\s*y mandatory/);
 assert.match(css, /\.knowledge-game-window/);
 assert.match(site, /typeof window\.authUi\.showElegantLogin === 'function'/);
+assert.match(site, /guestAuth\.hidden = !isGuest/);
+assert.match(site, /accountMenu\.hidden = isGuest/);
+assert.match(site, /target\.dataset\.authMode/);
 assert.match(site, /user\.role !== 'guest'/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {

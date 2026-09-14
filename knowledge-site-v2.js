@@ -32,6 +32,7 @@
   const languageButton = document.getElementById('knowledgeLanguageButton');
   const searchButton = document.getElementById('knowledgeSearchButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
+  const guestAuth = document.getElementById('knowledgeGuestAuth');
   const settingsMenu = document.getElementById('knowledgeSettingsMenu');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
@@ -308,16 +309,21 @@
 
   function refreshIdentity(user) {
     const activeUser = user || currentUser();
+    const isGuest = !activeUser || activeUser.role === 'guest';
     const username = activeUser && activeUser.username ? activeUser.username : t('当前用户');
     const accountName = document.getElementById('knowledgeAccountName');
     const accountInitial = document.getElementById('knowledgeAccountInitial');
     if (accountName) accountName.textContent = username;
     if (accountInitial) accountInitial.textContent = username.slice(0, 1).toUpperCase() || 'U';
     if (accountSummary) {
-      const isGuest = Boolean(activeUser && activeUser.role === 'guest');
       const label = isGuest ? t('登录账户') : t('打开账户菜单');
       accountSummary.setAttribute('aria-label', label);
       accountSummary.title = label;
+    }
+    if (guestAuth) guestAuth.hidden = !isGuest;
+    if (accountMenu) {
+      accountMenu.hidden = isGuest;
+      if (isGuest) accountMenu.removeAttribute('open');
     }
     authorTools.hidden = !(activeUser && activeUser.role === 'admin');
     if (settingsMenu) settingsMenu.hidden = !(activeUser && activeUser.role === 'admin');
@@ -2624,6 +2630,13 @@
       if (window.authUi && typeof window.authUi.showElegantLogin === 'function') {
         window.authUi.showElegantLogin('');
       }
+    });
+  }
+  if (guestAuth) {
+    guestAuth.addEventListener('click', function (event) {
+      const target = event.target.closest('[data-auth-mode]');
+      if (!target || !window.authUi || typeof window.authUi.showElegantLogin !== 'function') return;
+      window.authUi.showElegantLogin('', target.dataset.authMode);
     });
   }
   logoutButton.addEventListener('click', function () {
