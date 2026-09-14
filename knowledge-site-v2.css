@@ -369,6 +369,10 @@ body.auth-elegant .knowledge-site {
   gap: 5px;
 }
 
+.knowledge-legacy-nav-controls {
+  display: none !important;
+}
+
 .knowledge-icon-button,
 .knowledge-menu-toggle {
   width: 38px;

@@ -5,8 +5,8 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'knowledge-site-v2.css'), 'utf8');
-const site = fs.readFileSync(path.join(root, 'knowledge-site-v2.js'), 'utf8');
-const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-v2.js'), 'utf8');
+const site = fs.readFileSync(path.join(root, 'knowledge-site-v3.js'), 'utf8');
+const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-v3.js'), 'utf8');
 const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
 const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
 const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
@@ -20,8 +20,8 @@ const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-2
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site-v2\.css/);
-assert.match(html, /knowledge-site-v2\.js/);
-assert.match(html, /knowledge-i18n-v2\.js/);
+assert.match(html, /knowledge-site-v3\.js/);
+assert.match(html, /knowledge-i18n-v3\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
 assert.match(html, /id="knowledgeSolutionList"/);
@@ -36,8 +36,7 @@ assert.match(html, /data-knowledge-nav-menu="links"/);
 assert.match(html, /data-knowledge-nav-menu="language"/);
 assert.match(html, /data-knowledge-language="en"[\s\S]*>英语</);
 assert.match(html, /data-knowledge-language="zh"[\s\S]*>中文</);
-assert.doesNotMatch(html, /id="knowledgeSearchButton"/);
-assert.doesNotMatch(html, /id="knowledgeLanguageButton"/);
+assert.match(html, /class="knowledge-legacy-nav-controls" hidden[\s\S]*id="knowledgeSearchButton"[\s\S]*id="knowledgeLanguageButton"/);
 assert.match(i18n, /'语言': 'Language'/);
 assert.match(i18n, /'英语': 'English'/);
 assert.match(i18n, /'中文': 'Chinese'/);
@@ -88,7 +87,7 @@ assert.ok(
 assert.ok(
   html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
   && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
-  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v2.js')
+  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v3.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -107,7 +106,7 @@ assert.match(css, /max-height:\s*calc\(100vh - 92px\)/);
 
 assert.match(data, /placeholder:\s*true/);
 assert.match(html, /knowledge-data\.js/);
-assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v2.js'));
+assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v3.js'));
 assert.doesNotMatch(repository, /KnowledgeMockData/);
 assert.doesNotMatch(repository, /source\.posts/);
 assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
