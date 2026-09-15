@@ -94,7 +94,7 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260825-register-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260915-comments-1" />
+  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260915-account-1" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
   <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
@@ -314,10 +314,11 @@
             <button type="button" data-auth-mode="register" aria-label="注册"></button>
           </div>
           <details class="knowledge-account-menu" id="knowledgeAccountMenu">
-            <summary aria-label="打开账户菜单"><span id="knowledgeAccountInitial">U</span></summary>
+            <summary aria-label="打开账户菜单" aria-haspopup="dialog"><span id="knowledgeAccountInitial">U</span></summary>
             <div>
               <strong id="knowledgeAccountName">当前用户</strong>
-              <small>已登录账户</small>
+              <small id="knowledgeAccountRole">已登录账户</small>
+              <button type="button" data-knowledge-route="profile">个人中心</button>
               <button type="button" data-knowledge-action="desktop">返回 Web OS</button>
               <button type="button" id="knowledgeLogoutButton">退出登录</button>
             </div>
@@ -841,7 +842,7 @@ Camera: --, --, --</pre>
   <script src="home-desktop.js"></script>
   <script src="auth.js?v=20260914-guest-auth-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20260915-comments-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20260915-account-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="assets/vendor/katex/katex.min.js"></script>
@@ -855,7 +856,7 @@ Camera: --, --, --</pre>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
   <script src="knowledge-comments.js?v=20260915-2"></script>
-  <script src="knowledge-site-v4.js?v=20260915-comments-2"></script>
+  <script src="knowledge-site-v4.js?v=20260915-account-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20260913-route-1"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>

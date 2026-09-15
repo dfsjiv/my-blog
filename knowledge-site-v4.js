@@ -314,8 +314,15 @@
     const username = activeUser && activeUser.username ? activeUser.username : t('当前用户');
     const accountName = document.getElementById('knowledgeAccountName');
     const accountInitial = document.getElementById('knowledgeAccountInitial');
+    const accountRole = document.getElementById('knowledgeAccountRole');
+    const initial = username.slice(0, 1).toUpperCase() || 'U';
     if (accountName) accountName.textContent = username;
-    if (accountInitial) accountInitial.textContent = username.slice(0, 1).toUpperCase() || 'U';
+    if (accountInitial) accountInitial.textContent = initial;
+    if (accountRole) {
+      accountRole.textContent = t(activeUser && activeUser.role === 'admin'
+        ? '管理员账户'
+        : '用户账户');
+    }
     if (accountSummary) {
       const label = isGuest ? t('登录账户') : t('打开账户菜单');
       accountSummary.setAttribute('aria-label', label);
@@ -927,7 +934,7 @@
     if (routeName === 'post') {
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
-    const route = ['home', 'games', 'contests', 'all', 'categories', 'tags', 'archives', 'about',
+    const route = ['home', 'games', 'contests', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
       'writer', 'drafts', 'manage', 'mover', 'invitations'].includes(routeName) ? routeName : 'home';
     return {
       route,
@@ -1147,6 +1154,7 @@
     if (route === 'tags') return renderFacetIndex('tags', controller);
     if (route === 'archives') return renderFacetIndex('archives', controller);
     if (route === 'about') return renderAbout(controller);
+    if (route === 'profile') return renderProfile();
     if (route === 'detail') return renderDetail(details.slug, controller);
     if (route === 'mover') return renderArticleMover();
     if (route === 'writer') return renderWriter(details);
@@ -1834,6 +1842,55 @@
     } catch (error) {
       if (!controller.signal.aborted) console.error('About page statistics failed:', error);
     }
+  }
+
+  function renderProfile() {
+    const user = currentUser();
+    if (!user || user.role === 'guest') {
+      const node = showRouteShell(
+        'ACCOUNT',
+        t('请先登录'),
+        t('登录后可以进入个人中心。')
+      );
+      const login = button(t('登录'), 'knowledge-route-button is-primary');
+      login.addEventListener('click', function () {
+        if (window.authUi && typeof window.authUi.showElegantLogin === 'function') {
+          window.authUi.showElegantLogin('');
+        }
+      });
+      node.appendChild(login);
+      return;
+    }
+
+    const node = showRouteShell(
+      'ACCOUNT',
+      t('个人中心'),
+      t('查看当前账户并进入常用功能。')
+    );
+    const card = element('section', 'knowledge-profile-card');
+    const identity = element('div', 'knowledge-profile-identity');
+    identity.append(
+      element('span', 'knowledge-profile-avatar', user.username.slice(0, 1).toUpperCase() || 'U'),
+      element('div', 'knowledge-profile-copy')
+    );
+    identity.lastElementChild.append(
+      contentElement('strong', '', user.username),
+      element('span', '', user.role === 'admin' ? '管理员账户' : '用户账户')
+    );
+
+    const actions = element('div', 'knowledge-profile-actions');
+    const home = button(t('返回首页'), 'knowledge-route-button');
+    home.dataset.knowledgeRoute = 'home';
+    const desktop = button(t('返回 Web OS'), 'knowledge-route-button');
+    desktop.dataset.knowledgeAction = 'desktop';
+    const signOut = button(t('退出登录'), 'knowledge-route-button is-danger');
+    signOut.addEventListener('click', function () {
+      closeNavigation();
+      if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
+    });
+    actions.append(home, desktop, signOut);
+    card.append(identity, actions);
+    node.appendChild(card);
   }
 
   async function renderInvitations(controller) {

@@ -472,6 +472,7 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-account-menu summary {
   padding: 0 4px;
+  cursor: pointer;
 }
 
 #knowledgeAccountInitial {
@@ -484,6 +485,15 @@ body.auth-elegant .knowledge-site {
   border-radius: 50%;
   font-size: 11px;
   font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  transform-origin: center;
+}
+
+.knowledge-account-menu summary:hover #knowledgeAccountInitial,
+.knowledge-account-menu summary:focus-visible #knowledgeAccountInitial,
+.knowledge-account-menu[open] #knowledgeAccountInitial {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px var(--knowledge-primary-soft), 0 8px 22px rgba(0, 0, 0, 0.24);
 }
 
 .knowledge-author-tools > div,
@@ -1789,6 +1799,62 @@ body.auth-elegant .knowledge-site {
 
 .knowledge-route-shell {
   padding: 24px;
+}
+
+.knowledge-profile-card {
+  max-width: 680px;
+  margin-top: 24px;
+  padding: 24px;
+  display: grid;
+  gap: 22px;
+  background: var(--knowledge-surface-strong);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius);
+}
+
+.knowledge-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.knowledge-profile-avatar {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--knowledge-secondary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px var(--knowledge-primary-soft);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.knowledge-profile-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.knowledge-profile-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22px;
+}
+
+.knowledge-profile-copy span {
+  color: var(--knowledge-muted);
+}
+
+.knowledge-profile-actions {
+  padding-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid var(--knowledge-border);
 }
 
 .knowledge-route-header {
