@@ -104,6 +104,18 @@ const context = {
     if (url === '/api/knowledge/posts/binary-search') {
       return response({ success: true, data: { post } });
     }
+    if (url === '/api/knowledge/post-comments/knowledge/7' && options.method === 'GET') {
+      return response({ success: true, data: { comments: [{ id: 1, content: 'hello' }] } });
+    }
+    if (url === '/api/knowledge/post-comments/knowledge/7' && options.method === 'POST') {
+      return response({ success: true, data: { comment: { id: 2, content: 'new' } } }, 201);
+    }
+    if (url === '/api/knowledge/post-comments/legacy-blog/3' && options.method === 'GET') {
+      return response({ success: true, data: { comments: [] } });
+    }
+    if (url === '/api/knowledge/comments/2' && options.method === 'DELETE') {
+      return response({ success: true, data: { id: 2 } });
+    }
     return response({
       success: true,
       data: {
@@ -192,6 +204,29 @@ vm.runInContext(source, context);
     { token: 'admin-token' }
   );
   assert.equal(uploaded.mimeType, 'image/png');
+  const comments = await repository.getPostComments(detailA);
+  assert.equal(comments[0].id, 1);
+  const createdComment = await repository.createPostComment(
+    detailA,
+    { content: 'new' },
+    { token: 'user-token' }
+  );
+  assert.equal(createdComment.id, 2);
+  const legacyComments = await repository.getPostComments({
+    id: 30,
+    source: 'legacy-blog',
+    legacyId: 3,
+  });
+  assert.deepEqual(legacyComments, []);
+  await repository.deletePostComment(2, { token: 'admin-token' });
+  const commentWriteRequests = requests.filter((request) => (
+    request.url === '/api/knowledge/post-comments/knowledge/7'
+      || request.url === '/api/knowledge/comments/2'
+  ));
+  assert.deepEqual(
+    commentWriteRequests.map((request) => request.options.method),
+    ['GET', 'POST', 'DELETE']
+  );
   const uploadRequest = requests.find(
     (request) => request.url === '/api/knowledge/admin/images'
   );

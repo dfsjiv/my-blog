@@ -2291,6 +2291,128 @@ body.auth-elegant .knowledge-site {
   text-align: left;
 }
 
+.knowledge-comments {
+  margin-top: 28px;
+  padding: 20px;
+  background: var(--knowledge-surface);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius);
+}
+
+.knowledge-comments-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.knowledge-comments-status,
+.knowledge-comments-empty,
+.knowledge-comment-form-status {
+  color: var(--knowledge-muted);
+}
+
+.knowledge-comments-status.is-error,
+.knowledge-comment-form-status {
+  font-size: 12px;
+}
+
+.knowledge-comments-login,
+.knowledge-comment-header,
+.knowledge-comment-actions,
+.knowledge-comment-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.knowledge-comments-login {
+  justify-content: space-between;
+  margin-bottom: 16px;
+  color: var(--knowledge-muted);
+}
+
+.knowledge-comment-form {
+  margin-bottom: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.knowledge-comment-form.is-reply {
+  margin: 12px 0 0;
+}
+
+.knowledge-comment-input {
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 14px;
+  resize: vertical;
+  color: var(--knowledge-text);
+  background: var(--knowledge-surface-strong);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+  font: inherit;
+  line-height: 1.6;
+}
+
+.knowledge-comment-input:focus {
+  outline: 2px solid var(--knowledge-primary-soft);
+  border-color: var(--knowledge-primary);
+}
+
+.knowledge-comments-list,
+.knowledge-comment-replies {
+  display: grid;
+  gap: 12px;
+}
+
+.knowledge-comment-item {
+  padding: 14px;
+  background: var(--knowledge-surface-strong);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius-small);
+}
+
+.knowledge-comment-item.is-reply {
+  margin-left: 22px;
+  background: var(--knowledge-surface);
+}
+
+.knowledge-comment-header {
+  justify-content: space-between;
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+.knowledge-comment-header strong {
+  color: var(--knowledge-text);
+  font-size: 14px;
+}
+
+.knowledge-comment-actions {
+  margin-left: auto;
+}
+
+.knowledge-comment-actions button {
+  padding: 2px 5px;
+  color: var(--knowledge-primary);
+  background: transparent;
+  border: 0;
+}
+
+.knowledge-comment-actions button.is-danger {
+  color: #e36a75;
+}
+
+.knowledge-comment-content {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.knowledge-comment-replies {
+  margin-top: 12px;
+}
+
 .knowledge-index-item strong {
   font-size: 16px;
 }

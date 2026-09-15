@@ -428,6 +428,49 @@
     return image;
   }
 
+  function postCommentTarget(post) {
+    const legacy = post && post.source === 'legacy-blog';
+    return {
+      source: legacy ? 'legacy-blog' : 'knowledge',
+      id: legacy ? (post.legacyId ?? post.sourceId ?? post.id) : post && post.id,
+    };
+  }
+
+  function postCommentsPath(post) {
+    const target = postCommentTarget(post);
+    return API_ROOT + '/post-comments/'
+      + encodeURIComponent(target.source) + '/'
+      + encodeURIComponent(String(target.id));
+  }
+
+  async function getPostComments(post, options) {
+    const data = await apiRequest(
+      postCommentsPath(post),
+      options
+    );
+    return Array.isArray(data && data.comments) ? data.comments : [];
+  }
+
+  async function createPostComment(post, input, options) {
+    const settings = Object.assign({}, options || {}, {
+      method: 'POST',
+      body: input,
+    });
+    const data = await apiRequest(
+      postCommentsPath(post),
+      settings
+    );
+    return data && data.comment;
+  }
+
+  async function deletePostComment(commentId, options) {
+    const settings = Object.assign({}, options || {}, { method: 'DELETE' });
+    return apiRequest(
+      API_ROOT + '/comments/' + encodeURIComponent(String(commentId)),
+      settings
+    );
+  }
+
   async function getArchivePosts(year, month, options) {
     const settings = options || {};
     const target = Number(year) * 100 + Number(month);
@@ -529,6 +572,9 @@
     createInvitation,
     revokeInvitation,
     uploadImage,
+    getPostComments,
+    createPostComment,
+    deletePostComment,
     searchPosts,
     getArchivePosts,
     getPostContext,

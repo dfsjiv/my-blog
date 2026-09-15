@@ -41,6 +41,7 @@
   const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
+  const commentsModule = window.KnowledgeComments;
   const data = window.KnowledgeMockData;
   const i18n = window.KnowledgeI18n;
   if (!shell || !homeView || !routeView || !repository || !markdown || !data || !i18n) return;
@@ -2359,9 +2360,24 @@
     const related = element('section', 'knowledge-related-section');
     related.append(element('h2', '', '相关文章'), makeLoadingState('正在加载相关文章…'));
     main.appendChild(related);
+    const comments = element('section', 'knowledge-comments');
+    main.appendChild(comments);
     routeView.appendChild(layout);
     if (detailAside) setupSectionObserver(renderedHeadings, detailAside);
     loadDetailExtras(post, navigation, related, controller);
+    if (commentsModule && typeof commentsModule.render === 'function') {
+      commentsModule.render(comments, {
+        post,
+        repository,
+        signal: controller.signal,
+        translate: t,
+        getUser: currentUser,
+        getToken: currentToken,
+        getLanguage: function () { return state.language; },
+      });
+    } else {
+      comments.appendChild(makeEmptyState('评论暂时无法加载。', '评论模块未能正确加载。'));
+    }
   }
 
   function makeSolutionInfo(post) {

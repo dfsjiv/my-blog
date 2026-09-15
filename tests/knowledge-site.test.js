@@ -9,6 +9,8 @@ const site = fs.readFileSync(path.join(root, 'knowledge-site-v4.js'), 'utf8');
 const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-v3.js'), 'utf8');
 const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
 const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
+const comments = fs.readFileSync(path.join(root, 'knowledge-comments.js'), 'utf8');
+const legacyBlog = fs.readFileSync(path.join(root, 'script.js'), 'utf8');
 const markdown = fs.readFileSync(path.join(root, 'knowledge-markdown.js'), 'utf8');
 const mover = fs.readFileSync(path.join(root, 'knowledge-article-mover.js'), 'utf8');
 const moverCss = fs.readFileSync(path.join(root, 'knowledge-article-mover.css'), 'utf8');
@@ -21,6 +23,7 @@ const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-2
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site-v2\.css/);
 assert.match(html, /knowledge-site-v4\.js/);
+assert.match(html, /knowledge-comments\.js/);
 assert.match(html, /knowledge-i18n-v3\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
@@ -89,6 +92,7 @@ assert.ok(
   html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
   && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
   && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v4.js')
+  && html.indexOf('knowledge-comments.js') < html.indexOf('knowledge-site-v4.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -104,6 +108,8 @@ assert.match(css, /prefers-reduced-motion:\s*reduce/);
 assert.match(css, /\.knowledge-nav-submenu/);
 assert.match(css, /\.knowledge-nav-menu\.is-open/);
 assert.match(css, /max-height:\s*calc\(100vh - 92px\)/);
+assert.match(css, /\.knowledge-comments/);
+assert.match(css, /\.knowledge-comment-item/);
 
 assert.match(data, /placeholder:\s*true/);
 assert.match(html, /knowledge-data\.js/);
@@ -117,6 +123,9 @@ assert.match(repository, /getPosts/);
 assert.match(repository, /getPostBySlug/);
 assert.match(repository, /getFacets/);
 assert.match(repository, /getRelatedPosts/);
+assert.match(repository, /getPostComments/);
+assert.match(repository, /createPostComment/);
+assert.match(repository, /deletePostComment/);
 assert.match(repository, /getPostContext/);
 assert.match(repository, /getAdminPost/);
 assert.match(repository, /createPost/);
@@ -144,6 +153,7 @@ assert.match(site, /result\.pagination\.hasNext/);
 assert.match(site, /function detailCoverNode/);
 assert.match(site, /repository\.getRelatedPosts/);
 assert.match(site, /repository\.getPostContext/);
+assert.match(site, /commentsModule\.render\(comments/);
 assert.match(site, /currentUser\(\)\.role === 'admin'/);
 assert.match(site, /renderArticleMover/);
 assert.match(site, /renderWriter/);
@@ -175,6 +185,12 @@ assert.doesNotMatch(site, /演示内容/);
 assert.doesNotMatch(site, /innerHTML/);
 assert.doesNotMatch(site, /\beval\(/);
 assert.doesNotMatch(site, /new Function/);
+assert.match(comments, /repository\.getPostComments\(post/);
+assert.match(comments, /repository\.createPostComment/);
+assert.match(comments, /repository\.deletePostComment/);
+assert.doesNotMatch(comments, /innerHTML/);
+assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
+assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);

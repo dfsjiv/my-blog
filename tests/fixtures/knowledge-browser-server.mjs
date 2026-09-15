@@ -112,6 +112,18 @@ let favoriteItems = [
         updatedAt: now
     }
 ];
+let commentItems = [
+    {
+        id: 1,
+        postSource: "legacy-blog",
+        postId: 2,
+        parentId: null,
+        content: "这是一条文章评论。",
+        createdAt: now,
+        author: { id: 2, username: "Reader", role: "user" },
+        replies: []
+    }
+];
 
 function json(response, data, status = 200) {
     response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -262,6 +274,56 @@ http.createServer(async (request, response) => {
         const items = favoriteItems.filter((item) => item.status === "published"
             && (!kind || item.kind === kind));
         return json(response, { success: true, data: { items } });
+    }
+    const postCommentsMatch = url.pathname.match(
+        /^\/api\/knowledge\/post-comments\/(knowledge|legacy-blog)\/(\d+)$/
+    );
+    if (postCommentsMatch) {
+        const source = postCommentsMatch[1];
+        const postId = Number(postCommentsMatch[2]);
+        if (request.method === "GET") {
+            return json(response, {
+                success: true,
+                data: {
+                    comments: commentItems.filter((item) => (
+                        item.postSource === source && item.postId === postId
+                    ))
+                }
+            });
+        }
+        if (request.method === "POST") {
+            if (request.headers.authorization !== "Bearer fixture-admin-token") {
+                return json(response, {
+                    success: false,
+                    error: { code: "UNAUTHORIZED", message: "请先登录" }
+                }, 401);
+            }
+            const input = await readJsonBody(request);
+            const comment = {
+                id: commentItems.length + 1,
+                postSource: source,
+                postId,
+                parentId: input.parentId || null,
+                content: input.content,
+                createdAt: now,
+                author: { id: 1, username: "Lee Ethan", role: "admin" },
+                replies: []
+            };
+            commentItems.push(comment);
+            return json(response, { success: true, data: { comment } }, 201);
+        }
+    }
+    const knowledgeCommentMatch = url.pathname.match(/^\/api\/knowledge\/comments\/(\d+)$/);
+    if (knowledgeCommentMatch && request.method === "DELETE") {
+        if (request.headers.authorization !== "Bearer fixture-admin-token") {
+            return json(response, {
+                success: false,
+                error: { code: "UNAUTHORIZED", message: "请先登录" }
+            }, 401);
+        }
+        const id = Number(knowledgeCommentMatch[1]);
+        commentItems = commentItems.filter((item) => item.id !== id && item.parentId !== id);
+        return json(response, { success: true, data: { id } });
     }
     if (url.pathname === "/api/knowledge/admin/favorites") {
         if (request.headers.authorization !== "Bearer fixture-admin-token") {

@@ -1,6 +1,7 @@
 const API_BASE_URL = '';
 const STORAGE_KEY = 'myBlogDesktopState';
 const AUTH_TOKEN_KEY = 'blog_session_token';
+const LEGACY_COMMENTS_ENABLED = false;
 const PAGE_BY_CATEGORY = {
   algorithm: 'algorithm',
   computer: 'tech',
@@ -1100,9 +1101,7 @@ function renderArticleDetail(article) {
 
   const main = document.createElement('div');
   main.className = 'article-detail-main';
-  const commentsSection = document.createElement('section');
-  commentsSection.className = 'article-comments';
-  main.append(title, createArticleMeta(article), body, commentsSection);
+  main.append(title, createArticleMeta(article), body);
 
   const layout = document.createElement('div');
   layout.className = 'article-detail-layout';
@@ -1119,8 +1118,13 @@ function renderArticleDetail(article) {
   }
 
   setupReadingEnhancements(headings, tocGroups);
-  blogState.commentsSection = commentsSection;
-  loadComments(article.id, commentsSection);
+  if (LEGACY_COMMENTS_ENABLED) {
+    const commentsSection = document.createElement('section');
+    commentsSection.className = 'article-comments';
+    main.appendChild(commentsSection);
+    blogState.commentsSection = commentsSection;
+    loadComments(article.id, commentsSection);
+  }
 }
 
 function renderArticleAdminActions(article) {

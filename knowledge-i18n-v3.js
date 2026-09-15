@@ -441,6 +441,23 @@
     '这里暂时还没有发布动漫内容。': 'No anime content has been published yet.',
     '这里暂时还没有发布漫画内容。': 'No manga content has been published yet.',
     '这里暂时还没有发布小说内容。': 'No novel content has been published yet.',
+    '评论': 'Comments',
+    '正在加载评论…': 'Loading comments…',
+    '评论暂时无法加载。': 'Comments are temporarily unavailable.',
+    '评论模块未能正确加载。': 'The comments module did not load correctly.',
+    '还没有评论，来留下第一条吧。': 'No comments yet. Leave the first one.',
+    '登录后可以发表评论。': 'Sign in to leave a comment.',
+    '登录': 'Sign In',
+    '用户': 'User',
+    '回复': 'Reply',
+    '写下回复…': 'Write a reply…',
+    '写下你的评论…': 'Write your comment…',
+    '发表回复': 'Post Reply',
+    '发表评论': 'Post Comment',
+    '评论内容不能为空': 'Comment cannot be empty',
+    '正在发表…': 'Posting…',
+    '评论发表失败。': 'Unable to post the comment.',
+    '确认删除这条评论吗？': 'Delete this comment?',
   };
 
   const chinese = Object.fromEntries(Object.entries(english).map(function (entry) {
