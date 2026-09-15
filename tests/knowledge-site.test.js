@@ -194,6 +194,10 @@ assert.match(comments, /addEventListener\('knowledge-auth-changed'/);
 assert.match(comments, /removeEventListener\('knowledge-auth-changed'/);
 assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
 assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
+assert.match(html, /knowledge-site-v2\.css\?v=20260915-comments-1/);
+assert.match(html, /knowledge-i18n-v3\.js\?v=20260915-comments-1/);
+assert.match(css, /\.knowledge-comment-form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+assert.match(css, /\.knowledge-comment-input\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);

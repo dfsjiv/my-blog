@@ -2292,6 +2292,9 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-comments {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-top: 28px;
   padding: 20px;
   background: var(--knowledge-surface);
@@ -2331,9 +2334,10 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-comment-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   margin-bottom: 20px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  align-items: center;
 }
 
 .knowledge-comment-form.is-reply {
@@ -2341,7 +2345,10 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-comment-input {
+  grid-column: 1 / -1;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   min-height: 92px;
   padding: 12px 14px;
   resize: vertical;
@@ -2351,6 +2358,15 @@ body.auth-elegant .knowledge-site {
   border-radius: var(--knowledge-radius-small);
   font: inherit;
   line-height: 1.6;
+}
+
+.knowledge-comment-form-status {
+  grid-column: 1;
+}
+
+.knowledge-comment-form > .knowledge-route-button {
+  grid-column: 2;
+  justify-self: end;
 }
 
 .knowledge-comment-input:focus {
