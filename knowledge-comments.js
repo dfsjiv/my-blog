@@ -34,8 +34,20 @@
     const getLanguage = typeof options.getLanguage === 'function'
       ? options.getLanguage
       : function () { return 'zh'; };
+    let latestComments = [];
 
     container.className = 'knowledge-comments';
+
+    function refreshAuthState() {
+      draw(latestComments);
+    }
+
+    window.addEventListener('knowledge-auth-changed', refreshAuthState);
+    if (signal) {
+      signal.addEventListener('abort', function () {
+        window.removeEventListener('knowledge-auth-changed', refreshAuthState);
+      }, { once: true });
+    }
 
     async function load() {
       container.replaceChildren(
@@ -60,6 +72,7 @@
     }
 
     function draw(comments) {
+      latestComments = comments;
       const user = getUser();
       const signedIn = Boolean(user && user.role !== 'guest' && getToken());
       const total = comments.reduce(function (count, comment) {

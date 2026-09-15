@@ -189,6 +189,9 @@ assert.match(comments, /repository\.getPostComments\(post/);
 assert.match(comments, /repository\.createPostComment/);
 assert.match(comments, /repository\.deletePostComment/);
 assert.doesNotMatch(comments, /innerHTML/);
+assert.match(site, /knowledge-auth-changed/);
+assert.match(comments, /addEventListener\('knowledge-auth-changed'/);
+assert.match(comments, /removeEventListener\('knowledge-auth-changed'/);
 assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
 assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
 

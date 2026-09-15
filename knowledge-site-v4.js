@@ -328,6 +328,9 @@
     }
     authorTools.hidden = !(activeUser && activeUser.role === 'admin');
     if (settingsMenu) settingsMenu.hidden = !(activeUser && activeUser.role === 'admin');
+    window.dispatchEvent(new CustomEvent('knowledge-auth-changed', {
+      detail: { user: activeUser },
+    }));
   }
 
   function applyTheme() {
