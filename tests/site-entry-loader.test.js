@@ -8,9 +8,9 @@ const loader = fs.readFileSync(path.join(root, 'site-entry-loader.js'), 'utf8');
 const site = fs.readFileSync(path.join(root, 'knowledge-site-v3.js'), 'utf8');
 
 assert(html.includes('id="siteEntryLoader"'));
-assert(html.includes('id="siteEntryLoaderCanvas"'));
+assert(html.includes('class="site-entry-loader__animation"'));
+assert(html.includes('src="assets/site-entry-loader-miku.gif"'));
 assert(html.includes('id="siteEntryLoaderProgress"'));
-assert(html.includes('>LEE\'S SITE</p>'));
 assert(html.indexOf('site-entry-loader.js') < html.indexOf('home-device.js'));
 assert(loader.includes("const STORAGE_KEY = 'lee_site_entry_seen_v1'"));
 assert(loader.includes('window.sessionStorage.getItem'));

@@ -50,8 +50,8 @@
       display: grid;
       place-items: center;
       overflow: hidden;
-      background: #26272a;
-      color: #f5f7fa;
+      background: #ffffff;
+      color: #26335f;
       opacity: 1;
       transition: opacity 360ms ease, visibility 360ms ease;
     }
@@ -68,37 +68,20 @@
 
     .site-entry-loader__content {
       position: relative;
-      width: min(78vw, 920px);
-      aspect-ratio: 5 / 1;
+      display: grid;
+      justify-items: center;
+      width: min(78vw, 420px);
     }
 
-    .site-entry-loader__canvas {
+    .site-entry-loader__animation {
       display: block;
       width: 100%;
-      height: 100%;
-    }
-
-    .site-entry-loader__label {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      margin: 0;
-      color: #f5f7fa;
-      font: 800 clamp(52px, 10vw, 132px)/1 "Segoe UI", sans-serif;
-      letter-spacing: 0;
-    }
-
-    .site-entry-loader.is-canvas-ready .site-entry-loader__label {
-      visibility: hidden;
+      height: auto;
     }
 
     .site-entry-loader__progress {
-      position: absolute;
-      top: 100%;
-      right: 1.5%;
-      margin: 8px 0 0;
-      color: rgba(255, 255, 255, 0.82);
+      margin: 14px 0 0;
+      color: rgba(38, 51, 95, 0.78);
       font: 500 clamp(12px, 1.25vw, 17px)/1.4 "Segoe UI", sans-serif;
       letter-spacing: 0;
     }
@@ -128,8 +111,7 @@
 <body class="auth-pending">
   <div class="site-entry-loader" id="siteEntryLoader" role="status" aria-label="Loading Lee's Site">
     <div class="site-entry-loader__content">
-      <canvas class="site-entry-loader__canvas" id="siteEntryLoaderCanvas" aria-hidden="true"></canvas>
-      <p class="site-entry-loader__label" id="siteEntryLoaderLabel" aria-hidden="true">LEE'S SITE</p>
+      <img class="site-entry-loader__animation" src="assets/site-entry-loader-miku.gif" alt="" aria-hidden="true" />
       <p class="site-entry-loader__progress">loading... <span id="siteEntryLoaderProgress">0</span>%</p>
     </div>
   </div>
