@@ -907,6 +907,20 @@ body.auth-elegant .knowledge-site {
   padding: 16px;
 }
 
+.knowledge-cute-image-panel {
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.knowledge-cute-image-panel img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .knowledge-panel h2 {
   margin: 0;
   font-size: 15px;

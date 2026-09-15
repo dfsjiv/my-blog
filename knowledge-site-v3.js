@@ -636,16 +636,18 @@
         topics.appendChild(topic);
       }
     });
-    facets.archives.slice(0, 8).forEach(function (archive) {
-      const item = button('');
-      item.dataset.knowledgeRoute = 'all';
-      item.dataset.archive = archive.year + '-' + String(archive.month).padStart(2, '0');
-      item.append(
-        element('span', '', archive.year + ' · ' + String(archive.month).padStart(2, '0')),
-        element('span', '', String(archive.count))
-      );
-      archives.appendChild(item);
-    });
+    if (archives) {
+      facets.archives.slice(0, 8).forEach(function (archive) {
+        const item = button('');
+        item.dataset.knowledgeRoute = 'all';
+        item.dataset.archive = archive.year + '-' + String(archive.month).padStart(2, '0');
+        item.append(
+          element('span', '', archive.year + ' · ' + String(archive.month).padStart(2, '0')),
+          element('span', '', String(archive.count))
+        );
+        archives.appendChild(item);
+      });
+    }
     const statItems = [
       ['文章数量', facets.stats.posts],
       ['题解数量', facets.stats.solutions],
