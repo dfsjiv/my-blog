@@ -2643,6 +2643,26 @@
       }
     });
   }
+
+  async function waitForInitialViewImages() {
+    await new Promise(function (resolve) {
+      window.requestAnimationFrame(resolve);
+    });
+    const activeView = state.route === 'home' ? homeView : routeView;
+    const images = Array.from(activeView.querySelectorAll('img')).filter(function (image) {
+      const bounds = image.getBoundingClientRect();
+      return bounds.bottom >= 0 && bounds.top <= window.innerHeight * 1.25;
+    });
+    await Promise.allSettled(images.map(function (image) {
+      if (image.complete) {
+        return typeof image.decode === 'function' ? image.decode().catch(function () {}) : Promise.resolve();
+      }
+      return new Promise(function (resolve) {
+        image.addEventListener('load', resolve, { once: true });
+        image.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
   if (guestAuth) {
     guestAuth.addEventListener('click', function (event) {
       const target = event.target.closest('[data-auth-mode]');
@@ -2682,9 +2702,12 @@
   state.route = initialRoute.route;
   state.routePayload = initialRoute.payload;
   updateActiveNav(state.route, state.routePayload);
-  renderCurrentRoute({ replace: true })
+  const initialRender = renderCurrentRoute({ replace: true })
     .catch(renderHomeFailure)
     .finally(scheduleEmptyHomeRecovery);
+  if (window.siteEntryLoader && typeof window.siteEntryLoader.holdUntil === 'function') {
+    window.siteEntryLoader.holdUntil(initialRender.then(waitForInitialViewImages));
+  }
 
   window.elegantShell = {
     closeNavigation,
