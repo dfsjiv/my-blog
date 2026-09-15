@@ -5,7 +5,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'knowledge-site-v2.css'), 'utf8');
-const site = fs.readFileSync(path.join(root, 'knowledge-site-v3.js'), 'utf8');
+const site = fs.readFileSync(path.join(root, 'knowledge-site-v4.js'), 'utf8');
 const i18n = fs.readFileSync(path.join(root, 'knowledge-i18n-v3.js'), 'utf8');
 const data = fs.readFileSync(path.join(root, 'knowledge-data.js'), 'utf8');
 const repository = fs.readFileSync(path.join(root, 'knowledge-repository.js'), 'utf8');
@@ -20,7 +20,7 @@ const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-2
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site-v2\.css/);
-assert.match(html, /knowledge-site-v3\.js/);
+assert.match(html, /knowledge-site-v4\.js/);
 assert.match(html, /knowledge-i18n-v3\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
@@ -88,7 +88,7 @@ assert.ok(
 assert.ok(
   html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
   && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
-  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v3.js')
+  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v4.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -107,7 +107,7 @@ assert.match(css, /max-height:\s*calc\(100vh - 92px\)/);
 
 assert.match(data, /placeholder:\s*true/);
 assert.match(html, /knowledge-data\.js/);
-assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v3.js'));
+assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v4.js'));
 assert.doesNotMatch(repository, /KnowledgeMockData/);
 assert.doesNotMatch(repository, /source\.posts/);
 assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
@@ -131,6 +131,10 @@ assert.match(site, /knowledge', 'post'/);
 assert.match(site, /repository\.getPosts/);
 assert.match(site, /featured\.closest\('\.knowledge-feed-section'\)\.hidden = !featuredPosts\.length/);
 assert.match(site, /repository\.getFacets/);
+assert.match(site, /if \(tags\)/);
+assert.match(site, /if \(topics && index < 5\)/);
+assert.match(site, /if \(archives\)/);
+assert.match(site, /if \(stats\)/);
 assert.match(site, /repository\.getPostBySlug/);
 assert.match(site, /function loadMoreLatest/);
 assert.match(site, /function renderHomeFailure/);

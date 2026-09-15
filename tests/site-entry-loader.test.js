@@ -5,7 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const loader = fs.readFileSync(path.join(root, 'site-entry-loader.js'), 'utf8');
-const site = fs.readFileSync(path.join(root, 'knowledge-site-v3.js'), 'utf8');
+const site = fs.readFileSync(path.join(root, 'knowledge-site-v4.js'), 'utf8');
 
 assert(html.includes('id="siteEntryLoader"'));
 assert(html.includes('class="site-entry-loader__animation"'));

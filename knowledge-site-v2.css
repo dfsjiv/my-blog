@@ -911,7 +911,7 @@ body.auth-elegant .knowledge-site {
   aspect-ratio: 1 / 1;
   padding: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--knowledge-surface);
 }
 
 .knowledge-cute-image-panel img {
