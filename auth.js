@@ -337,10 +337,11 @@
       elements.loginButton.disabled = pending;
       elements.guestButton.disabled = pending;
       elements.modeSwitch.disabled = pending;
-      elements.loginButton.textContent = pending ? '' : '→';
+      const buttonText = authMode === 'register' ? 'CREATE' : 'SIGN IN';
+      elements.loginButton.textContent = pending ? '' : buttonText;
       elements.loginButton.classList.toggle('is-loading', pending);
-      const actionLabel = authMode === 'register' ? '注册' : '登录';
-      elements.loginButton.setAttribute('aria-label', pending ? '正在' + actionLabel : actionLabel);
+      const actionLabel = authMode === 'register' ? 'Create account' : 'Sign in';
+      elements.loginButton.setAttribute('aria-label', pending ? 'Please wait' : actionLabel);
       setMessage(message || '', pending);
     }
 
@@ -350,11 +351,11 @@
       verificationPending = false;
       elements.invitationRow.hidden = authMode !== 'register';
       elements.loginScreen.querySelector('.login-panel h1').textContent = authMode === 'register'
-        ? '创建账户'
-        : '账户登录';
+        ? 'CREATE ACCOUNT'
+        : 'SIGN IN';
       elements.modeSwitch.textContent = authMode === 'register'
-        ? '已有账号？去登录'
-        : '没有账号？去注册';
+        ? 'ALREADY HAVE AN ACCOUNT? SIGN IN'
+        : 'NO ACCOUNT? CREATE ONE';
       elements.username.autocomplete = authMode === 'register' ? 'new-username' : 'username';
       elements.password.autocomplete = authMode === 'register' ? 'new-password' : 'current-password';
       elements.username.value = '';
@@ -461,17 +462,17 @@
       const username = elements.username.value.trim();
       const password = elements.password.value;
       if (authMode === 'register' && !invitationVerified) {
-        setMessage('请先验证邀请码', false);
+        setMessage('Verify your invitation code first.', false);
         elements.invitation.focus();
         return;
       }
       if (!username) {
-        setMessage('用户名不能为空', false);
+        setMessage('Username is required.', false);
         elements.username.focus();
         return;
       }
       if (!password) {
-        setMessage('密码不能为空', false);
+        setMessage('Password is required.', false);
         elements.password.focus();
         return;
       }
@@ -484,7 +485,9 @@
         showAuthenticatedDestination(user);
       } catch (error) {
         setLoginPending(false, '');
-        setMessage(error && error.message ? error.message : '无法连接服务器，请稍后重试', false);
+        setMessage(error && error.code === 'invalid_credentials'
+          ? 'Invalid username or password.'
+          : 'Unable to connect. Please try again.', false);
       }
     });
 
@@ -502,26 +505,26 @@
       if (loginPending || verificationPending || authMode !== 'register') return;
       const code = elements.invitation.value.trim();
       if (!code) {
-        setMessage('邀请码不能为空', false);
+        setMessage('Invitation code is required.', false);
         return;
       }
       verificationPending = true;
       elements.verifyButton.disabled = true;
-      elements.verifyButton.textContent = '验证中';
-      setMessage('正在验证邀请码...', true);
+      elements.verifyButton.textContent = 'WAIT';
+      setMessage('Verifying invitation code...', true);
       try {
         await auth.verifyInvitation(code);
         invitationVerified = true;
-        setMessage('邀请码有效，请设置用户名和密码', true);
+        setMessage('Code verified. Choose a username and password.', true);
         elements.username.disabled = false;
         elements.password.disabled = false;
         elements.username.focus();
       } catch (error) {
         invitationVerified = false;
-        setMessage(error && error.message ? error.message : '邀请码验证失败', false);
+        setMessage('Invitation code could not be verified.', false);
       } finally {
         verificationPending = false;
-        elements.verifyButton.textContent = invitationVerified ? '已验证' : '验证';
+        elements.verifyButton.textContent = invitationVerified ? 'VERIFIED' : 'VERIFY';
         elements.verifyButton.disabled = invitationVerified || !elements.invitation.value.trim();
       }
     });

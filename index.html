@@ -92,7 +92,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="home-desktop.css?v=20260825-register-1" />
+  <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <link rel="stylesheet" href="knowledge-site-v2.css?v=20260922-nav-contrast-1" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
@@ -124,38 +124,37 @@
     allow="autoplay"
     aria-hidden="true"
   ></iframe>
-  <main class="login-screen" id="loginScreen" aria-label="登录" aria-hidden="true">
+  <main class="login-screen" id="loginScreen" aria-label="Sign in" aria-hidden="true">
     <div class="login-panel">
-      <img class="login-avatar" src="assets/blog-icon.png" alt="" draggable="false" />
-      <h1>账户登录</h1>
+      <h1>SIGN IN</h1>
       <form class="login-form" id="loginForm" novalidate>
         <div class="register-invitation-row" id="registerInvitationRow" hidden>
           <label class="login-field register-invitation-field">
-            <span>邀请码</span>
-            <input id="registerInvitation" name="invitationCode" type="text" autocomplete="off" placeholder="邀请码" disabled />
+            <span>Invitation code</span>
+            <input id="registerInvitation" name="invitationCode" type="text" autocomplete="off" placeholder="INVITATION CODE" disabled />
           </label>
-          <button class="register-verify" id="registerVerifyButton" type="button" disabled>验证</button>
+          <button class="register-verify" id="registerVerifyButton" type="button" disabled>VERIFY</button>
         </div>
         <label class="login-field">
-          <span>用户名</span>
-          <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="用户名" />
+          <span>Username</span>
+          <input id="loginUsername" name="username" type="text" autocomplete="username" placeholder="USERNAME" />
         </label>
         <div class="login-password-row">
           <label class="login-field login-password-field">
-            <span>密码</span>
-            <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="密码" />
+            <span>Password</span>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="PASSWORD" />
           </label>
-          <button class="login-submit" id="loginButton" type="submit" aria-label="登录">→</button>
+          <button class="login-submit" id="loginButton" type="submit" aria-label="Sign in">SIGN IN</button>
         </div>
         <p class="login-message" id="loginMessage" role="alert" aria-live="polite"></p>
-        <button class="login-guest" id="guestButton" type="button">以游客身份进入</button>
-        <button class="login-mode-switch" id="loginModeSwitch" type="button">没有账号？去注册</button>
+        <button class="login-guest" id="guestButton" type="button">CONTINUE AS GUEST</button>
+        <button class="login-mode-switch" id="loginModeSwitch" type="button">NO ACCOUNT? CREATE ONE</button>
       </form>
     </div>
-    <div class="login-system-icons" aria-label="系统状态">
-      <span class="login-system-icon network-icon" title="网络" aria-label="网络"><i></i><i></i><i></i></span>
-      <span class="login-system-icon accessibility-icon" title="辅助功能" aria-label="辅助功能">♿</span>
-      <span class="login-system-icon power-icon" title="电源" aria-label="电源">⏻</span>
+    <div class="login-system-icons" aria-label="System status">
+      <span class="login-system-icon network-icon" title="Network" aria-label="Network"><i></i><i></i><i></i></span>
+      <span class="login-system-icon accessibility-icon" title="Accessibility" aria-label="Accessibility">♿</span>
+      <span class="login-system-icon power-icon" title="Power" aria-label="Power">⏻</span>
     </div>
     <a class="login-mikutap-credit" href="https://aidn.jp/mikutap/" target="_blank" rel="noopener noreferrer">Mikutap by daniwell</a>
   </main>
@@ -844,7 +843,7 @@ Camera: --, --, --</pre>
   <script src="night-rain-city-3d.js"></script>
   <script src="particle-wallpaper.js"></script>
   <script src="home-desktop.js"></script>
-  <script src="auth.js?v=20260914-guest-auth-1"></script>
+  <script src="auth.js?v=20260922-auth-lines-1"></script>
   <script src="knowledge-data.js"></script>
   <script src="knowledge-i18n-v3.js?v=20260922-home-filters-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>

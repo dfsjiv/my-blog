@@ -364,11 +364,13 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
   assert.match(homeDesktopCss, /\.start-menu-apps\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
-  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260825-register-1"\s*\/>/);
+  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260922-auth-lines-1"\s*\/>/);
   assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
-  assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 5);
+  assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/src="assets\/chat-icon\.png"/g) || []).length, 4);
-  assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 9);
+  assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 8);
+  assert.doesNotMatch(indexHtml, /class="login-avatar"/);
+  assert.match(homeDesktopCss, /\.login-field input\s*\{[\s\S]*border-bottom:\s*1px solid/);
   assert.match(indexHtml, /id="startBlogStatus"/);
   assert.match(indexHtml, /id="startThemeButton"/);
   assert.doesNotMatch(indexHtml, /document-app-icon[\s\S]*?<svg/);

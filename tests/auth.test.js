@@ -241,7 +241,11 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20260914-guest-auth-1"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20260922-auth-lines-1"><\/script>/);
+  assert.match(indexHtml, /<h1>SIGN IN<\/h1>/);
+  assert.match(indexHtml, /placeholder="USERNAME"/);
+  assert.match(indexHtml, /placeholder="PASSWORD"/);
+  assert.match(indexHtml, /placeholder="INVITATION CODE"/);
   assert.match(indexHtml, /id="knowledgeGuestAuth"[\s\S]*data-auth-mode="login"[\s\S]*data-auth-mode="register"/);
   assert.match(indexHtml, /data-src="assets\/vendor\/mikutap\/background\?auto=1&amp;v=20260807-17"/);
   assert.doesNotMatch(indexHtml, /\ssrc="assets\/vendor\/mikutap\/background\?auto=1/);
