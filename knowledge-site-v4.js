@@ -823,12 +823,9 @@
     state.homeLatestController = null;
     const featured = document.getElementById('knowledgeFeaturedList');
     const latest = document.getElementById('knowledgeLatestList');
-    const solutions = document.getElementById('knowledgeSolutionList');
-    if (!featured || !latest || !solutions) return;
+    if (!featured || !latest) return;
     featured.closest('.knowledge-feed-section').hidden = true;
-    [latest, solutions].forEach(function (container) {
-      container.replaceChildren(makeLoadingState('正在加载…'));
-    });
+    latest.replaceChildren(makeLoadingState('正在加载…'));
     state.homeLatestPage = 1;
     state.homeLatestHasNext = false;
     state.homeLatestLoading = false;
@@ -841,7 +838,6 @@
       repository.getFacets(settings),
       repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
       repository.getPosts(homeLatestFilters(1), settings),
-      repository.getPosts({ page: 1, pageSize: 4, type: 'solution', sort: 'latest' }, settings),
     ];
     const results = await Promise.allSettled(jobs);
     if (controller.signal.aborted) return;
@@ -876,9 +872,6 @@
       updateHomeLoadMoreButton();
       latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
     }
-    if (results[3].status === 'fulfilled') {
-      renderCollection(solutions, results[3].value.items, makeSolutionCard);
-    } else solutions.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
   }
 
   function renderHomeFailure(error) {
@@ -886,9 +879,8 @@
     console.error('Knowledge home rendering failed:', error);
     const featured = document.getElementById('knowledgeFeaturedList');
     const latest = document.getElementById('knowledgeLatestList');
-    const solutions = document.getElementById('knowledgeSolutionList');
     if (featured) featured.closest('.knowledge-feed-section').hidden = true;
-    [latest, solutions].filter(Boolean).forEach(function (container) {
+    [latest].filter(Boolean).forEach(function (container) {
       container.replaceChildren(makeErrorState(function () {
         repository.clearCache();
         loadHome({ refresh: true }).catch(renderHomeFailure);

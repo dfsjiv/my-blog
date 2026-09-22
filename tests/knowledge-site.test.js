@@ -27,7 +27,8 @@ assert.match(html, /knowledge-comments\.js/);
 assert.match(html, /knowledge-i18n-v3\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
 assert.match(html, /id="knowledgeLoadMore"[^>]*>加载更多<\/button>/);
-assert.match(html, /id="knowledgeSolutionList"/);
+assert.doesNotMatch(html, /id="knowledgeSolutionList"/);
+assert.doesNotMatch(html, /id="knowledgeSolutionsTitle"/);
 assert.match(html, /id="knowledgeRouteView"/);
 assert.doesNotMatch(html, /class="knowledge-sidebar knowledge-left-sidebar"/);
 assert.doesNotMatch(html, /id="knowledgeUpdateList"/);
@@ -226,7 +227,7 @@ assert.match(i18n, /'文章分类': 'Post Categories'/);
 assert.match(i18n, /'按时间排列文章': 'Sort posts by time'/);
 assert.match(css, /\.knowledge-home-classification/);
 assert.match(css, /\.knowledge-home-filter-options button\.is-active/);
-assert.match(html, /knowledge-site-v4\.js\?v=20260922-home-filters-1/);
+assert.match(html, /knowledge-site-v4\.js\?v=20260922-home-filters-2/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);
