@@ -221,7 +221,7 @@
   }
 
   function configureNavigationLinks() {
-    navLinks.querySelectorAll('[data-social-link]').forEach(function (link) {
+    shell.querySelectorAll('[data-social-link]').forEach(function (link) {
       const url = safeExternalUrl(navigationLinks.socialLinks[link.dataset.socialLink]);
       if (url) {
         link.href = url;

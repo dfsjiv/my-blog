@@ -94,7 +94,7 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260922-search-layout-1" />
+  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260922-social-footer-1" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
   <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
@@ -406,8 +406,20 @@
     </main>
 
     <footer class="knowledge-footer">
-      <strong>Lee Ethan</strong>
-      <span>个人知识发布站</span>
+      <nav class="knowledge-social-links" aria-label="个人社交链接">
+        <a data-social-link="bilibili" target="_blank" rel="noopener noreferrer">
+          <span>Bilibili</span><small>Video &amp; Updates</small><b aria-hidden="true">↗</b>
+        </a>
+        <a data-social-link="github" target="_blank" rel="noopener noreferrer">
+          <span>GitHub</span><small>Code &amp; Projects</small><b aria-hidden="true">↗</b>
+        </a>
+        <a data-social-link="zhihu" target="_blank" rel="noopener noreferrer">
+          <span>Zhihu</span><small>Writing &amp; Notes</small><b aria-hidden="true">↗</b>
+        </a>
+        <a data-social-link="nowcoder" target="_blank" rel="noopener noreferrer">
+          <span>Nowcoder</span><small>Practice &amp; Profile</small><b aria-hidden="true">↗</b>
+        </a>
+      </nav>
       <button class="knowledge-back-to-top" id="knowledgeBackToTop" type="button"
         data-knowledge-action="top" aria-label="返回顶部" aria-hidden="true" tabindex="-1">
         <img src="assets/knowledge/back-to-top.gif" alt="" aria-hidden="true" />
@@ -831,7 +843,7 @@ Camera: --, --, --</pre>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
   <script src="knowledge-comments.js?v=20260915-2"></script>
-  <script src="knowledge-site-v4.js?v=20260922-search-layout-1"></script>
+  <script src="knowledge-site-v4.js?v=20260922-social-footer-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20260913-route-1"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>
