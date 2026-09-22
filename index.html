@@ -94,7 +94,7 @@
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260825-register-1" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260915-account-1" />
+  <link rel="stylesheet" href="knowledge-site-v2.css?v=20260922-home-filters-1" />
   <link rel="stylesheet" href="knowledge-writer.css?v=20260825-2" />
   <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
@@ -355,6 +355,31 @@
             </section>
 
             <section class="knowledge-feed-section" aria-labelledby="knowledgeLatestTitle">
+              <div class="knowledge-home-classification" aria-labelledby="knowledgeHomeClassificationTitle">
+                <div class="knowledge-home-classification-heading">
+                  <span>POST CATEGORIES</span>
+                  <h2 id="knowledgeHomeClassificationTitle">文章分类</h2>
+                </div>
+                <div class="knowledge-home-filter-row">
+                  <strong>时间</strong>
+                  <div class="knowledge-home-filter-options" aria-label="按时间排列文章">
+                    <button class="is-active" type="button" data-home-latest-sort="latest" aria-pressed="true">最新发布</button>
+                    <button type="button" data-home-latest-sort="updated" aria-pressed="false">最近更新</button>
+                    <button type="button" data-home-latest-sort="oldest" aria-pressed="false">最早发布</button>
+                  </div>
+                </div>
+                <div class="knowledge-home-filter-row">
+                  <strong>类型</strong>
+                  <div class="knowledge-home-filter-options" aria-label="按类型筛选文章">
+                    <button class="is-active" type="button" data-home-latest-type="" aria-pressed="true">全部文章</button>
+                    <button type="button" data-home-latest-type="article" aria-pressed="false">技术文章</button>
+                    <button type="button" data-home-latest-type="solution" aria-pressed="false">算法题解</button>
+                    <button type="button" data-home-latest-type="note" aria-pressed="false">学习笔记</button>
+                    <button type="button" data-home-latest-type="project" aria-pressed="false">项目记录</button>
+                    <button type="button" data-home-latest-type="essay" aria-pressed="false">思考随笔</button>
+                  </div>
+                </div>
+              </div>
               <div class="knowledge-section-heading">
                 <div><span>LATEST</span><h2 id="knowledgeLatestTitle">最新发布</h2></div>
                 <div class="knowledge-view-toggle" aria-label="文章展示模式">
@@ -829,7 +854,7 @@ Camera: --, --, --</pre>
   <script src="home-desktop.js"></script>
   <script src="auth.js?v=20260914-guest-auth-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20260915-account-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20260922-home-filters-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="assets/vendor/katex/katex.min.js"></script>
@@ -843,7 +868,7 @@ Camera: --, --, --</pre>
   <script src="knowledge-article-mover.js"></script>
   <script src="knowledge-game-2048.js?v=20260812-2"></script>
   <script src="knowledge-comments.js?v=20260915-2"></script>
-  <script src="knowledge-site-v4.js?v=20260922-hero-clean-1"></script>
+  <script src="knowledge-site-v4.js?v=20260922-home-filters-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20260913-route-1"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>

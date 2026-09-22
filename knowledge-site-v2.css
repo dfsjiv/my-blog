@@ -1061,6 +1061,67 @@ body.auth-elegant .knowledge-site {
   scroll-margin-top: 94px;
 }
 
+.knowledge-home-classification {
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 13px;
+  background: var(--knowledge-surface);
+  border: 1px solid var(--knowledge-border);
+  border-radius: var(--knowledge-radius);
+  box-shadow: var(--knowledge-shadow);
+}
+
+.knowledge-home-classification-heading span {
+  color: var(--knowledge-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.knowledge-home-classification-heading h2 {
+  margin: 3px 0 0;
+  font-size: 19px;
+}
+
+.knowledge-home-filter-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.knowledge-home-filter-row strong {
+  padding-top: 7px;
+  color: var(--knowledge-muted);
+  font-size: 12px;
+}
+
+.knowledge-home-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.knowledge-home-filter-options button {
+  min-height: 32px;
+  padding: 0 11px;
+  color: var(--knowledge-muted);
+  background: transparent;
+  border: 1px solid var(--knowledge-border);
+  border-radius: 999px;
+  font: 12px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.knowledge-home-filter-options button:hover,
+.knowledge-home-filter-options button:focus-visible,
+.knowledge-home-filter-options button.is-active {
+  color: var(--knowledge-primary);
+  background: var(--knowledge-primary-soft);
+  border-color: color-mix(in srgb, var(--knowledge-primary) 42%, var(--knowledge-border));
+  outline: none;
+}
+
 .knowledge-section-heading {
   margin-bottom: 13px;
   align-items: end;
@@ -3344,6 +3405,21 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-about-card {
     min-height: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .knowledge-home-classification {
+    padding: 14px;
+  }
+
+  .knowledge-home-filter-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .knowledge-home-filter-row strong {
+    padding-top: 0;
   }
 }
 

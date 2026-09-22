@@ -62,6 +62,9 @@
     routeTransitionActive: false,
     pendingNavigation: null,
     facets: null,
+    homeLatestSort: 'latest',
+    homeLatestType: '',
+    homeLatestController: null,
     homeLatestPage: 1,
     homeLatestHasNext: false,
     homeLatestLoading: false,
@@ -710,6 +713,29 @@
     );
   }
 
+  function homeLatestFilters(page) {
+    const filters = {
+      page: page,
+      pageSize: 5,
+      sort: state.homeLatestSort,
+    };
+    if (state.homeLatestType) filters.type = state.homeLatestType;
+    return filters;
+  }
+
+  function updateHomeLatestFilterControls() {
+    shell.querySelectorAll('[data-home-latest-sort]').forEach(function (control) {
+      const isActive = control.dataset.homeLatestSort === state.homeLatestSort;
+      control.classList.toggle('is-active', isActive);
+      control.setAttribute('aria-pressed', String(isActive));
+    });
+    shell.querySelectorAll('[data-home-latest-type]').forEach(function (control) {
+      const isActive = control.dataset.homeLatestType === state.homeLatestType;
+      control.classList.toggle('is-active', isActive);
+      control.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+
   function appendLatestPosts(container, posts) {
     posts.forEach(function (post) {
       if (state.homeLatestSlugs.has(post.slug)) return;
@@ -719,19 +745,18 @@
   }
 
   async function loadMoreLatest() {
-    if (state.homeLatestLoading || !state.homeLatestHasNext || !state.homeController) return;
+    const controller = state.homeLatestController || state.homeController;
+    if (state.homeLatestLoading || !state.homeLatestHasNext || !controller) return;
     const latest = document.getElementById('knowledgeLatestList');
-    const controller = state.homeController;
     state.homeLatestLoading = true;
     state.homeLatestError = false;
     updateHomeLoadMoreButton();
     try {
-      const result = await repository.getPosts({
-        page: state.homeLatestPage + 1,
-        pageSize: 5,
-        sort: 'latest',
-      }, { signal: controller.signal });
-      if (controller.signal.aborted || state.homeController !== controller) return;
+      const result = await repository.getPosts(
+        homeLatestFilters(state.homeLatestPage + 1),
+        { signal: controller.signal }
+      );
+      if (controller.signal.aborted) return;
       appendLatestPosts(latest, result.items);
       state.homeLatestPage = result.pagination.page;
       state.homeLatestHasNext = Boolean(result.pagination.hasNext);
@@ -740,7 +765,50 @@
       if (controller.signal.aborted) return;
       state.homeLatestError = true;
     } finally {
-      if (state.homeController === controller) {
+      if (!controller.signal.aborted) {
+        state.homeLatestLoading = false;
+        updateHomeLoadMoreButton();
+      }
+    }
+  }
+
+  async function reloadHomeLatest() {
+    if (state.homeLatestController) state.homeLatestController.abort();
+    const controller = new AbortController();
+    state.homeLatestController = controller;
+    const latest = document.getElementById('knowledgeLatestList');
+    state.homeLatestPage = 1;
+    state.homeLatestHasNext = false;
+    state.homeLatestLoading = true;
+    state.homeLatestError = false;
+    state.homeLatestSlugs = new Set();
+    updateHomeLatestFilterControls();
+    updateHomeLoadMoreButton();
+    latest.replaceChildren(makeLoadingState('正在加载…'));
+    try {
+      const result = await repository.getPosts(
+        homeLatestFilters(1),
+        { signal: controller.signal }
+      );
+      if (controller.signal.aborted || state.homeLatestController !== controller) return;
+      latest.replaceChildren();
+      appendLatestPosts(latest, result.items);
+      if (!result.items.length) {
+        latest.appendChild(makeEmptyState(
+          '这里暂时还没有发布内容。',
+          '请尝试其他文章分类。',
+          true
+        ));
+      }
+      state.homeLatestPage = result.pagination.page;
+      state.homeLatestHasNext = Boolean(result.pagination.hasNext);
+      applyViewMode();
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      state.homeLatestError = true;
+      latest.replaceChildren(makeErrorState(reloadHomeLatest));
+    } finally {
+      if (state.homeLatestController === controller) {
         state.homeLatestLoading = false;
         updateHomeLoadMoreButton();
       }
@@ -749,8 +817,10 @@
 
   async function loadHome(options) {
     if (state.homeController) state.homeController.abort();
+    if (state.homeLatestController) state.homeLatestController.abort();
     const controller = new AbortController();
     state.homeController = controller;
+    state.homeLatestController = null;
     const featured = document.getElementById('knowledgeFeaturedList');
     const latest = document.getElementById('knowledgeLatestList');
     const solutions = document.getElementById('knowledgeSolutionList');
@@ -770,7 +840,7 @@
     const jobs = [
       repository.getFacets(settings),
       repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
-      repository.getPosts({ page: 1, pageSize: 5, sort: 'latest' }, settings),
+      repository.getPosts(homeLatestFilters(1), settings),
       repository.getPosts({ page: 1, pageSize: 4, type: 'solution', sort: 'latest' }, settings),
     ];
     const results = await Promise.allSettled(jobs);
@@ -799,6 +869,7 @@
       state.homeLatestPage = results[2].value.pagination.page;
       state.homeLatestHasNext = Boolean(results[2].value.pagination.hasNext);
       updateHomeLoadMoreButton();
+      updateHomeLatestFilterControls();
       applyViewMode();
     } else {
       state.homeLatestHasNext = false;
@@ -2639,6 +2710,18 @@
     const actionTarget = event.target.closest('[data-knowledge-action]');
     const headingTarget = event.target.closest('[data-knowledge-heading]');
     const viewModeTarget = event.target.closest('[data-view-mode]');
+    const latestSortTarget = event.target.closest('[data-home-latest-sort]');
+    const latestTypeTarget = event.target.closest('[data-home-latest-type]');
+    if (latestSortTarget && !latestSortTarget.disabled) {
+      state.homeLatestSort = latestSortTarget.dataset.homeLatestSort || 'latest';
+      reloadHomeLatest();
+      return;
+    }
+    if (latestTypeTarget && !latestTypeTarget.disabled) {
+      state.homeLatestType = latestTypeTarget.dataset.homeLatestType || '';
+      reloadHomeLatest();
+      return;
+    }
     if (postTarget && !postTarget.disabled) {
       navigate('detail', { slug: postTarget.dataset.postSlug });
       return;
