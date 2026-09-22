@@ -883,7 +883,7 @@ body.auth-elegant .knowledge-site {
 .knowledge-layout {
   margin-top: 22px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 20px;
 }
@@ -1070,6 +1070,11 @@ body.auth-elegant .knowledge-site {
   border: 1px solid var(--knowledge-border);
   border-radius: var(--knowledge-radius);
   box-shadow: var(--knowledge-shadow);
+}
+
+.knowledge-home-search {
+  margin-bottom: 14px;
+  padding: 16px 18px;
 }
 
 .knowledge-home-classification-heading span {
@@ -3850,7 +3855,7 @@ body.auth-elegant .knowledge-site {
   z-index: 3;
   width: min(var(--knowledge-content-width), calc(100% - 40px));
   margin: -62px auto 0;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 

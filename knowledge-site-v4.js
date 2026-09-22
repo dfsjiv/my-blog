@@ -841,16 +841,13 @@
 
     const settings = { signal: controller.signal, refresh: Boolean(options && options.refresh) };
     const jobs = [
-      repository.getFacets(settings),
       repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
       repository.getPosts(homeLatestFilters(1), settings),
     ];
     const results = await Promise.allSettled(jobs);
     if (controller.signal.aborted) return;
-    if (results[0].status === 'fulfilled') renderFacets(results[0].value);
-    else renderFacetError();
-    if (results[1].status === 'fulfilled') {
-      const featuredPosts = results[1].value.items;
+    if (results[0].status === 'fulfilled') {
+      const featuredPosts = results[0].value.items;
       featured.closest('.knowledge-feed-section').hidden = !featuredPosts.length;
       if (featuredPosts.length) renderCollection(featured, featuredPosts, makeFeaturedCard);
       else featured.replaceChildren();
@@ -858,18 +855,18 @@
       featured.closest('.knowledge-feed-section').hidden = false;
       featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
     }
-    if (results[2].status === 'fulfilled') {
+    if (results[1].status === 'fulfilled') {
       latest.replaceChildren();
-      appendLatestPosts(latest, results[2].value.items);
-      if (!results[2].value.items.length) {
+      appendLatestPosts(latest, results[1].value.items);
+      if (!results[1].value.items.length) {
         latest.appendChild(makeEmptyState(
           '这里暂时还没有发布内容。',
           '发布后的内容会显示在这里。',
           true
         ));
       }
-      state.homeLatestPage = results[2].value.pagination.page;
-      state.homeLatestHasNext = Boolean(results[2].value.pagination.hasNext);
+      state.homeLatestPage = results[1].value.pagination.page;
+      state.homeLatestHasNext = Boolean(results[1].value.pagination.hasNext);
       updateHomeLoadMoreButton();
       updateHomeLatestFilterControls();
       applyViewMode();
@@ -892,7 +889,6 @@
         loadHome({ refresh: true }).catch(renderHomeFailure);
       }));
     });
-    renderFacetError();
   }
 
   function recoverEmptyHome() {
