@@ -3838,7 +3838,7 @@ body.auth-elegant .knowledge-site {
   bottom: -1px;
   left: 0;
   z-index: 1;
-  height: 142px;
+  height: 220px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -3850,11 +3850,11 @@ body.auth-elegant .knowledge-site {
   width: 200%;
   height: 100%;
   background: var(--knowledge-bg);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 140' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 60C180 20 360 100 540 60S900 100 1080 60S1350 80 1440 60V140H0Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 110V220H0Z'/%3E%3C/svg%3E");
   -webkit-mask-position: left bottom;
   -webkit-mask-repeat: repeat-x;
   -webkit-mask-size: 50% 100%;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 140' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 60C180 20 360 100 540 60S900 100 1080 60S1350 80 1440 60V140H0Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 110V220H0Z'/%3E%3C/svg%3E");
   mask-position: left bottom;
   mask-repeat: repeat-x;
   mask-size: 50% 100%;
@@ -3862,14 +3862,14 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-wave-back {
-  bottom: 24px;
+  bottom: 38px;
   background: rgba(8, 16, 24, 0.34);
   opacity: 0.72;
   animation: knowledge-wave-drift 18s linear infinite reverse;
 }
 
 .knowledge-wave-middle {
-  bottom: 10px;
+  bottom: 17px;
   background: color-mix(in srgb, var(--knowledge-bg) 62%, transparent);
   opacity: 0.58;
   animation: knowledge-wave-drift 24s linear infinite;
@@ -4328,7 +4328,7 @@ body.auth-elegant .knowledge-site {
   }
 
   .knowledge-hero-waves {
-    height: 112px;
+    height: 164px;
   }
 
   .knowledge-layout {
