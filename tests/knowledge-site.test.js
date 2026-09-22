@@ -205,6 +205,11 @@ assert.match(site, /function renderProfile\(\)/);
 assert.match(css, /\.knowledge-profile-card/);
 assert.match(css, /\.knowledge-account-menu summary:hover #knowledgeAccountInitial/);
 assert.match(css, /transform:\s*scale\(1\.2\)/);
+assert.doesNotMatch(html, /id="knowledgeHeroSearch"/);
+assert.doesNotMatch(html, /id="knowledgeTypeLinks"/);
+assert.doesNotMatch(html, /id="knowledgeSiteTitle"/);
+assert.doesNotMatch(site, /renderHomeTypeLinks/);
+assert.match(html, /knowledge-site-v4\.js\?v=20260922-hero-clean-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);

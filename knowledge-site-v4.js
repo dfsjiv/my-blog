@@ -583,17 +583,6 @@
     posts.forEach(function (post) { container.appendChild(factory(post)); });
   }
 
-  function renderHomeTypeLinks() {
-    const typeLinks = document.getElementById('knowledgeTypeLinks');
-    typeLinks.replaceChildren();
-    data.contentTypes.forEach(function (contentType) {
-      const item = button(contentType.label);
-      item.dataset.knowledgeRoute = 'all';
-      item.dataset.contentType = contentType.id;
-      typeLinks.appendChild(item);
-    });
-  }
-
   function renderExternalPlatforms() {
     const platforms = document.getElementById('knowledgePlatformList');
     platforms.replaceChildren();
@@ -770,7 +759,6 @@
     [latest, solutions].forEach(function (container) {
       container.replaceChildren(makeLoadingState('正在加载…'));
     });
-    renderHomeTypeLinks();
     state.homeLatestPage = 1;
     state.homeLatestHasNext = false;
     state.homeLatestLoading = false;
@@ -2694,10 +2682,6 @@
     }
   });
 
-  document.getElementById('knowledgeHeroSearch').addEventListener('submit', function (event) {
-    event.preventDefault();
-    handleSearchSubmit(event.currentTarget);
-  });
   document.getElementById('knowledgeSideSearch').addEventListener('submit', function (event) {
     event.preventDefault();
     handleSearchSubmit(event.currentTarget);
