@@ -2984,57 +2984,74 @@ body.auth-elegant .knowledge-site {
 .knowledge-footer {
   min-height: 0;
   margin-top: 42px;
-  padding: 28px 0 42px;
+  padding: 28px 0 38px;
   border-top: 1px solid var(--knowledge-border);
 }
 
 .knowledge-social-links {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.knowledge-social-links a {
-  min-width: 0;
-  min-height: 92px;
-  padding: 17px 18px;
+.knowledge-social-icon-link {
+  width: 58px;
+  height: 58px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-content: center;
-  gap: 5px 12px;
-  color: var(--knowledge-text);
-  background: var(--knowledge-surface);
+  place-items: center;
+  color: var(--knowledge-primary);
+  background: color-mix(in srgb, var(--knowledge-surface-solid) 66%, transparent);
   border: 1px solid var(--knowledge-border);
-  border-radius: var(--knowledge-radius);
-  box-shadow: var(--knowledge-shadow);
+  border-radius: 12px;
   text-decoration: none;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.knowledge-social-links a:hover,
-.knowledge-social-links a:focus-visible {
-  color: var(--knowledge-primary);
-  background: var(--knowledge-surface-hover);
-  border-color: color-mix(in srgb, var(--knowledge-primary) 46%, var(--knowledge-border));
+.knowledge-social-icon-link:hover,
+.knowledge-social-icon-link:focus-visible {
+  color: #ffffff;
+  background: var(--social-color, var(--knowledge-primary));
+  border-color: var(--social-color, var(--knowledge-primary));
   outline: none;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
-.knowledge-social-links span {
-  font-size: 15px;
-  font-weight: 700;
+.knowledge-social-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: currentColor;
+  mask: var(--social-icon) center / contain no-repeat;
+  -webkit-mask: var(--social-icon) center / contain no-repeat;
 }
 
-.knowledge-social-links small {
-  grid-column: 1 / -1;
-  color: var(--knowledge-muted);
-  font-size: 11px;
+.knowledge-social-icon-link.is-bilibili {
+  --social-color: #00aeec;
+  --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/bilibili.svg");
 }
 
-.knowledge-social-links b {
-  color: var(--knowledge-primary);
-  font-size: 14px;
-  font-weight: 400;
+.knowledge-social-icon-link.is-github {
+  --social-color: #6e5494;
+  --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/github.svg");
+}
+
+.knowledge-social-icon-link.is-zhihu {
+  --social-color: #0084ff;
+  --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/zhihu.svg");
+}
+
+.knowledge-social-icon-link.is-nowcoder {
+  --social-color: #00bc9b;
+}
+
+.knowledge-social-icon-link.is-nowcoder .knowledge-social-icon {
+  background: transparent;
+  mask: none;
+  -webkit-mask: none;
+  font: 800 21px/1 "Segoe UI", Arial, sans-serif;
 }
 
 .knowledge-footer button {
@@ -3099,18 +3116,6 @@ body.auth-elegant .knowledge-site {
 
   .knowledge-nav-links button {
     padding: 0 7px;
-  }
-}
-
-@media (max-width: 780px) {
-  .knowledge-social-links {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 430px) {
-  .knowledge-social-links {
-    grid-template-columns: 1fr;
   }
 }
 

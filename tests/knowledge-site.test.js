@@ -66,6 +66,8 @@ assert.match(html, /data-social-link="zhihu" role="menuitem" target="_blank" rel
 assert.match(html, /data-social-link="nowcoder" role="menuitem" target="_blank" rel="noopener noreferrer"/);
 assert.match(html, /class="knowledge-social-links"[\s\S]*data-social-link="bilibili"[\s\S]*data-social-link="github"[\s\S]*data-social-link="zhihu"[\s\S]*data-social-link="nowcoder"/);
 assert.doesNotMatch(html, /<footer class="knowledge-footer">\s*<strong>Lee Ethan<\/strong>/);
+assert.match(html, /knowledge-social-icon-link is-bilibili/);
+assert.match(html, /knowledge-social-icon-link is-nowcoder/);
 assert.match(html, /data-knowledge-route="articles" role="menuitem">[\s\S]*?<span>技术文章<\/span>/);
 assert.match(html, /data-knowledge-route="all" role="menuitem"/);
 assert.match(html, /data-about-link="games" role="menuitem"/);
@@ -203,7 +205,7 @@ assert.match(comments, /addEventListener\('knowledge-auth-changed'/);
 assert.match(comments, /removeEventListener\('knowledge-auth-changed'/);
 assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
 assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
-assert.match(html, /knowledge-site-v2\.css\?v=20260922-social-footer-1/);
+assert.match(html, /knowledge-site-v2\.css\?v=20260922-icon-footer-1/);
 assert.match(html, /knowledge-i18n-v3\.js\?v=20260922-home-filters-1/);
 assert.match(css, /\.knowledge-comment-form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
 assert.match(css, /\.knowledge-comment-input\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
@@ -239,7 +241,9 @@ assert.match(site, /function updateHeaderReadability\(\)/);
 assert.match(css, /\.knowledge-header\.is-scrolled/);
 assert.match(css, /\.knowledge-header\.is-scrolled \.knowledge-nav-links > button/);
 assert.match(css, /\.knowledge-social-links\s*\{/);
-assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
+assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
+assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
 assert.match(html, /knowledge-site-v4\.js\?v=20260922-social-footer-1/);
 
 assert.match(markdown, /markedApi\.parse/);
