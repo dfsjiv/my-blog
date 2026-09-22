@@ -133,6 +133,7 @@ assert.match(repository, /createPost/);
 assert.match(repository, /updatePost/);
 
 assert.match(site, /knowledge-site-theme/);
+assert.match(site, /theme:\s*\['system', 'light', 'dark'\]\.includes\(savedTheme\) \? savedTheme : 'dark'/);
 assert.match(site, /knowledge-site-language/);
 assert.match(site, /window\.history\[method\]/);
 assert.match(site, /window\.addEventListener\('popstate'/);
@@ -195,7 +196,7 @@ assert.match(comments, /addEventListener\('knowledge-auth-changed'/);
 assert.match(comments, /removeEventListener\('knowledge-auth-changed'/);
 assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
 assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
-assert.match(html, /knowledge-site-v2\.css\?v=20260922-home-filters-1/);
+assert.match(html, /knowledge-site-v2\.css\?v=20260922-nav-contrast-1/);
 assert.match(html, /knowledge-i18n-v3\.js\?v=20260922-home-filters-1/);
 assert.match(css, /\.knowledge-comment-form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
 assert.match(css, /\.knowledge-comment-input\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
@@ -227,7 +228,10 @@ assert.match(i18n, /'文章分类': 'Post Categories'/);
 assert.match(i18n, /'按时间排列文章': 'Sort posts by time'/);
 assert.match(css, /\.knowledge-home-classification/);
 assert.match(css, /\.knowledge-home-filter-options button\.is-active/);
-assert.match(html, /knowledge-site-v4\.js\?v=20260922-home-filters-2/);
+assert.match(site, /function updateHeaderReadability\(\)/);
+assert.match(css, /\.knowledge-header\.is-scrolled/);
+assert.match(css, /\.knowledge-header\.is-scrolled \.knowledge-nav-links > button/);
+assert.match(html, /knowledge-site-v4\.js\?v=20260922-dark-default-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);
@@ -398,7 +402,7 @@ assert.match(site, /target\.dataset\.authMode/);
 assert.match(site, /function updateBackToTopVisibility/);
 assert.match(site, /shell\.scrollTop > 160/);
 assert.match(site, /shell\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
-assert.match(site, /shell\.addEventListener\('scroll', updateBackToTopVisibility/);
+assert.match(site, /shell\.addEventListener\('scroll', function \(\) \{[\s\S]*updateBackToTopVisibility\(\);[\s\S]*updateHeaderReadability\(\);/);
 assert.match(site, /user\.role !== 'guest'/);
 
 ['marked.umd.js', 'purify.min.js', 'marked.LICENSE', 'dompurify.LICENSE'].forEach((file) => {

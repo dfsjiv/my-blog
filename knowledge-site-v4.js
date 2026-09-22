@@ -24,6 +24,7 @@
   const staticTextSources = new WeakMap();
   const staticAttributeSources = new WeakMap();
   const shell = document.getElementById('elegantShell');
+  const header = shell ? shell.querySelector('.knowledge-header') : null;
   const homeView = document.getElementById('knowledgeHomeView');
   const routeView = document.getElementById('knowledgeRouteView');
   const navLinks = document.getElementById('knowledgeNavLinks');
@@ -52,7 +53,7 @@
     route: 'home',
     routePayload: {},
     viewMode: readStorage(VIEW_MODE_KEY) === 'grid' ? 'grid' : 'list',
-    theme: ['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'system',
+    theme: ['system', 'light', 'dark'].includes(savedTheme) ? savedTheme : 'dark',
     language: savedLanguage === 'zh' ? 'zh' : 'en',
     routeController: null,
     homeController: null,
@@ -402,6 +403,11 @@
     backToTopButton.classList.toggle('is-visible', isVisible);
     backToTopButton.setAttribute('aria-hidden', String(!isVisible));
     backToTopButton.tabIndex = isVisible ? 0 : -1;
+  }
+
+  function updateHeaderReadability() {
+    if (!header) return;
+    header.classList.toggle('is-scrolled', shell.scrollTop > 48);
   }
 
   async function setLanguage(language) {
@@ -2819,7 +2825,10 @@
     closeNavMenus();
     if (window.innerWidth > 1040) setNavOpen(false);
   });
-  shell.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+  shell.addEventListener('scroll', function () {
+    updateBackToTopVisibility();
+    updateHeaderReadability();
+  }, { passive: true });
   window.addEventListener('popstate', function () {
     const parsed = routeFromUrl();
     navigate(parsed.route, parsed.payload, { fromHistory: true });
@@ -2839,6 +2848,7 @@
   setupHeroCarousel();
   refreshIdentity();
   updateBackToTopVisibility();
+  updateHeaderReadability();
   const initialRoute = routeFromUrl();
   state.route = initialRoute.route;
   state.routePayload = initialRoute.payload;

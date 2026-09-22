@@ -3513,6 +3513,12 @@ body.auth-elegant .knowledge-site {
   backdrop-filter: blur(16px);
 }
 
+.knowledge-header.is-scrolled {
+  padding: 10px 0;
+  background: color-mix(in srgb, var(--knowledge-bg) 90%, transparent);
+  backdrop-filter: blur(16px);
+}
+
 .knowledge-nav {
   min-height: 58px;
   padding: 0 16px;
@@ -3566,6 +3572,53 @@ body.auth-elegant .knowledge-site {
 .knowledge-language-button,
 .knowledge-author-tools summary {
   background: rgba(105, 183, 255, 0.2);
+}
+
+.knowledge-site:not([data-route="home"]) .knowledge-nav,
+.knowledge-header.is-scrolled .knowledge-nav {
+  color: var(--knowledge-text);
+}
+
+.knowledge-site:not([data-route="home"]) .knowledge-brand,
+.knowledge-site:not([data-route="home"]) .knowledge-brand strong,
+.knowledge-site:not([data-route="home"]) .knowledge-menu-toggle,
+.knowledge-site:not([data-route="home"]) .knowledge-author-tools summary,
+.knowledge-site:not([data-route="home"]) .knowledge-account-menu summary,
+.knowledge-header.is-scrolled .knowledge-brand,
+.knowledge-header.is-scrolled .knowledge-brand strong,
+.knowledge-header.is-scrolled .knowledge-menu-toggle,
+.knowledge-header.is-scrolled .knowledge-author-tools summary,
+.knowledge-header.is-scrolled .knowledge-account-menu summary {
+  color: var(--knowledge-text);
+}
+
+.knowledge-site:not([data-route="home"]) .knowledge-brand small,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-links > button,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-menu-trigger,
+.knowledge-site:not([data-route="home"]) .knowledge-icon-button,
+.knowledge-header.is-scrolled .knowledge-brand small,
+.knowledge-header.is-scrolled .knowledge-nav-links > button,
+.knowledge-header.is-scrolled .knowledge-nav-menu-trigger,
+.knowledge-header.is-scrolled .knowledge-icon-button {
+  color: var(--knowledge-muted);
+}
+
+.knowledge-site:not([data-route="home"]) .knowledge-nav-links > button:hover,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-links > button:focus-visible,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-links > button.is-active,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-menu-trigger:hover,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-menu-trigger:focus-visible,
+.knowledge-site:not([data-route="home"]) .knowledge-nav-menu-trigger.is-active,
+.knowledge-site:not([data-route="home"]) .knowledge-icon-button:hover,
+.knowledge-header.is-scrolled .knowledge-nav-links > button:hover,
+.knowledge-header.is-scrolled .knowledge-nav-links > button:focus-visible,
+.knowledge-header.is-scrolled .knowledge-nav-links > button.is-active,
+.knowledge-header.is-scrolled .knowledge-nav-menu-trigger:hover,
+.knowledge-header.is-scrolled .knowledge-nav-menu-trigger:focus-visible,
+.knowledge-header.is-scrolled .knowledge-nav-menu-trigger.is-active,
+.knowledge-header.is-scrolled .knowledge-icon-button:hover {
+  color: var(--knowledge-primary);
+  background: var(--knowledge-primary-soft);
 }
 
 .knowledge-main {
