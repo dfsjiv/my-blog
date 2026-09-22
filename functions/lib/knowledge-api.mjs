@@ -34,8 +34,9 @@ const POST_STATUSES = new Set(["draft", "published", "archived", "deleted"]);
 const MAX_PAGE_SIZE = 50;
 const MAX_TAGS = 15;
 const MAX_TAG_LENGTH = 40;
-const MAX_CONTENT_LENGTH = 2 * 1024 * 1024;
-const MAX_REQUEST_BYTES = MAX_CONTENT_LENGTH + 64 * 1024;
+const ADMIN_MAX_CONTENT_LENGTH = 2 * 1024 * 1024;
+const USER_MAX_CONTENT_LENGTH = 256 * 1024;
+const MAX_REQUEST_BYTES = ADMIN_MAX_CONTENT_LENGTH + 64 * 1024;
 
 const SORT_ORDERS = {
     latest: "p.is_pinned DESC, p.published_at DESC, p.id DESC",
@@ -54,10 +55,10 @@ export async function handleKnowledgeRequest(context) {
 
     try {
         if (isKnowledgeFavoritePath(url.pathname)) {
-            return await handleKnowledgeFavoriteRequest(context, requireAuthor);
+            return await handleKnowledgeFavoriteRequest(context, requireAdmin);
         }
         if (isKnowledgeInvitationPath(url.pathname)) {
-            return await handleKnowledgeInvitationRequest(context, requireAuthor);
+            return await handleKnowledgeInvitationRequest(context, requireAdmin);
         }
         const publicPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/posts\/([^/]+)$/);
         const adminPostMatch = matchPath(url.pathname, /^\/api\/knowledge\/admin\/posts\/(\d+)$/);
@@ -90,7 +91,7 @@ export async function handleKnowledgeRequest(context) {
             url.pathname === "/api/knowledge/admin/migration/audit"
             && request.method === "GET"
         ) {
-            const auth = await requireAuthor(context);
+            const auth = await requireAdmin(context);
             if (auth.response) return auth.response;
             return jsonResponse({
                 success: true,
@@ -101,7 +102,7 @@ export async function handleKnowledgeRequest(context) {
             url.pathname === "/api/knowledge/admin/migration/dry-run"
             && request.method === "POST"
         ) {
-            const auth = await requireAuthor(context);
+            const auth = await requireAdmin(context);
             if (auth.response) return auth.response;
             return jsonResponse({
                 success: true,
@@ -109,7 +110,7 @@ export async function handleKnowledgeRequest(context) {
             });
         }
         if (isArticleMoverPath(url.pathname)) {
-            const auth = await requireAuthor(context);
+            const auth = await requireAdmin(context);
             if (auth.response) return auth.response;
             return await handleArticleMoverRequest(context, auth.user, createPost);
         }
@@ -125,7 +126,7 @@ export async function handleKnowledgeRequest(context) {
         if (url.pathname === "/api/knowledge/admin/posts" && request.method === "GET") {
             const auth = await requireAuthor(context);
             if (auth.response) return auth.response;
-            return await getAdminPosts(request, env, jsonResponse);
+            return await getAdminPosts(request, env, auth.user, jsonResponse);
         }
         if (url.pathname === "/api/knowledge/admin/posts" && request.method === "POST") {
             const auth = await requireAuthor(context);
@@ -133,7 +134,7 @@ export async function handleKnowledgeRequest(context) {
             return await createPost(request, env, auth.user, jsonResponse);
         }
         if (legacyEditMatch && request.method === "POST") {
-            const auth = await requireAuthor(context);
+            const auth = await requireAdmin(context);
             if (auth.response) return auth.response;
             return await createEditableLegacyPost(
                 Number(legacyEditMatch[1]),
@@ -145,7 +146,7 @@ export async function handleKnowledgeRequest(context) {
         if (adminPostMatch && request.method === "GET") {
             const auth = await requireAuthor(context);
             if (auth.response) return auth.response;
-            return await getAdminPost(Number(adminPostMatch[1]), env, jsonResponse);
+            return await getAdminPost(Number(adminPostMatch[1]), env, auth.user, jsonResponse);
         }
         if (adminPostMatch && request.method === "PATCH") {
             const auth = await requireAuthor(context);
@@ -154,6 +155,7 @@ export async function handleKnowledgeRequest(context) {
                 request,
                 Number(adminPostMatch[1]),
                 env,
+                auth.user,
                 jsonResponse
             );
         }
@@ -164,6 +166,7 @@ export async function handleKnowledgeRequest(context) {
                 Number(adminPostMatch[1]),
                 "delete",
                 env,
+                auth.user,
                 jsonResponse
             );
         }
@@ -174,6 +177,7 @@ export async function handleKnowledgeRequest(context) {
                 Number(adminActionMatch[1]),
                 adminActionMatch[2],
                 env,
+                auth.user,
                 jsonResponse
             );
         }
@@ -240,7 +244,7 @@ async function requireAuthor(context) {
             )
         };
     }
-    if (user.role !== "admin") {
+    if (user.role !== "admin" && user.role !== "user") {
         return {
             response: errorResponse(
                 context.jsonResponse,
@@ -251,6 +255,22 @@ async function requireAuthor(context) {
         };
     }
     return { user };
+}
+
+async function requireAdmin(context) {
+    const auth = await requireAuthor(context);
+    if (auth.response) return auth;
+    if (auth.user.role !== "admin") {
+        return {
+            response: errorResponse(
+                context.jsonResponse,
+                403,
+                "FORBIDDEN",
+                "当前用户没有管理员权限"
+            )
+        };
+    }
+    return auth;
 }
 
 async function getPublicPosts(request, env, jsonResponse) {
@@ -404,11 +424,13 @@ async function getKnowledgeFacets(env) {
         };
 }
 
-async function getAdminPosts(request, env, jsonResponse) {
+async function getAdminPosts(request, env, user, jsonResponse) {
     const filters = parseListFilters(request, true);
     if (filters.error) return validationResponse(jsonResponse, filters.error);
+    const isAdmin = user.role === "admin";
+    if (!isAdmin) filters.ownerUserId = Number(user.id);
     const fetchLimit = filters.page * filters.pageSize;
-    const includeLegacy = !filters.status || filters.status === "published";
+    const includeLegacy = isAdmin && (!filters.status || filters.status === "published");
     const migratedIds = includeLegacy ? await getMigratedLegacyIds(env) : new Set();
     const [knowledgeResult, legacyResult] = await Promise.all([
         queryPostList(env, { ...filters, page: 1, pageSize: fetchLimit }, false),
@@ -518,11 +540,13 @@ async function createEditableLegacyPost(legacyId, env, user, jsonResponse) {
     }, 201);
 }
 
-async function getAdminPost(id, env, jsonResponse) {
+async function getAdminPost(id, env, user, jsonResponse) {
     const post = await getPostById(env, id);
     if (!post) {
         return errorResponse(jsonResponse, 404, "NOT_FOUND", "文章不存在");
     }
+    const ownershipError = ensurePostOwnership(post, user, jsonResponse);
+    if (ownershipError) return ownershipError;
     return jsonResponse({
         success: true,
         data: { post: toDetailPost(post, true) }
@@ -533,7 +557,7 @@ async function createPost(request, env, user, jsonResponse) {
     const bodyResult = await readJsonBody(request);
     if (bodyResult.error) return validationResponse(jsonResponse, bodyResult.error);
 
-    const validation = validatePost(bodyResult.body, null);
+    const validation = validatePost(bodyResult.body, null, user);
     if (validation.error) return validationResponse(jsonResponse, validation.error);
     const post = validation.value;
 
@@ -611,11 +635,13 @@ async function createPost(request, env, user, jsonResponse) {
     }, 201);
 }
 
-async function updatePost(request, id, env, jsonResponse) {
+async function updatePost(request, id, env, user, jsonResponse) {
     const existing = await getPostById(env, id);
     if (!existing) {
         return errorResponse(jsonResponse, 404, "NOT_FOUND", "文章不存在");
     }
+    const ownershipError = ensurePostOwnership(existing, user, jsonResponse);
+    if (ownershipError) return ownershipError;
 
     const bodyResult = await readJsonBody(request);
     if (bodyResult.error) return validationResponse(jsonResponse, bodyResult.error);
@@ -629,7 +655,7 @@ async function updatePost(request, id, env, jsonResponse) {
         return errorResponse(jsonResponse, 409, "VERSION_CONFLICT", "文章已被其他页面修改");
     }
 
-    const validation = validatePost(bodyResult.body, existing);
+    const validation = validatePost(bodyResult.body, existing, user);
     if (validation.error) return validationResponse(jsonResponse, validation.error);
     const post = validation.value;
 
@@ -749,11 +775,13 @@ async function updatePost(request, id, env, jsonResponse) {
     });
 }
 
-async function changePostState(id, action, env, jsonResponse) {
+async function changePostState(id, action, env, user, jsonResponse) {
     const post = await getPostById(env, id);
     if (!post) {
         return errorResponse(jsonResponse, 404, "NOT_FOUND", "文章不存在");
     }
+    const ownershipError = ensurePostOwnership(post, user, jsonResponse);
+    if (ownershipError) return ownershipError;
 
     const now = new Date().toISOString();
     let status;
@@ -804,6 +832,16 @@ async function changePostState(id, action, env, jsonResponse) {
         success: true,
         data: { post: toDetailPost(updated, true) }
     });
+}
+
+function ensurePostOwnership(post, user, jsonResponse) {
+    if (user.role === "admin" || Number(post.authorUserId) === Number(user.id)) return null;
+    return errorResponse(
+        jsonResponse,
+        403,
+        "FORBIDDEN",
+        "普通用户只能管理自己创建的文章"
+    );
 }
 
 function parseListFilters(request, admin) {
@@ -920,6 +958,10 @@ async function queryPostList(env, filters, publicOnly) {
         where.push("p.is_pinned = ?");
         bindings.push(filters.pinned ? 1 : 0);
     }
+    if (filters.ownerUserId) {
+        where.push("p.author_user_id = ?");
+        bindings.push(Number(filters.ownerUserId));
+    }
 
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const orderSql = (filters.admin ? ADMIN_SORT_ORDERS : SORT_ORDERS)[filters.sort];
@@ -973,7 +1015,8 @@ const POST_COLUMNS = `
     p.content_markdown, p.cover_url, p.category, p.category_slug,
     p.status, p.is_pinned, p.is_featured, p.source_url, p.word_count,
     p.reading_time_minutes, p.version, p.created_at, p.updated_at,
-    p.published_at, p.deleted_at
+    p.published_at, p.deleted_at,
+    (SELECT u.username FROM users AS u WHERE u.id = p.author_user_id) AS author_username
 `;
 
 async function hydratePosts(env, rows) {
@@ -1010,7 +1053,7 @@ async function hydratePosts(env, rows) {
     ));
 }
 
-function validatePost(body, existing) {
+function validatePost(body, existing, user) {
     if (!body || typeof body !== "object" || Array.isArray(body)) {
         return { error: { request: "请求体必须是 JSON 对象" } };
     }
@@ -1057,8 +1100,12 @@ function validatePost(body, existing) {
     if (suppliedSlug.length > 200) {
         fields.slug = "Slug 不能超过 200 个字符";
     }
-    if (contentMarkdown.length > MAX_CONTENT_LENGTH) {
-        fields.contentMarkdown = "正文不能超过 2MB";
+    const isAdmin = user?.role === "admin";
+    const contentLimit = isAdmin ? ADMIN_MAX_CONTENT_LENGTH : USER_MAX_CONTENT_LENGTH;
+    if (contentMarkdown.length > contentLimit) {
+        fields.contentMarkdown = isAdmin
+            ? "正文不能超过 2 MB"
+            : "普通用户的文章正文不能超过 256 KB";
     }
     if (!POST_STATUSES.has(status)) fields.status = "文章状态无效";
     if (category !== null && category.length > 80) fields.category = "分类不能超过 80 个字符";
@@ -1071,6 +1118,9 @@ function validatePost(body, existing) {
     if (tags.error) fields.tags = tags.error;
     if (typeof merged.isPinned !== "boolean") fields.isPinned = "必须为布尔值";
     if (typeof merged.isFeatured !== "boolean") fields.isFeatured = "必须为布尔值";
+    if (!isAdmin && (merged.isPinned || merged.isFeatured)) {
+        fields.permissions = "普通用户不能设置置顶或精选";
+    }
 
     let solutionMeta = null;
     if (type === "solution") {
@@ -1331,6 +1381,7 @@ function mapPost(row, tags, solutionMeta) {
         legacySlug: null,
         legacyUrl: null,
         authorUserId: Number(row.author_user_id),
+        author: row.author_username || null,
         slug: row.slug,
         type: row.type,
         title: row.title,
@@ -1404,6 +1455,7 @@ function toListPost(post, admin = false) {
         isPinned: post.isPinned,
         isFeatured: post.isFeatured,
         sourceUrl: post.sourceUrl,
+        author: post.author || null,
         wordCount: post.wordCount,
         readingTimeMinutes: post.readingTimeMinutes,
         createdAt: post.createdAt,
@@ -1414,6 +1466,7 @@ function toListPost(post, admin = false) {
     if (admin) {
         result.version = post.version;
         result.deletedAt = post.deletedAt;
+        result.authorUserId = post.authorUserId;
     }
     return result;
 }

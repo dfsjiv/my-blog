@@ -303,7 +303,12 @@
   }
 
   function isAuthor() {
-    return Boolean(currentUser() && currentUser().role === 'admin');
+    const role = currentUser()?.role;
+    return role === 'admin' || role === 'user';
+  }
+
+  function isAdmin() {
+    return currentUser()?.role === 'admin';
   }
 
   function currentToken() {
@@ -337,8 +342,10 @@
       accountMenu.hidden = isGuest;
       if (isGuest) accountMenu.removeAttribute('open');
     }
-    authorTools.hidden = !(activeUser && activeUser.role === 'admin');
-    if (settingsMenu) settingsMenu.hidden = !(activeUser && activeUser.role === 'admin');
+    authorTools.hidden = !(activeUser && (activeUser.role === 'admin' || activeUser.role === 'user'));
+    const moverAction = authorTools.querySelector('[data-knowledge-route="mover"]');
+    if (moverAction) moverAction.hidden = !isAdmin();
+    if (settingsMenu) settingsMenu.hidden = !isAdmin();
     window.dispatchEvent(new CustomEvent('knowledge-auth-changed', {
       detail: { user: activeUser },
     }));
@@ -1947,7 +1954,7 @@
   }
 
   async function renderInvitations(controller) {
-    if (!isAuthor()) return navigate('home', {}, { replace: true });
+    if (!isAdmin()) return navigate('home', {}, { replace: true });
     const node = showRouteShell(
       'ADMIN',
       t('邀请码'),
@@ -2358,7 +2365,7 @@
   }
 
   function renderArticleMover() {
-    if (!isAuthor()) return navigate('home', {}, { replace: true });
+    if (!isAdmin()) return navigate('home', {}, { replace: true });
     const mover = window.KnowledgeArticleMover;
     const node = showRouteShell(
       'AUTHOR TOOL',
@@ -2416,7 +2423,7 @@
     const tags = element('div', 'knowledge-card-tags');
     appendTags(tags, post.tags);
     const meta = element('div', 'knowledge-detail-meta');
-    appendIf(meta, t('作者：'), 'Lee Ethan');
+    appendIf(meta, t('作者：'), post.author || 'Lee Ethan');
     appendIf(meta, t('发布：'), formatDate(post.publishedAt));
     appendIf(meta, t('更新：'), formatDate(post.updatedAt));
     appendIf(meta, t('分类：'), post.category);
@@ -2432,7 +2439,7 @@
       header.appendChild(sourceLink);
     }
     header.appendChild(makeShareLink(post));
-    if (isAuthor()) {
+    if (isAdmin()) {
       const authorActions = element('div', 'knowledge-detail-author-actions');
       const edit = button(
         post.source === 'legacy-blog' ? '转换并编辑' : '编辑文章',

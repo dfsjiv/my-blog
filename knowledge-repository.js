@@ -155,6 +155,7 @@
       isPinned: Boolean(source.isPinned),
       isFeatured: Boolean(source.isFeatured),
       sourceUrl: source.sourceUrl || null,
+      author: typeof source.author === 'string' ? source.author : '',
       wordCount: Number(source.wordCount) || 0,
       readingTimeMinutes: Math.max(1, Number(source.readingTimeMinutes) || 1),
       version: Math.max(1, Number(source.version) || 1),

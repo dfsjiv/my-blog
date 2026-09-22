@@ -1,4 +1,5 @@
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const USER_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = {
     "image/jpeg": { extension: "jpg", signatures: [[0xff, 0xd8, 0xff]] },
     "image/png": { extension: "png", signatures: [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]] },
@@ -30,8 +31,18 @@ export async function uploadKnowledgeImage(context, user) {
     if (!file || typeof file.arrayBuffer !== "function") {
         return failure(jsonResponse, 400, "INVALID_IMAGE", "请选择要上传的图片");
     }
-    if (!Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
-        return failure(jsonResponse, 400, "INVALID_IMAGE", "图片大小必须在 8 MB 以内");
+    const maxImageBytes = user.role === "admin"
+        ? ADMIN_MAX_IMAGE_BYTES
+        : USER_MAX_IMAGE_BYTES;
+    if (!Number.isFinite(file.size) || file.size <= 0 || file.size > maxImageBytes) {
+        return failure(
+            jsonResponse,
+            400,
+            "INVALID_IMAGE",
+            user.role === "admin"
+                ? "图片大小必须在 8 MB 以内"
+                : "普通用户上传的图片必须在 2 MB 以内"
+        );
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());

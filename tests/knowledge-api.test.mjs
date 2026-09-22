@@ -319,23 +319,46 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     assert.equal(unauthenticatedAdmin.status, 401);
     assert.equal(unauthenticatedAdmin.body.error.code, "UNAUTHORIZED");
 
-    const forbiddenCreate = await api("/api/knowledge/admin/posts", {
+    const userCreated = await api("/api/knowledge/admin/posts", {
         method: "POST",
         token: "user-token",
-        body: articleInput()
+        body: articleInput({ title: "普通用户文章", slug: "reader-post", tags: [] })
     });
-    assert.equal(forbiddenCreate.status, 403);
-    assert.equal(forbiddenCreate.body.error.code, "FORBIDDEN");
+    assert.equal(userCreated.status, 201);
+    assert.equal(userCreated.body.data.post.authorUserId, 2);
+    const userPostId = userCreated.body.data.post.id;
+
+    const userPrivilegedCreate = await api("/api/knowledge/admin/posts", {
+        method: "POST",
+        token: "user-token",
+        body: articleInput({ title: "置顶尝试", isPinned: true })
+    });
+    assert.equal(userPrivilegedCreate.status, 400);
+    assert.match(userPrivilegedCreate.body.error.fields.permissions, /不能设置置顶或精选/);
+
+    const oversizedUserPost = await api("/api/knowledge/admin/posts", {
+        method: "POST",
+        token: "user-token",
+        body: articleInput({ title: "超大文章", contentMarkdown: "x".repeat(256 * 1024 + 1) })
+    });
+    assert.equal(oversizedUserPost.status, 400);
+    assert.match(oversizedUserPost.body.error.fields.contentMarkdown, /256 KB/);
+
+    const forbiddenInvitations = await api("/api/knowledge/admin/invitations", {
+        token: "user-token"
+    });
+    assert.equal(forbiddenInvitations.status, 403);
+    assert.equal(forbiddenInvitations.body.error.code, "FORBIDDEN");
 
     const unauthenticatedImageUpload = await api("/api/knowledge/admin/images", {
         method: "POST"
     });
     assert.equal(unauthenticatedImageUpload.status, 401);
-    const forbiddenImageUpload = await api("/api/knowledge/admin/images", {
+    const unconfiguredUserImageUpload = await api("/api/knowledge/admin/images", {
         method: "POST",
         token: "user-token"
     });
-    assert.equal(forbiddenImageUpload.status, 403);
+    assert.equal(unconfiguredUserImageUpload.status, 503);
     const unconfiguredImageUpload = await api("/api/knowledge/admin/images", {
         method: "POST",
         token: "admin-token"
@@ -369,13 +392,41 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     const articleId = createdDraft.body.data.post.id;
     const articleSlug = createdDraft.body.data.post.slug;
 
+    const forbiddenAdminPostRead = await api(`/api/knowledge/admin/posts/${articleId}`, {
+        token: "user-token"
+    });
+    assert.equal(forbiddenAdminPostRead.status, 403);
+
+    const forbiddenAdminPostUpdate = await api(`/api/knowledge/admin/posts/${articleId}`, {
+        method: "PATCH",
+        token: "user-token",
+        body: { version: 1, title: "越权修改" }
+    });
+    assert.equal(forbiddenAdminPostUpdate.status, 403);
+
+    const userPublished = await api(`/api/knowledge/admin/posts/${userPostId}/publish`, {
+        method: "POST",
+        token: "user-token"
+    });
+    assert.equal(userPublished.status, 200);
+    assert.equal(userPublished.body.data.post.status, "published");
+
+    const userOwnedList = await api("/api/knowledge/admin/posts", {
+        token: "user-token"
+    });
+    assert.equal(userOwnedList.status, 200);
+    assert.equal(userOwnedList.body.data.items.length, 1);
+    assert.equal(userOwnedList.body.data.items[0].authorUserId, 2);
+
     assert.equal(
         Number(sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_tags").get().count),
         2
     );
     const publicDraftDetail = await api(`/api/knowledge/posts/${articleSlug}`);
     assert.equal(publicDraftDetail.status, 404);
-    assert.equal((await api("/api/knowledge/posts")).body.data.pagination.total, 0);
+    const publicAfterUserPublish = await api("/api/knowledge/posts");
+    assert.equal(publicAfterUserPublish.body.data.pagination.total, 1);
+    assert.equal(publicAfterUserPublish.body.data.items[0].author, "reader");
 
     const createdSolution = await api("/api/knowledge/admin/posts", {
         method: "POST",
@@ -459,17 +510,17 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
 
     const paged = await api("/api/knowledge/posts?page=1&pageSize=1");
     assert.equal(paged.body.data.items.length, 1);
-    assert.equal(paged.body.data.pagination.total, 2);
-    assert.equal(paged.body.data.pagination.totalPages, 2);
+    assert.equal(paged.body.data.pagination.total, 3);
+    assert.equal(paged.body.data.pagination.totalPages, 3);
     assert.equal(paged.body.data.pagination.hasNext, true);
 
     assert.equal(
         (await api("/api/knowledge/posts?type=article")).body.data.pagination.total,
-        1
+        2
     );
     assert.equal(
         (await api("/api/knowledge/posts?category=技术文章")).body.data.pagination.total,
-        1
+        2
     );
     assert.equal(
         (await api("/api/knowledge/posts?tag=算法")).body.data.pagination.total,
@@ -502,7 +553,7 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
 
     const facets = await api("/api/knowledge/facets");
     assert.equal(facets.status, 200);
-    assert.equal(facets.body.data.stats.posts, 2);
+    assert.equal(facets.body.data.stats.posts, 3);
     assert.equal(facets.body.data.stats.notes, 1);
     assert.equal(facets.body.data.stats.solutions, 0);
 
@@ -569,7 +620,7 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     );
 
     const finalFacets = await api("/api/knowledge/facets");
-    assert.equal(finalFacets.body.data.stats.posts, 1);
+    assert.equal(finalFacets.body.data.stats.posts, 2);
     assert.equal(finalFacets.body.data.stats.notes, 1);
     sqlite.close();
 });

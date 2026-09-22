@@ -1,7 +1,9 @@
 (function () {
   const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
-  const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+  const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+  const USER_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+  const USER_MAX_CONTENT_LENGTH = 256 * 1024;
   const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
   const TYPE_OPTIONS = [
     ['article', '技术文章'],
@@ -136,6 +138,14 @@
     return window.authManager && window.authManager.state
       ? window.authManager.state.token
       : null;
+  }
+
+  function isAdmin() {
+    return window.authManager?.getCurrentUser?.().role === 'admin';
+  }
+
+  function maxImageBytes() {
+    return isAdmin() ? ADMIN_MAX_IMAGE_BYTES : USER_MAX_IMAGE_BYTES;
   }
 
   async function render(container, options) {
@@ -320,7 +330,9 @@
     const storageHint = element(
       'span',
       'knowledge-writer-storage-hint',
-      '自动备份到本机 · Ctrl+S 保存到服务器'
+      isAdmin()
+        ? '自动备份到本机 · Ctrl+S 保存到服务器'
+        : '普通用户正文上限 256 KB · 图片上限 2 MB'
     );
     bottomLeft.append(settingButton, wordCount, readingTime, editMode, storageHint);
     const bottomRight = element('div');
@@ -704,6 +716,10 @@
         showNotice('正文不能为空。', true);
         if (state.editorMode === 'rich') state.editor.commands.focus();
         else sourceInput.focus();
+        return false;
+      }
+      if (!isAdmin() && payload.contentMarkdown.length > USER_MAX_CONTENT_LENGTH) {
+        showNotice('普通用户的文章正文不能超过 256 KB。', true);
         return false;
       }
       if (publishing && payload.type === 'solution') {
@@ -1494,7 +1510,9 @@
   function validateImageFile(file) {
     if (!IMAGE_TYPES.has(file.type)) return '仅支持 JPEG、PNG、WebP 或 GIF 图片。';
     if (!Number.isFinite(file.size) || file.size <= 0) return '图片文件不能为空。';
-    if (file.size > MAX_IMAGE_BYTES) return '图片大小不能超过 8 MB。';
+    if (file.size > maxImageBytes()) {
+      return isAdmin() ? '图片大小不能超过 8 MB。' : '普通用户上传的图片不能超过 2 MB。';
+    }
     return '';
   }
 
@@ -1601,6 +1619,8 @@
     ]);
     const pinned = checkboxField('置顶', 'isPinned');
     const featured = checkboxField('精选', 'isFeatured');
+    pinned.hidden = !isAdmin();
+    featured.hidden = !isAdmin();
     const solutionFields = element('fieldset', 'knowledge-writer-solution-fields');
     solutionFields.append(
       element('legend', '', '题解信息'),
