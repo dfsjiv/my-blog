@@ -188,6 +188,23 @@
     };
   }
 
+  function adaptBackground(item) {
+    const source = item && typeof item === 'object' ? item : {};
+    return {
+      id: Number(source.id) || 0,
+      title: typeof source.title === 'string' ? source.title : '',
+      url: typeof source.url === 'string' ? source.url : '',
+      focalPosition: ['left', 'center', 'right'].includes(source.focalPosition)
+        ? source.focalPosition
+        : 'center',
+      sortOrder: Number(source.sortOrder) || 0,
+      isEnabled: Boolean(source.isEnabled),
+      uploadedBy: Number(source.uploadedBy) || 0,
+      createdAt: source.createdAt || null,
+      updatedAt: source.updatedAt || null,
+    };
+  }
+
   async function getPosts(filters, options) {
     const data = await apiRequest(API_ROOT + '/posts' + buildPostsQuery(filters), options);
     const pagination = data && data.pagination ? data.pagination : {};
@@ -384,6 +401,75 @@
     return data && data.invitation;
   }
 
+  async function getBackgrounds(options) {
+    const data = await apiRequest(API_ROOT + '/backgrounds', options);
+    return Array.isArray(data && data.items) ? data.items.map(adaptBackground) : [];
+  }
+
+  async function getAdminBackgrounds(options) {
+    const data = await apiRequest(API_ROOT + '/admin/backgrounds', options);
+    return Array.isArray(data && data.items) ? data.items.map(adaptBackground) : [];
+  }
+
+  async function uploadBackground(file, input, options) {
+    const settings = options || {};
+    const requestSignal = createRequestSignal(settings.signal, UPLOAD_TIMEOUT_MS);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', input && input.title ? input.title : '');
+    formData.append('focalPosition', input && input.focalPosition ? input.focalPosition : 'center');
+    let response;
+    try {
+      response = await fetch(API_ROOT + '/admin/backgrounds', {
+        method: 'POST',
+        headers: Object.assign(
+          { Accept: 'application/json' },
+          settings.token ? { Authorization: 'Bearer ' + settings.token } : {}
+        ),
+        body: formData,
+        signal: requestSignal.signal,
+        credentials: 'same-origin',
+      });
+    } catch (error) {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
+      throw new KnowledgeApiError('背景上传失败，请稍后重试。', 0, 'NETWORK_ERROR');
+    } finally {
+      requestSignal.cleanup();
+    }
+    let payload;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      throw new KnowledgeApiError('服务器返回了无效数据。', response.status, 'INVALID_RESPONSE');
+    }
+    if (!response.ok || !payload || payload.success !== true) {
+      const apiError = payload && payload.error;
+      throw new KnowledgeApiError(
+        apiError && apiError.message ? apiError.message : '背景上传失败，请稍后重试。',
+        response.status,
+        apiError && apiError.code
+      );
+    }
+    return adaptBackground(payload.data && payload.data.background);
+  }
+
+  async function updateBackground(id, input, options) {
+    const settings = Object.assign({}, options || {}, { method: 'PATCH', body: input });
+    const data = await apiRequest(
+      API_ROOT + '/admin/backgrounds/' + encodeURIComponent(String(id)),
+      settings
+    );
+    return adaptBackground(data && data.background);
+  }
+
+  async function deleteBackground(id, options) {
+    const settings = Object.assign({}, options || {}, { method: 'DELETE' });
+    return apiRequest(
+      API_ROOT + '/admin/backgrounds/' + encodeURIComponent(String(id)),
+      settings
+    );
+  }
+
   async function uploadImage(file, options) {
     const settings = options || {};
     const requestSignal = createRequestSignal(settings.signal, UPLOAD_TIMEOUT_MS);
@@ -572,6 +658,11 @@
     getInvitations,
     createInvitation,
     revokeInvitation,
+    getBackgrounds,
+    getAdminBackgrounds,
+    uploadBackground,
+    updateBackground,
+    deleteBackground,
     uploadImage,
     getPostComments,
     createPostComment,

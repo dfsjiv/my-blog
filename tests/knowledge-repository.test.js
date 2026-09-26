@@ -55,6 +55,33 @@ const context = {
   console,
   fetch(url, options) {
     requests.push({ url, options });
+    if (url === '/api/knowledge/backgrounds') {
+      return response({
+        success: true,
+        data: { items: [{ id: 4, title: 'Night', url: '/bg.png', focalPosition: 'right', isEnabled: true }] },
+      });
+    }
+    if (url === '/api/knowledge/admin/backgrounds' && options.method === 'GET') {
+      return response({
+        success: true,
+        data: { items: [{ id: 4, title: 'Night', url: '/bg.png', focalPosition: 'right', isEnabled: true }] },
+      });
+    }
+    if (url === '/api/knowledge/admin/backgrounds' && options.method === 'POST') {
+      return response({
+        success: true,
+        data: { background: { id: 5, title: 'Sky', url: '/sky.png', focalPosition: 'center', isEnabled: true } },
+      }, 201);
+    }
+    if (url === '/api/knowledge/admin/backgrounds/4' && options.method === 'PATCH') {
+      return response({
+        success: true,
+        data: { background: { id: 4, title: 'Night 2', url: '/bg.png', focalPosition: 'left', isEnabled: false } },
+      });
+    }
+    if (url === '/api/knowledge/admin/backgrounds/4' && options.method === 'DELETE') {
+      return response({ success: true, data: { deleted: true } });
+    }
     if (url === '/api/knowledge/admin/images' && options.method === 'POST') {
       return response({
         success: true,
@@ -204,6 +231,23 @@ vm.runInContext(source, context);
     { token: 'admin-token' }
   );
   assert.equal(uploaded.mimeType, 'image/png');
+  const backgrounds = await repository.getBackgrounds();
+  assert.equal(backgrounds[0].focalPosition, 'right');
+  const adminBackgrounds = await repository.getAdminBackgrounds({ token: 'admin-token' });
+  assert.equal(adminBackgrounds[0].title, 'Night');
+  const uploadedBackground = await repository.uploadBackground(
+    new Blob(['image'], { type: 'image/png' }),
+    { title: 'Sky', focalPosition: 'center' },
+    { token: 'admin-token' }
+  );
+  assert.equal(uploadedBackground.id, 5);
+  const updatedBackground = await repository.updateBackground(
+    4,
+    { title: 'Night 2', focalPosition: 'left', isEnabled: false },
+    { token: 'admin-token' }
+  );
+  assert.equal(updatedBackground.isEnabled, false);
+  await repository.deleteBackground(4, { token: 'admin-token' });
   const comments = await repository.getPostComments(detailA);
   assert.equal(comments[0].id, 1);
   const createdComment = await repository.createPostComment(

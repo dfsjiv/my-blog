@@ -24,6 +24,10 @@ import {
     handleKnowledgeInvitationRequest,
     isKnowledgeInvitationPath
 } from "./knowledge-invitations.mjs";
+import {
+    handleKnowledgeBackgroundRequest,
+    isKnowledgeBackgroundPath
+} from "./knowledge-backgrounds.mjs";
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -54,6 +58,9 @@ export async function handleKnowledgeRequest(context) {
     const { request, env, url, jsonResponse } = context;
 
     try {
+        if (isKnowledgeBackgroundPath(url.pathname)) {
+            return await handleKnowledgeBackgroundRequest(context, requireAdmin);
+        }
         if (isKnowledgeFavoritePath(url.pathname)) {
             return await handleKnowledgeFavoriteRequest(context, requireAdmin);
         }

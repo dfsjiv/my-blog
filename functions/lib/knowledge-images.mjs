@@ -141,7 +141,7 @@ function encodeKey(key) {
 }
 
 function isSafeImageKey(key) {
-    return /^knowledge\/\d{4}\/\d{2}\/[0-9a-f-]+\.(?:jpg|png|webp|gif)$/i.test(key);
+    return /^knowledge\/(?:backgrounds\/)?\d{4}\/\d{2}\/[0-9a-f-]+\.(?:jpg|png|webp|gif)$/i.test(key);
 }
 
 function safeMetadataValue(value) {

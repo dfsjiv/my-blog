@@ -39,7 +39,8 @@
   const accountSummary = accountMenu ? accountMenu.querySelector('summary') : null;
   const navMenus = Array.from(document.querySelectorAll('[data-knowledge-nav-menu]'));
   const languageOptions = Array.from(document.querySelectorAll('[data-knowledge-language]'));
-  const heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
+  let heroSlides = Array.from(document.querySelectorAll('[data-knowledge-hero-slide]'));
+  let heroCarouselRefresh = null;
   const repository = window.KnowledgeRepository;
   const markdown = window.KnowledgeMarkdown;
   const commentsModule = window.KnowledgeComments;
@@ -96,11 +97,42 @@
     let activeIndex = 0;
     let timer = 0;
 
-    function showSlide(index) {
-      activeIndex = index;
+    function ensureSlideImage(slide) {
+      const url = slide?.dataset.backgroundUrl;
+      if (!url || slide.dataset.backgroundReady === 'true') return Promise.resolve(true);
+      if (slide._backgroundPromise) return slide._backgroundPromise;
+      slide._backgroundPromise = new Promise(function (resolve) {
+        const image = new Image();
+        image.onload = function () {
+          slide.style.backgroundImage = 'url("' + url.replace(/["\\]/g, '\\$&') + '")';
+          slide.dataset.backgroundReady = 'true';
+          resolve(true);
+        };
+        image.onerror = function () {
+          slide.dataset.backgroundFailed = 'true';
+          resolve(false);
+        };
+        image.src = url;
+      });
+      return slide._backgroundPromise;
+    }
+
+    async function showSlide(index) {
+      if (!heroSlides.length) return;
+      let nextIndex = ((index % heroSlides.length) + heroSlides.length) % heroSlides.length;
+      let attempts = 0;
+      while (attempts < heroSlides.length) {
+        const candidate = heroSlides[nextIndex];
+        if (candidate.dataset.backgroundFailed !== 'true' && await ensureSlideImage(candidate)) break;
+        nextIndex = (nextIndex + 1) % heroSlides.length;
+        attempts += 1;
+      }
+      activeIndex = nextIndex;
       heroSlides.forEach(function (slide, slideIndex) {
         slide.classList.toggle('is-active', slideIndex === activeIndex);
       });
+      const following = heroSlides[(activeIndex + 1) % heroSlides.length];
+      void ensureSlideImage(following);
     }
 
     function stop() {
@@ -113,7 +145,7 @@
       stop();
       if (document.hidden || reducedMotion.matches) return;
       timer = window.setInterval(function () {
-        showSlide((activeIndex + 1) % heroSlides.length);
+        void showSlide((activeIndex + 1) % heroSlides.length);
       }, 7000);
     }
 
@@ -121,8 +153,35 @@
     if (typeof reducedMotion.addEventListener === 'function') {
       reducedMotion.addEventListener('change', start);
     }
-    showSlide(0);
+    void showSlide(0);
     start();
+
+    heroCarouselRefresh = async function () {
+      const container = shell.querySelector('.knowledge-hero-slides');
+      if (!container) return;
+      container.querySelectorAll('[data-custom-background]').forEach(function (slide) {
+        slide.remove();
+      });
+      try {
+        const backgrounds = await repository.getBackgrounds();
+        backgrounds.forEach(function (background) {
+          if (!background.url) return;
+          const slide = element('span', 'knowledge-hero-slide');
+          slide.dataset.knowledgeHeroSlide = '';
+          slide.dataset.customBackground = String(background.id);
+          slide.dataset.backgroundUrl = background.url;
+          slide.dataset.focalPosition = background.focalPosition;
+          slide.style.backgroundPosition = background.focalPosition + ' center';
+          container.appendChild(slide);
+        });
+      } catch (error) {
+        console.error('Custom backgrounds request failed:', error.message);
+      }
+      heroSlides = Array.from(container.querySelectorAll('[data-knowledge-hero-slide]'));
+      if (activeIndex >= heroSlides.length) activeIndex = 0;
+      void showSlide(activeIndex);
+    };
+    void heroCarouselRefresh();
   }
 
   function t(value) {
@@ -995,7 +1054,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'contests', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
-      'writer', 'drafts', 'manage', 'mover', 'invitations'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1220,6 +1279,7 @@
     if (route === 'writer') return renderWriter(details);
     if (route === 'drafts' || route === 'manage') return renderAdminPosts(route, details, controller);
     if (route === 'invitations') return renderInvitations(controller);
+    if (route === 'backgrounds') return renderBackgroundManager(controller);
     return navigate('home', {}, { replace: true });
   }
 
@@ -2094,6 +2154,253 @@
     }
 
     await loadInvitationList();
+  }
+
+  async function renderBackgroundManager(controller) {
+    if (!isAdmin()) return navigate('home', {}, { replace: true });
+    const node = showRouteShell(
+      'ADMIN',
+      '背景管理',
+      '上传图片并调整首页背景展示队列。现有四张默认背景会始终作为兜底。'
+    );
+    const workspace = element('div', 'knowledge-background-workspace');
+    const form = element('form', 'knowledge-background-upload');
+    const preview = element('div', 'knowledge-background-upload-preview');
+    const previewImage = document.createElement('img');
+    previewImage.alt = '待上传背景预览';
+    previewImage.hidden = true;
+    const previewEmpty = element('span', '', '选择图片后在这里预览');
+    preview.append(previewImage, previewEmpty);
+
+    const fields = element('div', 'knowledge-background-upload-fields');
+    const fileLabel = element('label');
+    fileLabel.appendChild(element('span', '', '背景图片'));
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/jpeg,image/png,image/webp';
+    fileInput.required = true;
+    fileLabel.appendChild(fileInput);
+    const titleLabel = element('label');
+    titleLabel.appendChild(element('span', '', '名称'));
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.maxLength = 80;
+    titleInput.placeholder = '例如：夜空';
+    titleLabel.appendChild(titleInput);
+    const focalLabel = element('label');
+    focalLabel.appendChild(element('span', '', '画面焦点'));
+    const focalSelect = backgroundFocalSelect('center');
+    focalLabel.appendChild(focalSelect);
+    const upload = button('上传并加入队列', 'knowledge-route-button is-primary');
+    upload.type = 'submit';
+    const message = element('p', 'knowledge-background-message');
+    message.setAttribute('role', 'status');
+    fields.append(fileLabel, titleLabel, focalLabel, upload, message);
+    form.append(preview, fields);
+
+    const heading = element('div', 'knowledge-section-heading');
+    heading.append(
+      element('h2', '', '自定义背景队列'),
+      element('span', '', '最多启用 12 张 · JPEG / PNG / WebP · 单张不超过 8 MB')
+    );
+    const list = element('div', 'knowledge-background-list');
+    list.appendChild(makeLoadingState('正在加载背景…'));
+    workspace.append(form, heading, list);
+    node.appendChild(workspace);
+
+    let previewUrl = '';
+    fileInput.addEventListener('change', function () {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = '';
+      message.classList.remove('is-error');
+      message.textContent = '';
+      const file = fileInput.files?.[0];
+      if (!file) {
+        previewImage.hidden = true;
+        previewEmpty.hidden = false;
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+        message.textContent = '请选择不超过 8 MB 的 JPEG、PNG 或 WebP 图片。';
+        message.classList.add('is-error');
+        fileInput.value = '';
+        previewImage.hidden = true;
+        previewEmpty.hidden = false;
+        return;
+      }
+      previewUrl = URL.createObjectURL(file);
+      previewImage.src = previewUrl;
+      previewImage.hidden = false;
+      previewEmpty.hidden = true;
+      previewImage.onload = function () {
+        const dimensions = previewImage.naturalWidth + ' × ' + previewImage.naturalHeight;
+        message.textContent = previewImage.naturalWidth < 1600 || previewImage.naturalHeight < 900
+          ? dimensions + '；建议使用至少 1600 × 900 的图片。'
+          : dimensions;
+      };
+      if (!titleInput.value.trim()) titleInput.value = file.name.replace(/\.[^.]+$/, '').slice(0, 80);
+    });
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const file = fileInput.files?.[0];
+      if (!file || upload.disabled) return;
+      upload.disabled = true;
+      message.classList.remove('is-error');
+      message.textContent = '正在上传背景…';
+      try {
+        await repository.uploadBackground(file, {
+          title: titleInput.value.trim(),
+          focalPosition: focalSelect.value,
+        }, { token: currentToken(), signal: controller.signal });
+        if (controller.signal.aborted) return;
+        fileInput.value = '';
+        titleInput.value = '';
+        previewImage.hidden = true;
+        previewImage.removeAttribute('src');
+        previewEmpty.hidden = false;
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = '';
+        message.textContent = '背景已加入展示队列。';
+        await loadBackgroundList();
+        await heroCarouselRefresh?.();
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        message.textContent = error.message || '背景上传失败。';
+        message.classList.add('is-error');
+      } finally {
+        upload.disabled = false;
+      }
+    });
+
+    async function loadBackgroundList() {
+      list.replaceChildren(makeLoadingState('正在加载背景…'));
+      try {
+        const items = await repository.getAdminBackgrounds({
+          token: currentToken(),
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        list.replaceChildren();
+        if (!items.length) {
+          list.appendChild(makeEmptyState('还没有自定义背景。', '上传后会自动加入默认背景之后。'));
+          return;
+        }
+        items.forEach(function (background, index) {
+          list.appendChild(makeBackgroundRow(background, items, index, loadBackgroundList));
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        list.replaceChildren(makeErrorState(loadBackgroundList));
+      }
+    }
+
+    function makeBackgroundRow(background, items, index, reload) {
+      const row = element('article', 'knowledge-background-row');
+      const image = document.createElement('img');
+      image.src = background.url;
+      image.alt = background.title || '自定义背景';
+      image.style.objectPosition = background.focalPosition + ' center';
+      const settings = element('div', 'knowledge-background-row-settings');
+      const title = document.createElement('input');
+      title.type = 'text';
+      title.maxLength = 80;
+      title.value = background.title;
+      title.setAttribute('aria-label', '背景名称');
+      const focal = backgroundFocalSelect(background.focalPosition);
+      focal.setAttribute('aria-label', '画面焦点');
+      const enabledLabel = element('label', 'knowledge-background-enabled');
+      const enabled = document.createElement('input');
+      enabled.type = 'checkbox';
+      enabled.checked = background.isEnabled;
+      enabledLabel.append(enabled, element('span', '', background.isEnabled ? '已启用' : '已暂停'));
+      settings.append(title, focal, enabledLabel);
+
+      const actions = element('div', 'knowledge-background-row-actions');
+      const save = button('保存', 'knowledge-route-button is-primary');
+      const up = button('↑', 'knowledge-route-button');
+      up.setAttribute('aria-label', '向前移动');
+      up.disabled = index === 0;
+      const down = button('↓', 'knowledge-route-button');
+      down.setAttribute('aria-label', '向后移动');
+      down.disabled = index === items.length - 1;
+      const remove = button('删除', 'knowledge-route-button is-danger');
+      actions.append(save, up, down, remove);
+      const rowMessage = element('p', 'knowledge-background-row-message');
+      row.append(image, settings, actions, rowMessage);
+
+      async function run(operation) {
+        actions.querySelectorAll('button').forEach(function (control) { control.disabled = true; });
+        rowMessage.textContent = '正在保存…';
+        try {
+          await operation();
+          await reload();
+          await heroCarouselRefresh?.();
+        } catch (error) {
+          rowMessage.textContent = error.message || '操作失败。';
+          actions.querySelectorAll('button').forEach(function (control) { control.disabled = false; });
+        }
+      }
+
+      save.addEventListener('click', function () {
+        run(function () {
+          return repository.updateBackground(background.id, {
+            title: title.value.trim(),
+            focalPosition: focal.value,
+            isEnabled: enabled.checked,
+            sortOrder: background.sortOrder,
+          }, { token: currentToken() });
+        });
+      });
+      up.addEventListener('click', function () {
+        const other = items[index - 1];
+        run(function () {
+          return Promise.all([
+            repository.updateBackground(background.id, { sortOrder: other.sortOrder }, { token: currentToken() }),
+            repository.updateBackground(other.id, { sortOrder: background.sortOrder }, { token: currentToken() }),
+          ]);
+        });
+      });
+      down.addEventListener('click', function () {
+        const other = items[index + 1];
+        run(function () {
+          return Promise.all([
+            repository.updateBackground(background.id, { sortOrder: other.sortOrder }, { token: currentToken() }),
+            repository.updateBackground(other.id, { sortOrder: background.sortOrder }, { token: currentToken() }),
+          ]);
+        });
+      });
+      let armed = false;
+      remove.addEventListener('click', function () {
+        if (!armed) {
+          armed = true;
+          remove.textContent = '确认删除';
+          return;
+        }
+        run(function () {
+          return repository.deleteBackground(background.id, { token: currentToken() });
+        });
+      });
+      return row;
+    }
+
+    await loadBackgroundList();
+  }
+
+  function backgroundFocalSelect(value) {
+    const select = document.createElement('select');
+    [
+      ['left', '左侧'],
+      ['center', '居中'],
+      ['right', '右侧'],
+    ].forEach(function (entry) {
+      const option = document.createElement('option');
+      option.value = entry[0];
+      option.textContent = entry[1];
+      select.appendChild(option);
+    });
+    select.value = value || 'center';
+    return select;
   }
 
   function localDateTimeValue(date) {

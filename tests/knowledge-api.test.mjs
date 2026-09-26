@@ -122,6 +122,10 @@ function createDatabase() {
         path.join(rootDir, "migrations", "0005_add_knowledge_favorites.sql"),
         "utf8"
     ));
+    sqlite.exec(fs.readFileSync(
+        path.join(rootDir, "migrations", "0009_add_knowledge_backgrounds.sql"),
+        "utf8"
+    ));
     return { sqlite, DB: new D1Database(sqlite) };
 }
 
@@ -222,6 +226,7 @@ test("knowledge migration creates isolated tables and constraints", () => {
         ORDER BY name
     `).all().map((row) => row.name);
     assert.deepEqual(tables, [
+        "knowledge_backgrounds",
         "knowledge_external_source_map",
         "knowledge_favorites",
         "knowledge_migration_map",
