@@ -3989,11 +3989,11 @@ body.auth-elegant .knowledge-site {
   width: 200%;
   height: 100%;
   background: var(--knowledge-bg);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 110V220H0Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 120V220H0Z'/%3E%3C/svg%3E");
   -webkit-mask-position: left bottom;
   -webkit-mask-repeat: repeat-x;
   -webkit-mask-size: 50% 100%;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 110V220H0Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 120V220H0Z'/%3E%3C/svg%3E");
   mask-position: left bottom;
   mask-repeat: repeat-x;
   mask-size: 50% 100%;
