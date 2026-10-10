@@ -4,7 +4,7 @@
   function mount(root, options) {
     const t = (zh, en) => options.language === 'zh' ? zh : en;
     const controller = new AbortController();
-    const platforms = { vjudge: 'VJudge', luogu: t('洛谷', 'Luogu'), nowcoder: t('牛客', 'Nowcoder'), leetcode: t('力扣中国站', 'LeetCode China') };
+    const platforms = { luogu: t('洛谷', 'Luogu'), nowcoder: t('牛客', 'Nowcoder'), leetcode: t('力扣中国站', 'LeetCode China') };
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text != null) node.textContent = text; return node; };
     const button = (text, fn) => { const node = el('button', 'algorithm-button', text); node.type = 'button'; node.addEventListener('click', fn); return node; };
     const panel = el('details', 'algorithm-panel algorithm-cookie-panel');

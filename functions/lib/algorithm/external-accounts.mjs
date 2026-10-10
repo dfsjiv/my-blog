@@ -23,7 +23,7 @@ export async function handleExternalAccounts(c, user) {
     try {
         if (url.pathname === '/api/algorithm/external/dashboard' && request.method === 'GET') {
             const { results } = await db.prepare('SELECT * FROM algorithm_external_accounts WHERE user_id=? ORDER BY platform').bind(user.id).all();
-            const accounts = (results || []).map(row => ({ id: row.id, platform: row.platform, handle: row.handle,
+            const accounts = (results || []).filter(row => row.platform !== 'vjudge').map(row => ({ id: row.id, platform: row.platform, handle: row.handle,
                 lastSyncedAt: row.last_synced_at, previousSolved: row.previous_solved,
                 snapshot: JSON.parse(row.snapshot_json) }));
             return c.jsonResponse({ success: true, data: { accounts } });
@@ -39,6 +39,7 @@ export async function handleExternalAccounts(c, user) {
         if (url.pathname !== '/api/algorithm/external/sync' || request.method !== 'POST') return fail(405, 'METHOD_NOT_ALLOWED');
         body = await readBody(request);
         const platform = body?.platform;
+        if (platform === 'vjudge') return fail(400, 'PLATFORM_DISABLED');
         const providerOptions = platform === 'luogu' ? { luoguDomain: body.luoguDomain || 'www.luogu.com.cn' } : {};
         if (platform === 'luogu' && !['www.luogu.com.cn', 'www.luogu.com'].includes(providerOptions.luoguDomain)) throw new Error('INVALID_REQUEST');
         cookie = body?.credentials ? buildPlatformCookie(platform, body.credentials) : normalizeOneTimeCookie(body?.cookie);

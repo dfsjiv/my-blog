@@ -42,8 +42,8 @@
     if (!user || user.role === 'guest' || !token) {
       const preview = el('section', 'algorithm-panel');
       preview.append(el('h2', '', t('把刷题变成看得见的进步', 'Turn practice into visible progress')),
-        el('p', '', t('登录博客后可关联 Codeforces、AtCoder、VJudge、洛谷、牛客和力扣。可获取的统计范围按平台分别说明。',
-          'Sign in to link Codeforces, AtCoder, VJudge, Luogu, Nowcoder and LeetCode China. Data coverage is explained separately for each platform.')),
+        el('p', '', t('登录博客后可关联 Codeforces、AtCoder、洛谷、牛客和力扣。VJudge 已暂停统计。',
+          'Sign in to link Codeforces, AtCoder, Luogu, Nowcoder and LeetCode China. VJudge statistics are disabled.')),
         btn(t('登录并开始', 'Sign in to start'), onLogin, 'is-primary'));
       root.append(preview); return () => {};
     }
@@ -85,6 +85,13 @@
       try { await action(); await load(); if (!signal.aborted) status.textContent = success; }
       catch (error) { if (!signal.aborted) message(error); }
       finally { if (!signal.aborted) setBusy(false); }
+    }
+    function waitForNextPage() {
+      return new Promise((resolve,reject) => {
+        const cancel=()=>{ clearTimeout(timer); reject(new Error('CANCELLED')); };
+        const timer=setTimeout(()=>{signal.removeEventListener('abort',cancel);resolve();},31000);
+        signal.addEventListener('abort',cancel,{once:true}); if(signal.aborted)cancel();
+      });
     }
     form.addEventListener('submit', event => {
       event.preventDefault();
@@ -145,6 +152,16 @@
         const actions = el('div', 'algorithm-actions');
         actions.append(btn(account.historyComplete ? t('同步最新', 'Sync latest') : t('继续同步历史', 'Import next history page'), () => mutate(
           () => api('accounts/' + account.id + '/sync', 'POST'), t('同步成功。历史较多时需要分批同步，每次间隔 30 秒。', 'Synced. Large histories require multiple pages, 30 seconds apart.'))));
+        if (!account.historyComplete && !(account.profile.warnings||[]).includes('RECORD_LIMIT')) actions.append(btn(t('分批导入更多（最多 4 批）','Import more history (up to 4 pages)'),()=>mutate(async()=>{
+          for(let page=0;page<4;page++){
+            if(signal.aborted||identityChanged)break;
+            await api('accounts/'+account.id+'/sync','POST');await load();
+            const current=data.platforms.find(p=>p.id===account.id);
+            if(!current||current.historyComplete||(current.profile.warnings||[]).includes('RECORD_LIMIT')||page===3)break;
+            status.textContent=t('已完成第 ','Imported page ')+(page+1)+t(' 批；等待 31 秒后继续，可离开页面停止。','; waiting 31 seconds before continuing. Leave this page to stop.');
+            await waitForNextPage();
+          }
+        },t('本轮历史导入结束，图表已更新。','This import batch finished; charts updated.'))));
         actions.append(btn(t('解绑', 'Unlink'), () => {
           if (!window.confirm(t('解绑会移除本站保存的该账号统计，不会修改比赛平台账号。确定吗？', 'Unlink removes this account’s cached statistics here, not its platform account. Continue?'))) return;
           mutate(() => api('accounts/' + account.id, 'DELETE'), t('已解绑', 'Account unlinked'));
@@ -232,14 +249,15 @@
       metrics.append(metric(t('总过题数', 'Total solves'), a.solved, t('各平台合计，跨站同题可能重复', 'Platform sum; cross-site duplicates possible')),
         metric(t('总尝试题数', 'Total attempted problems'), a.attemptedSources ? a.attempted : '—', sources(a.attemptedSources)),
         metric(t('总提交次数（已知）', 'Total known submissions'), a.submissionSources ? a.submissions : '—', sources(a.submissionSources)),
-        metric(t('总体题目完成率', 'Overall problem completion'), percent(a.completionRate), t('按题数加权，不是平台百分比平均', 'Weighted by problems, not average platform rates')),
+        metric(t('已知样本完成率', 'Known-sample completion'), percent(a.completionRate), a.comparableSolved + ' / ' + a.attempted + ' · ' + sources(a.attemptedSources)),
         metric(t('待解决题目合计', 'Total unresolved'), a.attemptedSources ? a.unresolved : '—', sources(a.attemptedSources)),
         metric(t('已同步平台', 'Synced platforms'), a.platforms.length, t('绑定但未同步成功不计入', 'Unsynced connections excluded')));
-      total.append(metrics, el('p', 'algorithm-note', t('数据范围：总量合并六个平台；洛谷/力扣为当前题目快照，牛客为 ACM 练习 + Tracker 分区合计，VJudge 为该站记录。跨站、跨分区同题暂不能可靠去重。', 'Coverage: six-platform totals; Luogu/LeetCode are current snapshots, Nowcoder is ACM practice + Tracker section totals, VJudge is site-recorded. Cross-site and cross-section duplicates are possible.')));
+      total.append(metrics, el('p', 'algorithm-note', t('数据范围：总量合并五个平台，VJudge 已停用；洛谷/力扣为当前快照，牛客为 ACM 练习 + Tracker 分区合计。跨站、跨分区同题可能重复。', 'Coverage: five-platform totals; VJudge is disabled. Luogu/LeetCode are snapshots, Nowcoder is ACM practice + Tracker section totals. Cross-site/section duplicates are possible.')));
       if (a.platforms.some(p => p.platform === 'nowcoder' && p.coverage === 'nowcoder-practice-coding')) total.append(el('p', 'algorithm-warning', t('牛客仍是旧版 ACM 快照，尚未包含 Tracker。请重新同步牛客以更新总统计。', 'Nowcoder still uses the older ACM-only snapshot. Resync Nowcoder to include Tracker in the total.')));
       if (a.recordSources && !data.summary.historyComplete) total.append(el('p', 'algorithm-warning', t('CF / AtCoder 历史记录尚未完整导入，总量和趋势包含部分样本。请展开账号区域继续补齐历史。', 'CF / AtCoder history is incomplete; totals and trends include partial samples. Expand connections to continue importing history.')));
       if (!a.platforms.length) total.append(el('p', '', t('展开下面的绑定区域，同步后这里会显示统一统计。', 'Expand the connection sections below. Synced data will appear here together.')));
       overviewNode.append(total);
+      window.KnowledgeAlgorithmCharts?.render(overviewNode, data, options);
       const insights = section(t('综合训练诊断', 'Combined training insights')), list = el('ul');
       if (a.attempted) list.append(el('li', '', t('已知尝试题目中完成 ', 'Completed ') + percent(a.completionRate) + t('；还有 ', ' of known attempted problems; ') + a.unresolved + t(' 道待解决。建议先复盘失败题，再增加新题。', ' remain unresolved. Review failed problems before adding new ones.')));
       const largest = [...a.platforms].sort((x,y) => y.solved-x.solved)[0];

@@ -1,3 +1,4 @@
+import { analyzeProblemEvidence } from './diagnostics.mjs';
 const DAY = 86400;
 const dateKey = second => new Date((second + 8 * 3600) * 1000).toISOString().slice(0, 10);
 const rate = (n, d) => d ? Math.round(n / d * 1000) / 10 : null;
@@ -92,7 +93,7 @@ export function analyzeSubmissions(rows, accounts, now = Date.now()) {
         activeDays30: activeDays.filter(d => d >= dateKey(nowSecond - 29 * DAY)).length,
         streak, longestStreak, unresolved: all.length - solved.length,
         historyComplete: accounts.length > 0 && accounts.every(a => a.history_complete && a.last_synced_at) },
-        platforms, tags: tagList.slice(0, 30), heatmap,
+        platforms, tags: tagList.slice(0, 30), heatmap, diagnostics: analyzeProblemEvidence(all, accounts, now),
         months: [...months].sort(([a],[b]) => a.localeCompare(b)).slice(-12).map(([month, count]) => ({ month, count })),
         verdicts: [...verdicts].map(([name,count]) => ({name,count})).sort((a,b) => b.count-a.count),
         languages: [...languages].map(([name,count]) => ({name,count})).sort((a,b) => b.count-a.count).slice(0, 10),

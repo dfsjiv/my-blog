@@ -38,6 +38,8 @@ Run `migrations/0010_add_algorithm_center.sql` against the existing D1 `DB` bind
 
 ## One-time Cookie sync — four additional platforms
 
+**Current status:** VJudge is disabled by user request. Its cached rows are preserved, but new syncs are rejected, connection choices omit it, and dashboards/aggregate totals exclude it. Older VJudge implementation notes below document legacy behavior, not current availability.
+
 Apply `migrations/0011_add_algorithm_external_snapshots.sql` to the existing DB binding before deployment. It only creates `algorithm_external_accounts`; it does not rebuild the older constrained accounts table or change existing article/comment/auth data. Missing migration affects only the additional-platform panel.
 
 - Endpoints: `GET /api/algorithm/external/dashboard`, `POST /api/algorithm/external/sync` with `{platform, credentials: {namedCookie: value}}` (automatic identity) or `{platform, handle}` (public profile), `DELETE /api/algorithm/external/accounts/:id`. Existing session and per-user ownership checks apply, including administrators. Legacy Cookie headers are filtered to the same platform-specific whitelist.
@@ -75,6 +77,14 @@ The default session form explains F12 → Application → Cookies, the selected 
 - [LeetCode China](https://leetcode.cn/) — own `/graphql/` profile progress queries.
 
 ## Verification
+
+### Objective visual analytics
+
+`algorithm-charts.js` renders theme-aware, local charts with no third-party chart library or credential access: platform solve bars, monthly first-solve trend with underlying values, 91-day focusable practice calendar, topic solved/unresolved bars with sample filter, verdict distribution, separate CF/AtCoder difficulty scales and LeetCode snapshot difficulty categories. The overall completion metric explicitly shows its comparable numerator/denominator and platform coverage; it is not total solves divided by partial attempted counts.
+
+`diagnostics.mjs` derives additional evidence from existing imported submissions: attempted/solved/first-try topic counts, average submissions per problem, known-tag/difficulty coverage, recent/previous 30-day solved-problem cohorts, and up to 30 unresolved problems with judged failures (first eight visible, rest expandable). Topics only use CF metadata. Five attempted problems are required for a training suggestion; these are explicit practice heuristics, not standardized ability scores or causal diagnoses. Repeat AC counts toward average submissions, pending verdicts are not failures, and incomplete histories are disclosed. Unobserved topics remain unknown, never zero ability. No new database schema or snapshot history is required for these derived charts.
+
+The optional public CF/AtCoder bulk import runs at most four existing pages, waiting 31 seconds between pages and respecting existing cooldowns, leases and 20,000-record/account storage cap. It stops on completed history, the cap, route abort, account change or an error. It does not retain or background-sync Cookies. CF pages contain up to 1,000 submissions; AtCoder pages contain up to 500. All derived data stays isolated to the authenticated blog user. External providers with count-only snapshots cannot supply invented topic/time/attempt analyses.
 
 ### 2026-10-11 provider corrections
 

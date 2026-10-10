@@ -50,6 +50,22 @@
 .algorithm-center td:first-child { overflow-wrap: anywhere; }
 .algorithm-center details { margin-top: 24px; }
 .algorithm-center summary { color: var(--knowledge-primary); cursor: pointer; }
+.algorithm-chart-row { margin: 16px 0; }
+.algorithm-chart-label { display:flex; justify-content:space-between; gap:12px; margin-bottom:7px; font-size:.9rem; }
+.algorithm-chart-label span { overflow-wrap:anywhere; }
+.algorithm-chart-label strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.algorithm-chart-track { display:flex; height:10px; background:var(--knowledge-primary-soft); border-radius:6px; overflow:hidden; }
+.algorithm-chart-fill { display:block; background:var(--training-accent); }
+.algorithm-chart-rest { display:block; background:color-mix(in srgb, var(--training-accent) 30%, var(--knowledge-bg)); }
+.algorithm-chart-panel select { font:inherit; color:var(--knowledge-text); background:var(--knowledge-surface); border:1px solid var(--knowledge-border); border-radius:6px; padding:8px; max-width:100%; }
+.algorithm-line-chart { display:block; width:100%; height:auto; }
+.algorithm-line-chart .chart-grid { stroke:var(--knowledge-border); stroke-width:1; }
+.algorithm-line-chart .chart-axis { fill:var(--knowledge-muted); font-size:12px; }
+.algorithm-line-chart .chart-series { stroke:var(--training-accent); stroke-width:3; }
+.algorithm-line-chart .chart-point { fill:var(--training-accent); }
+.algorithm-day { padding:0; cursor:help; }
+.algorithm-day:focus-visible, .algorithm-line-chart .chart-point:focus-visible { outline:2px solid var(--knowledge-primary); outline-offset:2px; }
+.algorithm-review-item { display:flex; flex-direction:column; gap:8px; padding:14px 0; border-bottom:1px solid var(--knowledge-border); }
 .algorithm-credentials { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .algorithm-credentials label { display: flex; flex-direction: column; gap: 8px; color: var(--knowledge-muted); min-width: 0; }
 .algorithm-credentials input { width: 100%; box-sizing: border-box; min-width: 0; }
@@ -64,6 +80,7 @@
 .knowledge-contest-sources { margin: 16px 0 24px; color: var(--knowledge-muted); font-size: .9rem; }
 .knowledge-contest-sources div { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 12px; }
 @media (max-width: 760px) {
+  .algorithm-line-chart .chart-axis { font-size: 20px; }
   .algorithm-grid { grid-template-columns: 1fr; }
   .algorithm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .algorithm-panel { padding: 18px; }

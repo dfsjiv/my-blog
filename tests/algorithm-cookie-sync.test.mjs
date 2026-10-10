@@ -224,12 +224,19 @@ test('aggregation weights completion by problems, retains coverage and excludes 
   assert.equal(result.solved, 91); assert.equal(result.completionRate, 82.7); assert.equal(result.unresolved, 19);
   assert.equal(result.submissions, 200); assert.equal(result.submissionSources, 1); assert.equal(result.recordSources, 1);
 });
-test('all six sources feed a single total without inventing missing submissions or global deduplication', () => {
+test('five active sources feed a single total; disabled VJudge is excluded without deleting cached data', () => {
   const analysis = { platforms: ['codeforces', 'atcoder'].map(platform => ({ platform, solved: 10, attempted: 15, submissions: 30, lastSyncedAt: 'now' })) };
   const rows = ['luogu', 'nowcoder', 'leetcode', 'vjudge'].map(platform => ({ platform, last_synced_at: 'now', snapshot_json: JSON.stringify({ solved: 20, attempted: 25, submissions: platform === 'nowcoder' ? 100 : null }) }));
   const total = aggregatePlatforms(analysis, rows);
-  assert.equal(total.platforms.length, 6); assert.equal(total.solved, 100); assert.equal(total.attempted, 130);
-  assert.equal(total.submissions, 160); assert.equal(total.submissionSources, 3); assert.equal(total.completionRate, 76.9);
+  assert.equal(total.platforms.length, 5); assert.equal(total.solved, 80); assert.equal(total.attempted, 105);
+  assert.equal(total.submissions, 160); assert.equal(total.submissionSources, 3); assert.equal(total.completionRate, 76.2);
   const noAttempts = aggregatePlatforms({ platforms: [] }, [{ platform: 'demo', last_synced_at: 'now', snapshot_json: '{"solved":12,"attempted":null,"submissions":null}' }]);
   assert.equal(noAttempts.completionRate, null); assert.equal(noAttempts.attemptedSources, 0);
+});
+test('VJudge binding is disabled and old rows are preserved but not exposed or aggregated', async()=>{
+  const f=fixture();f.sqlite.exec("INSERT INTO algorithm_external_accounts(user_id,platform,handle,snapshot_json,last_synced_at) VALUES(1,'vjudge','demo','{\"solved\":100,\"attempted\":100}','2026-10-10');");
+  assert.equal((await f.request('external/sync','POST',{platform:'vjudge',handle:'demo'})).status,400);
+  assert.equal((await (await f.request('external/dashboard')).json()).data.accounts.length,0);
+  assert.equal((await (await f.request('dashboard')).json()).data.aggregate.solved,0);
+  assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM algorithm_external_accounts WHERE platform='vjudge'").get().n,1);
 });
