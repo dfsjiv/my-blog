@@ -3,7 +3,8 @@ import test from 'node:test';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleAlgorithmRequest } from '../functions/lib/algorithm-center.mjs';
-import { fetchExternalSnapshot, normalizeOneTimeCookie, normalizeExternalHandle } from '../functions/lib/algorithm/external-providers.mjs';
+import { fetchExternalSnapshot, normalizeOneTimeCookie, normalizeExternalHandle, buildPlatformCookie, resolveExternalIdentity } from '../functions/lib/algorithm/external-providers.mjs';
+import { aggregatePlatforms } from '../functions/lib/algorithm/aggregate.mjs';
 
 const migration = fs.readFileSync(new URL('../migrations/0011_add_algorithm_external_snapshots.sql', import.meta.url), 'utf8');
 const json = body => new Response(JSON.stringify(body));
@@ -100,7 +101,7 @@ test('reject changed difficulty schema, huge responses and upstream errors witho
   await assert.rejects(fetchExternalSnapshot('leetcode', 'demo', '', async () => new Response('x'.repeat(2 * 1024 * 1024 + 1))), /PROVIDER_FORMAT_CHANGED/);
 });
 test('authenticated members can sync; guests and cross-user admins cannot read, sync or unlink records', async () => {
-  const f = fixture(); const body = { platform: 'leetcode', handle: 'demo', cookie: 'a=secret' };
+  const f = fixture(); const body = { platform: 'leetcode', credentials: { LEETCODE_SESSION: 'synthetic-session', csrftoken: 'synthetic-csrf' } };
   assert.equal((await f.request('external/sync', 'POST', body, 0)).status, 401);
   assert.equal((await f.request('external/sync', 'POST', body, 3)).status, 401);
   assert.equal((await f.request('external/sync', 'POST', body)).status, 200);
@@ -111,7 +112,7 @@ test('authenticated members can sync; guests and cross-user admins cannot read, 
   assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM algorithm_external_accounts WHERE user_id=1').get().n, 1);
 });
 test('sync only persists whitelisted stats; failures preserve last snapshot, release lock and never log cookies', async () => {
-  const f = fixture(), secret = 'a=COOKIE_SHOULD_NOT_BE_SAVED';
+  const f = fixture(), secret = 'LEETCODE_SESSION=COOKIE_SHOULD_NOT_BE_SAVED; csrftoken=synthetic-csrf';
   const body = { platform: 'leetcode', handle: 'demo', cookie: secret };
   assert.equal((await f.request('external/sync', 'POST', body)).status, 200);
   const saved = f.sqlite.prepare('SELECT * FROM algorithm_external_accounts').get();
@@ -148,11 +149,54 @@ test('missing new migration does not break original algorithm dashboard', async 
 test('frontend never uses browser storage for cookies and integrates cleanup into route/auth teardown', () => {
   const source = fs.readFileSync(new URL('../algorithm-cookie-sync.js', import.meta.url), 'utf8');
   assert.ok(!/localStorage|sessionStorage|document\.cookie|console\./.test(source));
-  assert.match(source, /cookie\.type = 'password'/); assert.match(source, /cookie\.autocomplete = 'off'/);
+  assert.match(source, /input\.type = 'password'/); assert.match(source, /input\.autocomplete = 'off'/);
   assert.match(source, /event\.preventDefault\(\);[\s\S]*?clear\(\);/);
   assert.match(source, /finally \{ clear\(\)/); assert.match(source, /function cleanup\(\) \{ clear\(\); controller\.abort\(\)/);
   const integration = fs.readFileSync(new URL('../algorithm-center.js', import.meta.url), 'utf8');
   assert.match(integration, /identityChanged = true;\s*extraCleanup\(\)/);
   const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.ok(index.indexOf('algorithm-cookie-sync.js') < index.indexOf('algorithm-center.js'));
+});
+
+test('explicit platform credential whitelist rejects missing values and ignores unrelated cookies', () => {
+  assert.equal(buildPlatformCookie('nowcoder', { t: 'session', NOWCODERUID: 'device', analytics: 'ignored' }), 't=session');
+  assert.equal(buildPlatformCookie('luogu', { _uid: '42', __client_id: 'session' }), '_uid=42; __client_id=session');
+  assert.throws(() => buildPlatformCookie('leetcode', { LEETCODE_SESSION: 'session' }), /INVALID_COOKIE/);
+  assert.throws(() => buildPlatformCookie('nowcoder', { t: 'x;host=evil' }), /INVALID_COOKIE/);
+});
+test('all four sessions identify their own account without an extra handle; device ID and profile links are never used', async () => {
+  assert.equal(await resolveExternalIdentity('luogu', '_uid=42; __client_id=synthetic'), '42');
+  assert.equal(await resolveExternalIdentity('leetcode', 'LEETCODE_SESSION=synthetic; csrftoken=csrf', async () => json(lcPayload())), 'demo');
+  assert.equal(await resolveExternalIdentity('nowcoder', 't=synthetic', async () => new Response('window.globalInfo = { ownerId: "123" };')), '123');
+  await assert.rejects(resolveExternalIdentity('nowcoder', 't=synthetic; NOWCODERUID=999', async () => new Response('window.globalInfo={}; <a href="/profile/999">other</a>')), /COOKIE_EXPIRED/);
+  assert.equal(await resolveExternalIdentity('vjudge', 'JSESSIONID=synthetic', async (url, init) => {
+    assert.equal(url, 'https://vjudge.net/user/changeUsernameInfo'); assert.equal(init.method, 'GET'); return json({ currentUsername: 'demo' });
+  }), 'demo');
+});
+test('automatic identity ignores submitted handle, preserves ownership and never persists credential values', async () => {
+  const f = fixture(), credentials = { LEETCODE_SESSION: 'DO_NOT_STORE', csrftoken: 'csrf', analytics: 'DROP_ME' };
+  assert.equal((await f.request('external/sync', 'POST', { platform: 'leetcode', handle: 'wrong', credentials })).status, 200);
+  const row = f.sqlite.prepare('SELECT * FROM algorithm_external_accounts').get();
+  assert.equal(row.handle, 'demo'); assert.ok(!JSON.stringify(row).includes('DO_NOT_STORE'));
+  f.advance();
+  const changed = lcPayload({ userStatus: { isSignedIn: true, userSlug: 'other' } });
+  assert.equal((await f.request('external/sync', 'POST', { platform: 'leetcode', credentials }, 1, async () => json(changed))).status, 409);
+  const dashboard = (await (await f.request('dashboard')).json()).data;
+  assert.equal(dashboard.aggregate.solved, 35); assert.equal(dashboard.aggregate.platforms.length, 1);
+});
+test('aggregation weights completion by problems, retains coverage and excludes unsynced accounts', () => {
+  const result = aggregatePlatforms({ platforms: [{ platform: 'codeforces', lastSyncedAt: 'now', solved: 90, attempted: 100, submissions: 200 }] },
+    [{ platform: 'leetcode', last_synced_at: 'now', snapshot_json: JSON.stringify({ solved: 1, attempted: 10, submissions: null }) },
+     { platform: 'luogu', last_synced_at: null, snapshot_json: '{}' }]);
+  assert.equal(result.solved, 91); assert.equal(result.completionRate, 82.7); assert.equal(result.unresolved, 19);
+  assert.equal(result.submissions, 200); assert.equal(result.submissionSources, 1); assert.equal(result.recordSources, 1);
+});
+test('all six sources feed a single total without inventing missing submissions or global deduplication', () => {
+  const analysis = { platforms: ['codeforces', 'atcoder'].map(platform => ({ platform, solved: 10, attempted: 15, submissions: 30, lastSyncedAt: 'now' })) };
+  const rows = ['luogu', 'nowcoder', 'leetcode', 'vjudge'].map(platform => ({ platform, last_synced_at: 'now', snapshot_json: JSON.stringify({ solved: 20, attempted: 25, submissions: platform === 'nowcoder' ? 100 : null }) }));
+  const total = aggregatePlatforms(analysis, rows);
+  assert.equal(total.platforms.length, 6); assert.equal(total.solved, 100); assert.equal(total.attempted, 130);
+  assert.equal(total.submissions, 160); assert.equal(total.submissionSources, 3); assert.equal(total.completionRate, 76.9);
+  const noAttempts = aggregatePlatforms({ platforms: [] }, [{ platform: 'demo', last_synced_at: 'now', snapshot_json: '{"solved":12,"attempted":null,"submissions":null}' }]);
+  assert.equal(noAttempts.completionRate, null); assert.equal(noAttempts.attemptedSources, 0);
 });

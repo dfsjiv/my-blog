@@ -1,4 +1,4 @@
-import { normalizeExternalHandle, normalizeOneTimeCookie, fetchExternalSnapshot } from './external-providers.mjs';
+import { normalizeExternalHandle, normalizeOneTimeCookie, fetchExternalSnapshot, buildPlatformCookie, resolveExternalIdentity } from './external-providers.mjs';
 
 const LIMIT = 12288;
 async function readBody(request) {
@@ -38,8 +38,13 @@ export async function handleExternalAccounts(c, user) {
         }
         if (url.pathname !== '/api/algorithm/external/sync' || request.method !== 'POST') return fail(405, 'METHOD_NOT_ALLOWED');
         body = await readBody(request);
-        const platform = body?.platform, handle = normalizeExternalHandle(platform, body?.handle);
-        cookie = normalizeOneTimeCookie(body?.cookie); body.cookie = ''; body = null;
+        const platform = body?.platform;
+        cookie = body?.credentials ? buildPlatformCookie(platform, body.credentials) : normalizeOneTimeCookie(body?.cookie);
+        if (cookie && !body.credentials) cookie = buildPlatformCookie(platform, Object.fromEntries(cookie.split(';').map(part => {
+            const at = part.indexOf('='); return [part.slice(0, at).trim(), part.slice(at + 1)];
+        })));
+        const handle = cookie ? await resolveExternalIdentity(platform, cookie, c.fetch || fetch) : normalizeExternalHandle(platform, body?.handle);
+        body.cookie = ''; if (body.credentials) Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); body = null;
         account = await db.prepare('SELECT * FROM algorithm_external_accounts WHERE user_id=? AND platform=?').bind(user.id, platform).first();
         if (account && account.handle !== handle) return fail(409, 'ALREADY_BOUND');
         if (!account) {
@@ -67,7 +72,7 @@ export async function handleExternalAccounts(c, user) {
         const codes = ['INVALID_REQUEST', 'INVALID_HANDLE', 'INVALID_COOKIE', 'COOKIE_EXPIRED', 'COOKIE_MISMATCH', 'PROFILE_NOT_FOUND'];
         return fail(codes.includes(error.message) ? 400 : 502, codes.includes(error.message) ? error.message : 'PROVIDER_UNAVAILABLE');
     } finally {
-        cookie = ''; if (body && typeof body === 'object') body.cookie = ''; body = null;
+        cookie = ''; if (body && typeof body === 'object') { body.cookie = ''; if (body.credentials && typeof body.credentials === 'object') Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); } body = null;
         if (acquired) await db.prepare('UPDATE algorithm_external_accounts SET sync_lock_until=0 WHERE id=? AND user_id=?').bind(account.id, user.id).run();
     }
 }

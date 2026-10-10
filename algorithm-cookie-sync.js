@@ -7,25 +7,29 @@
     const platforms = { vjudge: 'VJudge', luogu: t('洛谷', 'Luogu'), nowcoder: t('牛客', 'Nowcoder'), leetcode: t('力扣中国站', 'LeetCode China') };
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text != null) node.textContent = text; return node; };
     const button = (text, fn) => { const node = el('button', 'algorithm-button', text); node.type = 'button'; node.addEventListener('click', fn); return node; };
-    const panel = el('section', 'algorithm-panel algorithm-cookie-panel');
+    const panel = el('details', 'algorithm-panel algorithm-cookie-panel');
+    panel.append(el('summary', '', t('其他平台绑定与明细（展开）', 'Other platform connections & details (expand)')));
     panel.append(el('h2', '', t('更多平台 · 一次性同步', 'More platforms · one-time sync')),
-      el('p', 'algorithm-note', t('Cookie 可选：仅用于当次请求，不保存、不自动同步，提交后立即清空。不要填写平台密码。账号关联不等于身份认证。',
-        'Cookie is optional, used only for this request, never saved or auto-synced, and cleared on submit. Do not enter your platform password. Linking does not certify ownership.')));
+      el('p', 'algorithm-note', t('按平台填写指定 Cookie 的 Value，自动识别账号。仅用于当次请求，不保存、不自动同步，提交后立即清空。也可选择无需 Cookie 的公开账号模式。不要填写平台密码。',
+        'Enter the named Cookie values to identify your account automatically. Used once, never saved or auto-synced, cleared on submit. Public-profile mode needs no Cookie. Never enter a platform password.')));
     const form = el('form', 'algorithm-bind');
     form.autocomplete = 'off';
     const platform = el('select'); platform.setAttribute('aria-label', t('更多平台', 'More platforms'));
     Object.entries(platforms).forEach(([value, name]) => platform.append(new Option(name, value)));
-    const handle = el('input'); handle.required = true; handle.maxLength = 40; handle.autocomplete = 'off';
+    const mode = el('select'); mode.setAttribute('aria-label', t('绑定方式', 'Connection mode'));
+    mode.append(new Option(t('登录态自动识别账号', 'Identify account from session'), 'session'), new Option(t('公开账号（无需 Cookie）', 'Public profile (no Cookie)'), 'public'));
+    const handle = el('input'); handle.maxLength = 40; handle.autocomplete = 'off';
     handle.setAttribute('aria-label', t('平台用户名或 UID', 'Platform handle or UID'));
-    const cookie = el('input', 'algorithm-cookie-input'); cookie.type = 'password'; cookie.maxLength = 8192; cookie.autocomplete = 'off';
-    cookie.spellcheck = false; cookie.setAttribute('aria-label', t('一次性 Cookie（可选）', 'One-time Cookie (optional)'));
-    cookie.placeholder = t('一次性 Cookie（可选，name=value; ...）', 'One-time Cookie (optional, name=value; ...)');
+    const cookieFields = { vjudge: ['JSESSIONID'], luogu: ['_uid', '__client_id'], nowcoder: ['t'], leetcode: ['LEETCODE_SESSION', 'csrftoken'] };
+    const domains = { vjudge: 'vjudge.net', luogu: 'www.luogu.com / www.luogu.com.cn', nowcoder: 'ac.nowcoder.com / .nowcoder.com', leetcode: 'leetcode.cn' };
+    const credentialsNode = el('div', 'algorithm-credentials'), guide = el('p', 'algorithm-note');
+    let credentialInputs = [];
     const submit = el('button', 'algorithm-button is-primary', t('绑定 / 同步', 'Link / sync')); submit.type = 'submit';
-    form.append(platform, handle, cookie, submit);
-    const clear = () => { cookie.value = ''; };
+    form.append(platform, mode, handle, credentialsNode, submit);
+    const clear = () => { credentialInputs.forEach(input => { input.value = ''; }); };
     const status = el('p', 'algorithm-status'); status.setAttribute('role', 'status');
     const content = el('div');
-    panel.append(form, button(t('清空 Cookie', 'Clear Cookie'), clear), status, content);
+    panel.append(guide, form, button(t('清空 Cookie', 'Clear Cookie'), clear), status, content);
     root.append(panel);
     let accounts = [], busy = false;
     const errors = {
@@ -45,21 +49,31 @@
     };
     async function api(path, method = 'GET', body) {
       const init = { method, signal: controller.signal, cache: 'no-store', headers: { Authorization: 'Bearer ' + options.token, 'Content-Type': 'application/json' } };
-      if (body) { init.body = JSON.stringify(body); body.cookie = ''; }
+      const wipe = () => { if (body) { body.cookie = ''; if (body.credentials) Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); } };
+      if (body) { init.body = JSON.stringify(body); wipe(); }
       try {
         const request = fetch('/api/algorithm/external/' + path, init);
         init.body = undefined; body = null;
         const response = await request, payload = await response.json();
         if (!response.ok || !payload.success) throw new Error(payload.code || 'PROVIDER_UNAVAILABLE');
         return payload.data;
-      } finally { init.body = undefined; if (body) body.cookie = ''; }
+      } finally { init.body = undefined; wipe(); }
     }
     function changePlatform() {
       clear();
+      credentialsNode.replaceChildren(); credentialInputs = [];
+      const session = mode.value === 'session'; handle.hidden = session; handle.required = !session;
+      guide.textContent = session ? t('先登录所选平台，F12 → Application（应用）→ Cookies → ', 'Sign in to the selected platform, then F12 → Application → Cookies → ') + domains[platform.value] + t('。按 Name 找到下面这些字段，只复制对应的 Value，不要复制全部 Cookie。不需要另外填写用户编号。', '. Find the names below and copy only their Value, not the whole Cookie list. No extra user ID required.') : t('公开模式不提供登录凭据，只填写个人主页的用户名或 UID。', 'Public mode uses a profile handle or UID without session credentials.');
+      if (session) cookieFields[platform.value].forEach(name => {
+        const label = el('label', '', name + ' · Value');
+        const input = el('input', 'algorithm-cookie-input'); input.type = 'password'; input.name = name; input.required = true;
+        input.maxLength = 8192; input.autocomplete = 'off'; input.spellcheck = false; input.placeholder = name + ' Value';
+        label.append(input); credentialInputs.push(input); credentialsNode.append(label);
+      });
       handle.placeholder = ['luogu', 'nowcoder'].includes(platform.value) ? t('数字 UID（个人主页网址中的数字）', 'Numeric UID from your profile URL') : t('平台用户名（不是网址）', 'Platform handle, not a URL');
       handle.value = accounts.find(a => a.platform === platform.value)?.handle || '';
     }
-    platform.addEventListener('change', changePlatform); changePlatform();
+    platform.addEventListener('change', changePlatform); mode.addEventListener('change', changePlatform); changePlatform();
     async function load() {
       const data = await api('dashboard');
       if (controller.signal.aborted) return;
@@ -69,7 +83,7 @@
       if (busy) { clear(); return; }
       busy = true; panel.querySelectorAll('input,select,button').forEach(n => { n.disabled = true; });
       status.classList.remove('is-error'); status.textContent = t('正在同步……', 'Syncing…');
-      try { await action(); await load(); if (!controller.signal.aborted) status.textContent = t('统计已更新，未保存 Cookie。', 'Statistics updated. Cookie was not saved.'); }
+      try { await action(); await load(); await options.onUpdated?.(); if (!controller.signal.aborted) status.textContent = t('总统计已更新，未保存 Cookie。', 'Unified statistics updated. Cookie was not saved.'); }
       catch (error) {
         if (!controller.signal.aborted) {
           status.classList.add('is-error'); status.textContent = errors[error.message] || errors.PROVIDER_UNAVAILABLE;
@@ -80,9 +94,9 @@
     }
     form.addEventListener('submit', event => {
       event.preventDefault();
-      const body = { platform: platform.value, handle: handle.value, cookie: cookie.value };
+      const body = mode.value === 'session' ? { platform: platform.value, credentials: Object.fromEntries(credentialInputs.map(input => [input.name, input.value])) } : { platform: platform.value, handle: handle.value };
       clear();
-      if (busy) { body.cookie = ''; return; }
+      if (busy) { if (body.credentials) Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); return; }
       mutate(() => api('sync', 'POST', body));
     });
     const metric = (label, value) => {
@@ -102,13 +116,12 @@
     }
     function render() {
       content.replaceChildren();
-      content.append(el('p', 'algorithm-warning', t('以下为平台统计快照，不混入下方 CF / AtCoder 的提交分析；未知项显示 —。不同平台同题不合并，VJudge 仅统计经 VJudge 记录的题目。',
-        'These platform snapshots are separate from CF / AtCoder submission analysis below. Unknown values show —. No cross-platform deduplication. VJudge counts only VJudge-recorded problems.')));
+      content.append(el('p', 'algorithm-note', t('以下快照已纳入顶部总统计。未知项显示 —；VJudge 只包含该站记录，牛客只包含练习题统计。', 'These snapshots feed the unified overview above. Unknown values show —. VJudge covers its recorded problems; Nowcoder covers practice problems.')));
       accounts.forEach(a => {
-        const item = el('section', 'algorithm-panel'), heading = el('h3', '', platforms[a.platform] + ' · ' + a.handle), s = a.snapshot;
+        const item = el('details', 'algorithm-panel'), heading = el('summary', '', platforms[a.platform] + ' · ' + a.handle), s = a.snapshot;
         item.append(heading, el('p', 'algorithm-note', a.lastSyncedAt ? t('统计更新：', 'Updated: ') + new Date(a.lastSyncedAt).toLocaleString() : t('尚未同步成功，可重试或解绑。', 'Not synced yet. Retry or unlink.')));
         const actions = el('div', 'algorithm-actions');
-        actions.append(button(t('重新同步', 'Resync'), () => { platform.value = a.platform; changePlatform(); form.scrollIntoView({ block: 'center' }); cookie.focus(); }),
+        actions.append(button(t('重新同步', 'Resync'), () => { platform.value = a.platform; changePlatform(); form.scrollIntoView({ block: 'center' }); (credentialInputs[0] || handle).focus(); }),
           button(t('解绑', 'Unlink'), () => {
             clear();
             if (window.confirm(t('删除本站保存的该平台统计？不会修改平台账号。', 'Remove cached platform statistics here? The platform account is untouched.'))) mutate(() => api('accounts/' + a.id, 'DELETE'));

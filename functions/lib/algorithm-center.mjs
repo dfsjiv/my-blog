@@ -1,4 +1,5 @@
 import { analyzeSubmissions } from './algorithm/analytics.mjs';
+import { aggregatePlatforms } from './algorithm/aggregate.mjs';
 import { handleExternalAccounts } from './algorithm/external-accounts.mjs';
 import { normalizeHandle, verifyProfile, fetchSubmissionPage, fetchProfileDetails,
     fetchAtCoderModels, atCoderDifficulty } from './algorithm/providers.mjs';
@@ -25,7 +26,12 @@ export async function handleAlgorithmRequest(context) {
             const { results: accounts } = await db.prepare('SELECT * FROM algorithm_accounts WHERE user_id = ? ORDER BY platform').bind(user.id).all();
             const { results: rows } = await db.prepare(`SELECT s.*, a.platform FROM algorithm_submissions s
                 JOIN algorithm_accounts a ON a.id=s.account_id WHERE a.user_id=?`).bind(user.id).all();
-            return c.jsonResponse({ success: true, data: analyzeSubmissions(rows || [], accounts || [], c.now?.() ?? Date.now()) });
+            const data = analyzeSubmissions(rows || [], accounts || [], c.now?.() ?? Date.now());
+            let external = [];
+            try { external = (await db.prepare('SELECT * FROM algorithm_external_accounts WHERE user_id=? ORDER BY platform').bind(user.id).all()).results || []; }
+            catch (error) { if (!/no such table/.test(error.message)) throw error; }
+            data.aggregate = aggregatePlatforms(data, external);
+            return c.jsonResponse({ success: true, data });
         }
         if (url.pathname === '/api/algorithm/accounts' && request.method === 'POST') {
             if (Number(request.headers.get('Content-Length')) > 2048) return fail(c, 413, 'INVALID_REQUEST');

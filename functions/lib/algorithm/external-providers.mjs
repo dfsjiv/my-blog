@@ -3,6 +3,37 @@ export const EXTERNAL_PLATFORMS = ['vjudge', 'luogu', 'nowcoder', 'leetcode'];
 const MAX_RESPONSE = 2 * 1024 * 1024;
 const count = value => Number.isSafeInteger(value) && value >= 0 && value <= 10000000 ? value : null;
 const invalid = () => { throw new Error('PROVIDER_FORMAT_CHANGED'); };
+export const COOKIE_FIELDS = { vjudge: ['JSESSIONID'], luogu: ['_uid', '__client_id'], nowcoder: ['t'], leetcode: ['LEETCODE_SESSION', 'csrftoken'] };
+export function buildPlatformCookie(platform, credentials) {
+    const fields = COOKIE_FIELDS[platform];
+    if (!fields || !credentials || typeof credentials !== 'object') throw new Error('INVALID_COOKIE');
+    return normalizeOneTimeCookie(fields.map(name => {
+        const value = credentials[name];
+        if (typeof value !== 'string' || !value || /[;\s\x00-\x1f\x7f-\uffff]/.test(value)) throw new Error('INVALID_COOKIE');
+        return name + '=' + value;
+    }).join('; '));
+}
+export async function resolveExternalIdentity(platform, cookie, fetchImpl = fetch) {
+    try {
+        let handle;
+        if (platform === 'luogu') handle = cookie.split(';').map(x => x.trim()).find(x => x.startsWith('_uid='))?.slice(5);
+        else if (platform === 'leetcode') {
+            const csrf = cookie.split(';').map(x => x.trim()).find(x => x.startsWith('csrftoken='))?.slice(10);
+            const payload = parseJson(await read('https://leetcode.cn/graphql/', cookie, fetchImpl,
+                { query: 'query { userStatus { isSignedIn userSlug } }' }, { 'X-CSRFToken': csrf || '', Referer: 'https://leetcode.cn/' }));
+            if (payload.data?.userStatus?.isSignedIn) handle = payload.data.userStatus.userSlug;
+        } else if (platform === 'nowcoder') {
+            const html = await read('https://ac.nowcoder.com/', cookie, fetchImpl);
+            // Read only the logged-in user's globalInfo, never arbitrary profile links or device cookies.
+            const info = html.match(/(?:window\.)?globalInfo\s*=\s*\{([\s\S]*?)\}\s*;/)?.[1];
+            handle = info?.match(/["']?ownerId["']?\s*:\s*["']?(\d+)/)?.[1];
+        } else if (platform === 'vjudge') {
+            handle = parseJson(await read('https://vjudge.net/user/changeUsernameInfo', cookie, fetchImpl)).currentUsername;
+        }
+        if (!handle) throw new Error('COOKIE_EXPIRED');
+        return normalizeExternalHandle(platform, String(handle));
+    } finally { cookie = ''; }
+}
 
 export function normalizeExternalHandle(platform, value) {
     if (!EXTERNAL_PLATFORMS.includes(platform) || typeof value !== 'string') throw new Error('INVALID_HANDLE');

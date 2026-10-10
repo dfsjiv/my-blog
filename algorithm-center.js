@@ -47,8 +47,11 @@
         btn(t('登录并开始', 'Sign in to start'), onLogin, 'is-primary'));
       root.append(preview); return () => {};
     }
-    const extraCleanup = window.KnowledgeCookieSync?.mount(root, options) || (() => {});
-    root.append(el('h2', '', t('Codeforces / AtCoder · 提交记录分析', 'Codeforces / AtCoder · submission analysis')));
+    const overviewNode = el('div', 'algorithm-overview'); root.append(overviewNode);
+    const extraCleanup = window.KnowledgeCookieSync?.mount(root, { ...options, onUpdated: () => load() }) || (() => {});
+    const records = el('details', 'algorithm-panel');
+    records.append(el('summary', '', t('Codeforces / AtCoder · 账号与详细分析（展开）', 'Codeforces / AtCoder · connections & detailed analysis (expand)')));
+    root.append(records);
     const form = el('form', 'algorithm-bind');
     const platform = el('select'); platform.setAttribute('aria-label', t('比赛平台', 'Platform'));
     platform.append(new Option('Codeforces', 'codeforces'), new Option('AtCoder', 'atcoder'));
@@ -59,7 +62,7 @@
     const status = el('p', 'algorithm-status'); status.setAttribute('role', 'status');
     const accountsNode = el('div', 'algorithm-accounts');
     const dataNode = el('div', 'algorithm-data');
-    root.append(form, status, accountsNode, dataNode);
+    records.append(form, status, accountsNode, dataNode);
     let data, busy = false, identityChanged = false;
 
     async function api(path, method = 'GET', body) {
@@ -127,6 +130,7 @@
       return link;
     }
     function render() {
+      renderOverview();
       accountsNode.replaceChildren(); dataNode.replaceChildren();
       data.platforms.forEach(account => {
         const item = el('section', 'algorithm-account');
@@ -218,6 +222,36 @@
       lists.append(recent, unresolved, languages); dataNode.append(lists);
       dataNode.append(el('p', 'algorithm-note', t('数据来源：Codeforces 官方 API；AtCoder 官方 Rating 与 AtCoder Problems 非官方提交/难度数据。仅统计可获取的公开记录，不能代表完整个人能力。',
         'Sources: official Codeforces API; official AtCoder rating and unofficial AtCoder Problems submissions/difficulty. Public records are evidence of practice, not a complete measure of ability.')));
+    }
+    function renderOverview() {
+      overviewNode.replaceChildren();
+      const a = data.aggregate; if (!a) return;
+      const total = section(t('跨平台 · 总体分析', 'Cross-platform · unified analysis'));
+      const metrics = el('div', 'algorithm-metrics');
+      const sources = n => n + ' / ' + a.platforms.length + t(' 个平台有数据', ' platforms covered');
+      metrics.append(metric(t('总过题数', 'Total solves'), a.solved, t('各平台合计，跨站同题可能重复', 'Platform sum; cross-site duplicates possible')),
+        metric(t('总尝试题数', 'Total attempted problems'), a.attemptedSources ? a.attempted : '—', sources(a.attemptedSources)),
+        metric(t('总提交次数（已知）', 'Total known submissions'), a.submissionSources ? a.submissions : '—', sources(a.submissionSources)),
+        metric(t('总体题目完成率', 'Overall problem completion'), percent(a.completionRate), t('按题数加权，不是平台百分比平均', 'Weighted by problems, not average platform rates')),
+        metric(t('待解决题目合计', 'Total unresolved'), a.attemptedSources ? a.unresolved : '—', sources(a.attemptedSources)),
+        metric(t('已同步平台', 'Synced platforms'), a.platforms.length, t('绑定但未同步成功不计入', 'Unsynced connections excluded')));
+      total.append(metrics, el('p', 'algorithm-note', t('数据范围：总量合并六个平台；洛谷/力扣为当前题目快照，牛客为练习统计，VJudge 为该站记录。跨站同题暂不能可靠去重。', 'Coverage: totals combine all six platforms. Luogu/LeetCode are current problem snapshots, Nowcoder is practice-only, VJudge is site-recorded. Cross-site problem deduplication is not yet reliable.')));
+      if (a.recordSources && !data.summary.historyComplete) total.append(el('p', 'algorithm-warning', t('CF / AtCoder 历史记录尚未完整导入，总量和趋势包含部分样本。请展开账号区域继续补齐历史。', 'CF / AtCoder history is incomplete; totals and trends include partial samples. Expand connections to continue importing history.')));
+      if (!a.platforms.length) total.append(el('p', '', t('展开下面的绑定区域，同步后这里会显示统一统计。', 'Expand the connection sections below. Synced data will appear here together.')));
+      overviewNode.append(total);
+      const insights = section(t('综合训练诊断', 'Combined training insights')), list = el('ul');
+      if (a.attempted) list.append(el('li', '', t('已知尝试题目中完成 ', 'Completed ') + percent(a.completionRate) + t('；还有 ', ' of known attempted problems; ') + a.unresolved + t(' 道待解决。建议先复盘失败题，再增加新题。', ' remain unresolved. Review failed problems before adding new ones.')));
+      const largest = [...a.platforms].sort((x,y) => y.solved-x.solved)[0];
+      if (largest && a.solved) list.append(el('li', '', largest.platform + t(' 占总过题量 ', ' contributes ') + (largest.solved/a.solved*100).toFixed(1) + t('%。这表示平台训练分布，不等于算法能力。', '% of all solves. This is practice distribution, not an ability score.')));
+      list.append(el('li', '', t('时间趋势覆盖已导入 CF / AtCoder 的记录，算法标签只覆盖 CF；其他平台累计快照不用于推测每日训练。', 'Time trends cover imported CF / AtCoder records; algorithm topics cover CF only. Cumulative snapshots do not imply daily activity.')));
+      if (a.recordSources) {
+        list.append(el('li', '', t('记录覆盖平台近 30 天过题 ', 'Record-covered platforms: ') + data.summary.solved30 + t('，前 30 天 ', ' solves / 30 days; previous period ') + data.summary.previous30 + t('；活跃 ', '; active ') + data.summary.activeDays30 + t(' 天。', ' days.')));
+        data.weakTags.forEach(tag => list.append(el('li', '', tag.tag + ' · ' + tag.solved + '/' + tag.attempted + t('：当前记录样本的薄弱项，建议集中补题。', ': weaker topic in available records; focus on targeted practice.'))));
+      }
+      insights.append(list); overviewNode.append(insights);
+      const distribution = el('details', 'algorithm-panel'); distribution.append(el('summary', '', t('各平台数据分布（展开）', 'Platform distribution (expand)')));
+      table(distribution, [t('平台', 'Platform'), t('账号', 'Account'), t('过题', 'Solved'), t('尝试', 'Attempted'), t('提交', 'Submissions'), t('统计更新', 'Updated')], a.platforms.map(p => [p.platform, p.handle, p.solved, p.attempted ?? '—', p.submissions ?? '—', new Date(p.lastSyncedAt).toLocaleDateString()]));
+      overviewNode.append(distribution);
     }
     function authChanged(event) {
       if (String(event.detail?.user?.id) === String(user.id)) return;
