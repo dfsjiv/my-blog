@@ -1,4 +1,5 @@
 import { getContestsResponse } from "../lib/contests/index.mjs";
+import { handleAlgorithmRequest } from "../lib/algorithm-center.mjs";
 import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
 import {
     handleRegistrationRequest,
@@ -154,6 +155,12 @@ export async function onRequest(context) {
                 waitUntil: context.waitUntil
                     ? context.waitUntil.bind(context)
                     : null
+            });
+        }
+
+        else if (url.pathname.startsWith("/api/algorithm/")) {
+            response = await handleAlgorithmRequest({
+                request, env, url, jsonResponse, getBearerToken, getAuthenticatedUser
             });
         }
 

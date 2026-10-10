@@ -212,7 +212,7 @@ assert.match(css, /M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 
 assert.doesNotMatch(css, /1440 110V220H0Z/);
 assert.doesNotMatch(html, /knowledge-hero-scroll/);
 assert.doesNotMatch(css, /\.knowledge-hero-scroll/);
-assert.match(html, /knowledge-i18n-v3\.js\?v=20260926-backgrounds-1/);
+assert.match(html, /knowledge-i18n-v3\.js\?v=20261010-algorithms-1/);
 assert.match(i18n, /'背景管理': 'Backgrounds'/);
 assert.match(i18n, /'上传并加入队列': 'Upload and add to queue'/);
 assert.match(css, /\.knowledge-comment-form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
@@ -252,7 +252,7 @@ assert.match(css, /\.knowledge-social-links\s*\{/);
 assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
-assert.match(html, /knowledge-site-v4\.js\?v=20260926-backgrounds-1/);
+assert.match(html, /knowledge-site-v4\.js\?v=20261010-algorithms-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);
@@ -381,7 +381,9 @@ assert.match(html, /data-knowledge-route="games">小游戏/);
 assert.match(html, /data-knowledge-action="desktop">我的系统/);
 assert.match(i18n, /'我的系统': 'My OS'/);
 assert.match(i18n, /'链接': 'Link'/);
-assert.match(html, /data-knowledge-route="contests">竞赛中心/);
+assert.match(html, /data-knowledge-nav-menu="contests"/);
+assert.match(html, /class="knowledge-nav-submenu" id="knowledgeContestMenu"/);
+assert.match(html, /data-knowledge-route="algorithms"/);
 assert.match(site, /function renderContestPage/);
 assert.match(site, /fetch\('\/api\/contests'/);
 assert.match(site, /route === 'contests'/);

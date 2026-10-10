@@ -8,6 +8,8 @@ export const PLATFORM_NAMES = Object.freeze({
     hackerrank: "HackerRank",
     dmoj: "DMOJ",
     kattis: "Kattis",
+    yukicoder: "yukicoder",
+    topcoder: "Topcoder",
     lanqiao: "\u84dd\u6865\u676f",
     baidustar: "\u767e\u5ea6\u4e4b\u661f",
     raicom: "\u777f\u6297",

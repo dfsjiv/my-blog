@@ -13,13 +13,14 @@ function parseDuration(value) {
 }
 
 export function parseAtCoderHtml(html, now = Date.now()) {
-    const section = String(html).match(/id=["']contest-table-upcoming["'][\s\S]*?<tbody>([\s\S]*?)<\/tbody>/i);
-    if (!section) throw new Error("AtCoder upcoming table was not found");
+    const sections = Array.from(String(html).matchAll(/id=["']contest-table-(?:upcoming|active)["'][\s\S]*?<tbody>([\s\S]*?)<\/tbody>/gi));
+    if (!sections.length) throw new Error("AtCoder contest tables were not found");
+    const section = sections.map(match => match[1]).join('');
 
     const contests = [];
     const rowPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
     let rowMatch;
-    while ((rowMatch = rowPattern.exec(section[1])) !== null) {
+    while ((rowMatch = rowPattern.exec(section)) !== null) {
         const row = rowMatch[1];
         const cells = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi));
         const link = row.match(/<a[^>]+href=["'](\/contests\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);

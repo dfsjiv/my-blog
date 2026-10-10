@@ -7,7 +7,7 @@
   const WINDOW_KEY = 'webos_contest_window';
   const REMINDER_CHECK_MS = 30000;
   const PLATFORM_ORDER = [
-    'Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'CodeChef', 'HackerRank', 'DMOJ', 'Kattis',
+    'Codeforces', 'AtCoder', '牛客', '洛谷', 'LeetCode', 'CodeChef', 'HackerRank', 'DMOJ', 'Kattis', 'yukicoder', 'Topcoder',
     '蓝桥杯', '百度之星', '睿抗', '传智杯', '天梯赛', '码蹄杯',
   ];
   const PLATFORM_META = {
@@ -20,6 +20,8 @@
     HackerRank: { short: 'HR', color: '#3f7d62' },
     DMOJ: { short: 'DM', color: '#a65353' },
     Kattis: { short: 'KT', color: '#347e83' },
+    yukicoder: { short: 'YK', color: '#529584' },
+    Topcoder: { short: 'TC', color: '#8761ad' },
     蓝桥杯: { short: 'LQ', color: '#2678c8' },
     百度之星: { short: 'BD', color: '#3568d4' },
     睿抗: { short: 'RK', color: '#9b4f43' },
@@ -185,6 +187,7 @@
       Codeforces: ['codeforces.com'], AtCoder: ['atcoder.jp'], 牛客: ['ac.nowcoder.com'],
       洛谷: ['www.luogu.com.cn'], LeetCode: ['leetcode.com'], CodeChef: ['www.codechef.com'],
       HackerRank: ['www.hackerrank.com'], DMOJ: ['dmoj.ca'], Kattis: ['open.kattis.com'],
+      yukicoder: ['yukicoder.me'], Topcoder: ['www.topcoder.com'],
       蓝桥杯: ['dasai.lanqiao.cn'], 百度之星: ['star.baidu.com'],
       睿抗: ['www.raicom.com.cn', 'raicom.com.cn'], 传智杯: ['www.boxuegu.com', 'boxuegu.com'],
       天梯赛: ['gplt.patest.cn'], 码蹄杯: ['www.matiji.net', 'matiji.net'],

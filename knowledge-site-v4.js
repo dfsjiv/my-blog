@@ -1053,7 +1053,7 @@
     if (routeName === 'post') {
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
-    const route = ['home', 'games', 'contests', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
+    const route = ['home', 'games', 'contests', 'algorithms', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
       'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds'].includes(routeName) ? routeName : 'home';
     return {
       route,
@@ -1268,6 +1268,7 @@
     }
     if (route === 'games') return renderGameGallery();
     if (route === 'contests') return renderContestPage(controller);
+    if (route === 'algorithms') return renderAlgorithmPage(controller);
     if (route === 'all') return renderPostIndex(details, controller);
     if (route === 'categories') return renderFacetIndex('categories', controller);
     if (route === 'tags') return renderFacetIndex('tags', controller);
@@ -1373,22 +1374,51 @@
     }
   }
 
+  function appendCenterTabs(node, active) {
+    const tabs = element('nav', 'knowledge-center-tabs');
+    tabs.setAttribute('aria-label', t('竞赛中心'));
+    [['contests', '查询竞赛'], ['algorithms', '算法中心']].forEach(function (item) {
+      const link = element('a', '', t(item[1]));
+      link.href = '?knowledge=' + item[0];
+      if (item[0] === active) link.setAttribute('aria-current', 'page');
+      link.addEventListener('click', function (event) {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault(); navigate(item[0], {});
+      });
+      tabs.appendChild(link);
+    });
+    node.appendChild(tabs);
+  }
+
+  function renderAlgorithmPage(controller) {
+    const node = showRouteShell('PRACTICE INSIGHTS', '算法中心', '账号绑定、做题统计与训练能力分析。');
+    appendCenterTabs(node, 'algorithms');
+    const content = element('div'); node.appendChild(content);
+    state.contestCleanup = window.KnowledgeAlgorithmCenter.mount(content, {
+      signal: controller.signal, user: currentUser(), token: currentToken(), language: state.language,
+      onLogin: function () { window.authUi?.showElegantLogin(''); }
+    });
+  }
+
   function renderContestPage(controller) {
     const node = showRouteShell(
       'CONTEST CALENDAR',
-      '竞赛中心',
+      '查询竞赛',
       '聚合原有竞赛，并单独标记官方 XCPC 线上与线下赛事。'
     );
     node.classList.add('knowledge-contest-shell');
+    appendCenterTabs(node, 'contests');
 
     const stateNode = {
       contests: [],
       scope: 'all',
+      platform: 'all',
       status: 'active',
       keyword: '',
       loading: true,
       error: false,
       warnings: [],
+      sources: [],
     };
     const toolbar = element('div', 'knowledge-contest-toolbar');
     const scopeSelect = element('select', 'knowledge-contest-select');
@@ -1409,13 +1439,17 @@
     search.placeholder = t('搜索比赛或平台');
     search.setAttribute('aria-label', search.placeholder);
     const refresh = button('刷新', 'knowledge-contest-refresh');
-    toolbar.append(scopeSelect, statusSelect, search, refresh);
+    const platformSelect = element('select', 'knowledge-contest-select');
+    platformSelect.setAttribute('aria-label', t('比赛平台'));
+    platformSelect.append(new Option(t('全部平台'), 'all'));
+    toolbar.append(scopeSelect, platformSelect, statusSelect, search, refresh);
 
     const summary = element('div', 'knowledge-contest-summary');
     const notice = element('p', 'knowledge-contest-notice');
     const list = element('div', 'knowledge-contest-list');
     list.setAttribute('aria-live', 'polite');
-    node.append(toolbar, summary, notice, list);
+    const sources = element('details', 'knowledge-contest-sources');
+    node.append(toolbar, summary, notice, sources, list);
 
     function contestStatus(contest) {
       if (contest.dateTba || !contest.startTime) return 'upcoming';
@@ -1462,6 +1496,7 @@
       return stateNode.contests.filter(function (contest) {
         const status = contestStatus(contest);
         if (stateNode.scope === 'xcpc' && !isXcpc(contest)) return false;
+        if (stateNode.platform !== 'all' && contest.platform !== stateNode.platform) return false;
         if (stateNode.status === 'active' && status === 'finished') return false;
         if (stateNode.status === 'upcoming' && status !== 'upcoming') return false;
         const searchable = [contest.title, contest.platform, contest.series, contest.location].filter(Boolean).join(' ');
@@ -1533,6 +1568,14 @@
       notice.textContent = stateNode.warnings.length
         ? t('部分数据源暂时不可用，已展示其余来源。')
         : '';
+      sources.replaceChildren(element('summary', '', t('数据源状态')));
+      const sourceList = element('div');
+      stateNode.sources.forEach(function (source) {
+        sourceList.appendChild(contentElement('span', '', source.name + ': '
+          + (source.status === 'ok' ? source.count : t('暂不可用'))));
+      });
+      sources.appendChild(sourceList);
+      sources.hidden = !stateNode.sources.length;
       if (!visible.length) {
         const empty = element('div', 'knowledge-contest-state');
         empty.append(
@@ -1565,6 +1608,12 @@
           return contest && contest.id && contest.platform && contest.title && (contest.startTime || contest.dateTba);
         });
         stateNode.warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+        stateNode.sources = Array.isArray(payload.sources) ? payload.sources : [];
+        platformSelect.replaceChildren(new Option(t('全部平台'), 'all'));
+        const platforms = new Set(stateNode.contests.map(function (c) { return c.platform; }));
+        platforms.forEach(function (p) { platformSelect.appendChild(new Option(p, p)); });
+        if (!platforms.has(stateNode.platform)) stateNode.platform = 'all';
+        platformSelect.value = stateNode.platform;
       } catch (error) {
         if (error.name === 'AbortError') return;
         stateNode.error = true;
@@ -1575,6 +1624,7 @@
     }
 
     scopeSelect.addEventListener('change', function () { stateNode.scope = scopeSelect.value; render(); });
+    platformSelect.addEventListener('change', function () { stateNode.platform = platformSelect.value; render(); });
     statusSelect.addEventListener('change', function () { stateNode.status = statusSelect.value; render(); });
     search.addEventListener('input', debounce(function () { stateNode.keyword = search.value.trim(); render(); }, 120));
     refresh.addEventListener('click', load);

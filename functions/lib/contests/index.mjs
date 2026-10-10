@@ -17,6 +17,7 @@ import {
     fetchMatiCupContests
 } from "./china-events.mjs";
 import { sortContests } from "./normalize.mjs";
+import { fetchYukicoderContests, fetchTopcoderContests } from "./extra-platforms.mjs";
 
 export const CONTEST_CACHE_SECONDS = 10 * 60;
 const SOURCE_TIMEOUT_MS = 12 * 1000;
@@ -32,6 +33,8 @@ const SOURCES = [
     ["HackerRank", fetchHackerRankContests],
     ["DMOJ", fetchDmojContests],
     ["Kattis", fetchKattisContests],
+    ["yukicoder", fetchYukicoderContests],
+    ["Topcoder", fetchTopcoderContests],
     ["Lanqiao Cup", fetchLanqiaoCupContests],
     ["Baidu Star", fetchBaiduStarContests],
     ["RAICOM", fetchRaicomContests],
@@ -57,24 +60,27 @@ async function fetchAllContests(fetchImpl = fetch, now = Date.now()) {
     );
     const contests = [];
     const warnings = [];
+    const sources = [];
 
     settled.forEach((result, index) => {
         if (result.status === "fulfilled") {
             contests.push(...result.value);
+            sources.push({ name: SOURCES[index][0], status: 'ok', count: result.value.length });
             return;
         }
         const sourceName = SOURCES[index][0];
         console.error(`${sourceName} contests fetch failed:`, result.reason?.message || result.reason);
         warnings.push(`${sourceName} fetch failed`);
+        sources.push({ name: sourceName, status: 'error', count: 0 });
     });
 
-    return { success: true, contests: sortContests(contests), warnings };
+    return { success: true, contests: sortContests(contests), warnings, sources, fetchedAt: new Date(now).toISOString() };
 }
 
 export async function getContestsResponse(request, context = {}) {
     const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?source-cache=v7";
+    cacheUrl.search = "?source-cache=v8";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
 
     if (cache) {
