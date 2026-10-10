@@ -1,4 +1,5 @@
 import { analyzeSubmissions } from './algorithm/analytics.mjs';
+import { handleExternalAccounts } from './algorithm/external-accounts.mjs';
 import { normalizeHandle, verifyProfile, fetchSubmissionPage, fetchProfileDetails,
     fetchAtCoderModels, atCoderDifficulty } from './algorithm/providers.mjs';
 
@@ -19,6 +20,7 @@ export async function handleAlgorithmRequest(context) {
     const db = env.DB, fetchImpl = c.fetch || fetch;
     const accountMatch = url.pathname.match(/^\/api\/algorithm\/accounts\/(\d+)(\/sync)?$/);
     try {
+        if (url.pathname.startsWith('/api/algorithm/external/')) return await handleExternalAccounts(c, user);
         if (url.pathname === '/api/algorithm/dashboard' && request.method === 'GET') {
             const { results: accounts } = await db.prepare('SELECT * FROM algorithm_accounts WHERE user_id = ? ORDER BY platform').bind(user.id).all();
             const { results: rows } = await db.prepare(`SELECT s.*, a.platform FROM algorithm_submissions s

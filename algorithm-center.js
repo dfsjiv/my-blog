@@ -36,17 +36,19 @@
     };
     root.classList.add('algorithm-center');
     const intro = el('p', 'algorithm-note', t(
-      '绑定公开账号，建立属于你的训练档案。只读取公开记录，无需比赛平台密码；绑定为自行声明，不代表身份认证。',
-      'Link public handles to build your training profile. No platform password is needed. Linking is self-declared, not identity verification.'));
+      '关联平台账号，建立属于你的训练档案。无需平台密码；Cookie 仅用于一次性同步，不保存。绑定为自行声明，不代表身份认证。',
+      'Link platform accounts to build your training profile. No password is needed. Optional Cookies are used once, never saved. Linking is self-declared, not identity verification.'));
     root.append(intro);
     if (!user || user.role === 'guest' || !token) {
       const preview = el('section', 'algorithm-panel');
       preview.append(el('h2', '', t('把刷题变成看得见的进步', 'Turn practice into visible progress')),
-        el('p', '', t('登录博客后可绑定 Codeforces 和 AtCoder，查看去重过题数、训练日历、难度、算法标签与 Rating。',
-          'Sign in to link Codeforces and AtCoder: unique solves, training calendar, difficulty, topics and rating.')),
+        el('p', '', t('登录博客后可关联 Codeforces、AtCoder、VJudge、洛谷、牛客和力扣。可获取的统计范围按平台分别说明。',
+          'Sign in to link Codeforces, AtCoder, VJudge, Luogu, Nowcoder and LeetCode China. Data coverage is explained separately for each platform.')),
         btn(t('登录并开始', 'Sign in to start'), onLogin, 'is-primary'));
       root.append(preview); return () => {};
     }
+    const extraCleanup = window.KnowledgeCookieSync?.mount(root, options) || (() => {});
+    root.append(el('h2', '', t('Codeforces / AtCoder · 提交记录分析', 'Codeforces / AtCoder · submission analysis')));
     const form = el('form', 'algorithm-bind');
     const platform = el('select'); platform.setAttribute('aria-label', t('比赛平台', 'Platform'));
     platform.append(new Option('Codeforces', 'codeforces'), new Option('AtCoder', 'atcoder'));
@@ -220,6 +222,7 @@
     function authChanged(event) {
       if (String(event.detail?.user?.id) === String(user.id)) return;
       identityChanged = true;
+      extraCleanup();
       if (!signal.aborted) {
         root.replaceChildren(el('p', 'algorithm-note', t('登录状态已变化，请重新打开算法中心。', 'Account changed. Reopen Algorithm Center.')));
       }
@@ -227,6 +230,6 @@
     window.addEventListener('knowledge-auth-changed', authChanged);
     status.textContent = t('正在读取训练档案……', 'Loading your training profile…');
     load().then(() => { if (!signal.aborted) status.textContent = ''; }).catch(error => { if (!signal.aborted) message(error); });
-    return () => window.removeEventListener('knowledge-auth-changed', authChanged);
+    return () => { extraCleanup(); window.removeEventListener('knowledge-auth-changed', authChanged); };
   }
 })();

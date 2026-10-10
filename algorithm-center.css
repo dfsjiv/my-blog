@@ -5,6 +5,9 @@
 .algorithm-bind { margin: 24px 0 8px; }
 .algorithm-bind input, .algorithm-bind select { padding: 12px 14px; background: var(--knowledge-surface-solid); color: var(--knowledge-text); border: 1px solid var(--knowledge-border); border-radius: 8px; font: inherit; }
 .algorithm-bind input { flex: 1; min-width: 160px; }
+.algorithm-cookie-panel .algorithm-bind { align-items: stretch; }
+.algorithm-cookie-panel .algorithm-cookie-input { flex-basis: 100%; min-width: 0; }
+.algorithm-cookie-panel h3 { font-size: 1.05rem; margin: 18px 0 12px; }
 .algorithm-button { padding: 11px 18px; color: var(--knowledge-text); background: var(--knowledge-surface); border: 1px solid var(--knowledge-border); border-radius: 8px; cursor: pointer; font: inherit; }
 .algorithm-button:hover { border-color: var(--training-accent); }
 .algorithm-button.is-primary { background: var(--knowledge-primary-soft); color: var(--knowledge-primary); }
