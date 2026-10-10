@@ -39,6 +39,8 @@ export async function handleExternalAccounts(c, user) {
         if (url.pathname !== '/api/algorithm/external/sync' || request.method !== 'POST') return fail(405, 'METHOD_NOT_ALLOWED');
         body = await readBody(request);
         const platform = body?.platform;
+        const providerOptions = platform === 'luogu' ? { luoguDomain: body.luoguDomain || 'www.luogu.com.cn' } : {};
+        if (platform === 'luogu' && !['www.luogu.com.cn', 'www.luogu.com'].includes(providerOptions.luoguDomain)) throw new Error('INVALID_REQUEST');
         cookie = body?.credentials ? buildPlatformCookie(platform, body.credentials) : normalizeOneTimeCookie(body?.cookie);
         if (cookie && !body.credentials) cookie = buildPlatformCookie(platform, Object.fromEntries(cookie.split(';').map(part => {
             const at = part.indexOf('='); return [part.slice(0, at).trim(), part.slice(at + 1)];
@@ -60,9 +62,9 @@ export async function handleExternalAccounts(c, user) {
             .bind(now + 90, account.id, user.id, now).run();
         if (!lock.meta?.changes) return fail(409, 'SYNC_BUSY');
         acquired = true;
-        const snapshot = await fetchExternalSnapshot(platform, handle, cookie, c.fetch || fetch);
+        const snapshot = await fetchExternalSnapshot(platform, handle, cookie, c.fetch || fetch, providerOptions);
         cookie = '';
-        let previous; try { previous = JSON.parse(account.snapshot_json).solved ?? null; } catch { previous = null; }
+        let previous; try { const old = JSON.parse(account.snapshot_json); previous = old.scope === snapshot.scope ? old.solved ?? null : null; } catch { previous = null; }
         await db.prepare('UPDATE algorithm_external_accounts SET snapshot_json=?, previous_solved=?, last_synced_at=?, sync_lock_until=0 WHERE id=? AND user_id=?')
             .bind(JSON.stringify(snapshot), previous, new Date(now * 1000).toISOString(), account.id, user.id).run();
         return c.jsonResponse({ success: true, data: { id: account.id } });
@@ -70,7 +72,8 @@ export async function handleExternalAccounts(c, user) {
         // Do not log exception strings: upstream fetch implementations may embed submitted credentials.
         if (/no such table/.test(error.message)) return fail(503, 'MIGRATION_REQUIRED');
         const codes = ['INVALID_REQUEST', 'INVALID_HANDLE', 'INVALID_COOKIE', 'COOKIE_EXPIRED', 'COOKIE_MISMATCH', 'PROFILE_NOT_FOUND'];
-        return fail(codes.includes(error.message) ? 400 : 502, codes.includes(error.message) ? error.message : 'PROVIDER_UNAVAILABLE');
+        const upstream = ['PROVIDER_ACCESS_BLOCKED', 'PROVIDER_RATE_LIMITED', 'PROVIDER_FORMAT_CHANGED', 'PROVIDER_REDIRECT', 'PROVIDER_TIMEOUT'];
+        return fail(codes.includes(error.message) ? 400 : 502, [...codes, ...upstream].includes(error.message) ? error.message : 'PROVIDER_UNAVAILABLE');
     } finally {
         cookie = ''; if (body && typeof body === 'object') { body.cookie = ''; if (body.credentials && typeof body.credentials === 'object') Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); } body = null;
         if (acquired) await db.prepare('UPDATE algorithm_external_accounts SET sync_lock_until=0 WHERE id=? AND user_id=?').bind(account.id, user.id).run();

@@ -18,6 +18,8 @@
     Object.entries(platforms).forEach(([value, name]) => platform.append(new Option(name, value)));
     const mode = el('select'); mode.setAttribute('aria-label', t('绑定方式', 'Connection mode'));
     mode.append(new Option(t('登录态自动识别账号', 'Identify account from session'), 'session'), new Option(t('公开账号（无需 Cookie）', 'Public profile (no Cookie)'), 'public'));
+    const luoguDomain = el('select'); luoguDomain.setAttribute('aria-label', t('洛谷 Cookie 来源域名', 'Luogu Cookie source domain'));
+    luoguDomain.append(new Option('www.luogu.com.cn', 'www.luogu.com.cn'), new Option('www.luogu.com', 'www.luogu.com'));
     const handle = el('input'); handle.maxLength = 40; handle.autocomplete = 'off';
     handle.setAttribute('aria-label', t('平台用户名或 UID', 'Platform handle or UID'));
     const cookieFields = { vjudge: ['JSESSIONID'], luogu: ['_uid', '__client_id'], nowcoder: ['t'], leetcode: ['LEETCODE_SESSION', 'csrftoken'] };
@@ -25,7 +27,7 @@
     const credentialsNode = el('div', 'algorithm-credentials'), guide = el('p', 'algorithm-note');
     let credentialInputs = [];
     const submit = el('button', 'algorithm-button is-primary', t('绑定 / 同步', 'Link / sync')); submit.type = 'submit';
-    form.append(platform, mode, handle, credentialsNode, submit);
+    form.append(platform, mode, luoguDomain, handle, credentialsNode, submit);
     const clear = () => { credentialInputs.forEach(input => { input.value = ''; }); };
     const status = el('p', 'algorithm-status'); status.setAttribute('role', 'status');
     const content = el('div');
@@ -37,6 +39,11 @@
       UNAUTHORIZED: t('请重新登录博客。', 'Please sign in to the blog again.'),
       INVALID_HANDLE: t('洛谷和牛客请填数字 UID；VJudge 和力扣请填用户名。', 'Use numeric UIDs for Luogu/Nowcoder and handles for VJudge/LeetCode.'),
       INVALID_COOKIE: t('Cookie 格式不正确，或超过 8192 字符。', 'Invalid Cookie format or more than 8192 characters.'),
+      PROVIDER_ACCESS_BLOCKED: t('平台拒绝服务器访问（HTTP 403），可能是风控或人机验证。不要继续重复提交 Cookie；可稍后重试。', 'Provider blocked server access (HTTP 403), possibly an anti-bot challenge. Do not repeatedly submit Cookies; retry later.'),
+      PROVIDER_RATE_LIMITED: t('平台限流（HTTP 429），请稍后重试。', 'Provider rate limit (HTTP 429). Retry later.'),
+      PROVIDER_TIMEOUT: t('平台请求超时，旧数据未改动，请稍后重试。', 'Provider timed out. Saved data is unchanged; retry later.'),
+      PROVIDER_REDIRECT: t('平台要求跳转，未转发 Cookie。洛谷请确认选中的域名与复制 Cookie 的域名一致。', 'Provider requested a redirect; Cookie was not forwarded. For Luogu, select the domain where you copied the Cookie.'),
+      PROVIDER_FORMAT_CHANGED: t('平台返回内容无法解析，或统计不完整。旧数据未改动；请反馈所选平台及这条错误提示。', 'Provider response changed or statistics are incomplete. Saved data is unchanged; report the platform and this message.'),
       COOKIE_EXPIRED: t('Cookie 已过期，或不适用于此平台。请重新获取。', 'Cookie expired or not valid for this platform. Please obtain a new one.'),
       COOKIE_MISMATCH: t('Cookie 对应的账号与填写的账号不一致。', 'The Cookie account does not match the entered account.'),
       PROFILE_NOT_FOUND: t('找不到这个平台账号，请检查用户名或 UID。', 'Platform account not found. Check the handle or UID.'),
@@ -63,7 +70,8 @@
       clear();
       credentialsNode.replaceChildren(); credentialInputs = [];
       const session = mode.value === 'session'; handle.hidden = session; handle.required = !session;
-      guide.textContent = session ? t('先登录所选平台，F12 → Application（应用）→ Cookies → ', 'Sign in to the selected platform, then F12 → Application → Cookies → ') + domains[platform.value] + t('。按 Name 找到下面这些字段，只复制对应的 Value，不要复制全部 Cookie。不需要另外填写用户编号。', '. Find the names below and copy only their Value, not the whole Cookie list. No extra user ID required.') : t('公开模式不提供登录凭据，只填写个人主页的用户名或 UID。', 'Public mode uses a profile handle or UID without session credentials.');
+      luoguDomain.hidden = platform.value !== 'luogu';
+      guide.textContent = session ? t('先登录所选平台，F12 → Application（应用）→ Cookies → ', 'Sign in to the selected platform, then F12 → Application → Cookies → ') + (platform.value === 'luogu' ? luoguDomain.value : domains[platform.value]) + t('。按 Name 找到下面这些字段，只复制对应的 Value，不要复制全部 Cookie。不需要另外填写用户编号。', '. Find the names below and copy only their Value, not the whole Cookie list. No extra user ID required.') : t('公开模式不提供登录凭据，只填写个人主页的用户名或 UID。', 'Public mode uses a profile handle or UID without session credentials.');
       if (session) cookieFields[platform.value].forEach(name => {
         const label = el('label', '', name + ' · Value');
         const input = el('input', 'algorithm-cookie-input'); input.type = 'password'; input.name = name; input.required = true;
@@ -73,7 +81,7 @@
       handle.placeholder = ['luogu', 'nowcoder'].includes(platform.value) ? t('数字 UID（个人主页网址中的数字）', 'Numeric UID from your profile URL') : t('平台用户名（不是网址）', 'Platform handle, not a URL');
       handle.value = accounts.find(a => a.platform === platform.value)?.handle || '';
     }
-    platform.addEventListener('change', changePlatform); mode.addEventListener('change', changePlatform); changePlatform();
+    platform.addEventListener('change', changePlatform); mode.addEventListener('change', changePlatform); luoguDomain.addEventListener('change', changePlatform); changePlatform();
     async function load() {
       const data = await api('dashboard');
       if (controller.signal.aborted) return;
@@ -95,6 +103,7 @@
     form.addEventListener('submit', event => {
       event.preventDefault();
       const body = mode.value === 'session' ? { platform: platform.value, credentials: Object.fromEntries(credentialInputs.map(input => [input.name, input.value])) } : { platform: platform.value, handle: handle.value };
+      if (platform.value === 'luogu') body.luoguDomain = luoguDomain.value;
       clear();
       if (busy) { if (body.credentials) Object.keys(body.credentials).forEach(key => { body.credentials[key] = ''; }); return; }
       mutate(() => api('sync', 'POST', body));
@@ -110,13 +119,13 @@
       thead.append(head);
       rows.forEach(r => {
         const row = el('tr'), names = { EASY: t('简单', 'Easy'), MEDIUM: t('中等', 'Medium'), HARD: t('困难', 'Hard') };
-        [names[r.name] || r.name, r.solved, r.attempted, r.attempted ? (r.solved / r.attempted * 100).toFixed(1) + '%' : '—'].forEach(value => row.append(el('td', '', value)));
+        [names[r.name] || r.name, r.solved, r.attempted ?? '—', r.attempted ? (r.solved / r.attempted * 100).toFixed(1) + '%' : '—'].forEach(value => row.append(el('td', '', value)));
         tbody.append(row);
       }); table.append(thead, tbody); wrap.append(table); node.append(wrap);
     }
     function render() {
       content.replaceChildren();
-      content.append(el('p', 'algorithm-note', t('以下快照已纳入顶部总统计。未知项显示 —；VJudge 只包含该站记录，牛客只包含练习题统计。', 'These snapshots feed the unified overview above. Unknown values show —. VJudge covers its recorded problems; Nowcoder covers practice problems.')));
+      content.append(el('p', 'algorithm-note', t('以下快照已纳入顶部总统计。牛客包含 ACM 练习与 Tracker 分区合计，分区同题可能重复；未知项显示 —。', 'These snapshots feed the unified overview. Nowcoder includes ACM practice + Tracker section totals; duplicates between sections are possible. Unknown values show —.')));
       accounts.forEach(a => {
         const item = el('details', 'algorithm-panel'), heading = el('summary', '', platforms[a.platform] + ' · ' + a.handle), s = a.snapshot;
         item.append(heading, el('p', 'algorithm-note', a.lastSyncedAt ? t('统计更新：', 'Updated: ') + new Date(a.lastSyncedAt).toLocaleString() : t('尚未同步成功，可重试或解绑。', 'Not synced yet. Retry or unlink.')));
@@ -131,6 +140,13 @@
           metrics.append(metric(t('累计过题', 'Unique solves'), s.solved), metric(t('尝试题数', 'Problems attempted'), s.attempted),
             metric(t('提交次数', 'Submissions'), s.submissions), metric(t('未解决题数', 'Unresolved'), s.attempted == null ? null : s.attempted - s.solved));
           item.append(metrics);
+          if (s.sources?.length) {
+            item.append(el('p', 'algorithm-warning', t('牛客按 ACM 练习 + Tracker 分区合计，不是跨分区去重题数。Tracker 未提供尝试/提交总数，因此不与 ACM 的完成率混算。', 'Nowcoder is ACM practice + Tracker section totals, not deduplicated across sections. Tracker supplies no attempted/submission totals, so no combined completion rate is inferred.')));
+            s.sources.forEach(source => {
+              const text = source.name + ' · ' + t('过题 ', 'Solved ') + source.solved + ' · ' + t('尝试 ', 'Attempted ') + (source.attempted ?? '—') + ' · ' + t('提交 ', 'Submissions ') + (source.submissions ?? '—');
+              item.append(el('p', 'algorithm-note', text));
+            });
+          }
           if (a.previousSolved != null) item.append(el('p', 'algorithm-note', t('较上次快照过题数变化：', 'Solve-count change since last snapshot: ') + (s.solved - a.previousSolved) + t('（不是每日新增过题；平台统计可能修正）', ' (not daily new solves; provider counts may change)')));
           breakdown(item, t('难度分析', 'Difficulty breakdown'), s.difficulty || []);
           breakdown(item, t('VJudge 来源 OJ 分布', 'VJudge source OJ breakdown'), s.origins || []);

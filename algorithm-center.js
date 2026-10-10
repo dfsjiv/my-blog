@@ -235,7 +235,8 @@
         metric(t('总体题目完成率', 'Overall problem completion'), percent(a.completionRate), t('按题数加权，不是平台百分比平均', 'Weighted by problems, not average platform rates')),
         metric(t('待解决题目合计', 'Total unresolved'), a.attemptedSources ? a.unresolved : '—', sources(a.attemptedSources)),
         metric(t('已同步平台', 'Synced platforms'), a.platforms.length, t('绑定但未同步成功不计入', 'Unsynced connections excluded')));
-      total.append(metrics, el('p', 'algorithm-note', t('数据范围：总量合并六个平台；洛谷/力扣为当前题目快照，牛客为练习统计，VJudge 为该站记录。跨站同题暂不能可靠去重。', 'Coverage: totals combine all six platforms. Luogu/LeetCode are current problem snapshots, Nowcoder is practice-only, VJudge is site-recorded. Cross-site problem deduplication is not yet reliable.')));
+      total.append(metrics, el('p', 'algorithm-note', t('数据范围：总量合并六个平台；洛谷/力扣为当前题目快照，牛客为 ACM 练习 + Tracker 分区合计，VJudge 为该站记录。跨站、跨分区同题暂不能可靠去重。', 'Coverage: six-platform totals; Luogu/LeetCode are current snapshots, Nowcoder is ACM practice + Tracker section totals, VJudge is site-recorded. Cross-site and cross-section duplicates are possible.')));
+      if (a.platforms.some(p => p.platform === 'nowcoder' && p.coverage === 'nowcoder-practice-coding')) total.append(el('p', 'algorithm-warning', t('牛客仍是旧版 ACM 快照，尚未包含 Tracker。请重新同步牛客以更新总统计。', 'Nowcoder still uses the older ACM-only snapshot. Resync Nowcoder to include Tracker in the total.')));
       if (a.recordSources && !data.summary.historyComplete) total.append(el('p', 'algorithm-warning', t('CF / AtCoder 历史记录尚未完整导入，总量和趋势包含部分样本。请展开账号区域继续补齐历史。', 'CF / AtCoder history is incomplete; totals and trends include partial samples. Expand connections to continue importing history.')));
       if (!a.platforms.length) total.append(el('p', '', t('展开下面的绑定区域，同步后这里会显示统一统计。', 'Expand the connection sections below. Synced data will appear here together.')));
       overviewNode.append(total);

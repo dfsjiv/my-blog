@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
+import { Script } from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { handleAlgorithmRequest } from '../functions/lib/algorithm-center.mjs';
 import { fetchExternalSnapshot, normalizeOneTimeCookie, normalizeExternalHandle, buildPlatformCookie, resolveExternalIdentity } from '../functions/lib/algorithm/external-providers.mjs';
@@ -91,8 +92,39 @@ test('Luogu uses current page context and Nowcoder uses explicitly labelled prac
   const s = await fetchExternalSnapshot('luogu', '2', '', async () => new Response('<script type="application/json" id="lentille-context">{"data":{"user":{"uid":2,"passedProblemCount":40,"submittedProblemCount":45,"privateInfo":"ignored"}}}</script>'));
   assert.equal(s.solved, 40); assert.equal(s.attempted, 45); assert.equal(s.submissions, null);
   await assert.rejects(fetchExternalSnapshot('luogu', '2', '', async () => new Response('<script id="lentille-context">{"data":{"user":{"uid":2,"passedProblemCount":null,"submittedProblemCount":null}}}</script>')), /PROVIDER_FORMAT_CHANGED/);
-  const nc = await fetchExternalSnapshot('nowcoder', '123', '', async () => new Response('<div class="state-num">436</div><span>题已挑战</span><div class="state-num">398</div><span>题已通过</span><div class="state-num">1546</div><span>次提交</span>'));
-  assert.equal(nc.solved, 398); assert.equal(nc.attempted, 436); assert.equal(nc.submissions, 1546);
+  const nc = await fetchExternalSnapshot('nowcoder', '123', '', async url => url.includes('/tracker/')
+    ? json({ code: 0, data: { ranks: [{ uid: 123, count: 166 }] } })
+    : new Response('<div class="state-num">436</div><span>题已挑战</span><div class="state-num">398</div><span>题已通过</span><div class="state-num">1546</div><span>次提交</span>'));
+  assert.equal(nc.solved, 564); assert.equal(nc.attempted, null); assert.equal(nc.submissions, null);
+  assert.equal(nc.sources[0].submissions, 1546); assert.equal(nc.sources[1].solved, 166);
+  assert.equal(nc.deduplication, 'not-available');
+});
+test('Luogu uses the selected cookie origin only, rejects arbitrary domains, and reports blocked access precisely', async () => {
+  const html = '<script id="lentille-context">{"user":{"uid":42},"data":{"user":{"uid":42,"passedProblemCount":12,"submittedProblemCount":15}}}</script>';
+  for (const domain of ['www.luogu.com.cn', 'www.luogu.com']) {
+    let calls = 0;
+    const snapshot = await fetchExternalSnapshot('luogu', '42', '_uid=42; __client_id=synthetic', async (url, init) => {
+      calls++; assert.equal(url, 'https://' + domain + '/user/42'); assert.equal(init.redirect, 'manual');
+      assert.equal(init.headers['User-Agent'], 'KnowledgeAlgorithmCenter/1.0');
+      return new Response(html);
+    }, { luoguDomain: domain });
+    assert.equal(calls, 1); assert.equal(snapshot.solved, 12);
+  }
+  await assert.rejects(fetchExternalSnapshot('luogu', '42', '', async () => { throw new Error('must not fetch'); }, { luoguDomain: 'evil.com' }), /INVALID_REQUEST/);
+  await assert.rejects(fetchExternalSnapshot('luogu', '42', '', async () => new Response('', { status: 403 })), /PROVIDER_ACCESS_BLOCKED/);
+  const f = fixture();
+  const blocked = await f.request('external/sync', 'POST', { platform:'luogu', handle:'42' }, 1, async () => new Response('', { status:403 }));
+  assert.equal((await blocked.json()).code, 'PROVIDER_ACCESS_BLOCKED');
+});
+test('Tracker missing rank is not silently zero, wrong-user rows are rejected, real zero is accepted', async () => {
+  const html = '<div class="state-num">3</div><span>题已挑战</span><div class="state-num">2</div><span>题已通过</span><div class="state-num">5</div><span>次提交</span>';
+  const snapshot = await fetchExternalSnapshot('nowcoder', '123', '', async url => {
+    if (url.includes('ranks/problem')) return json({ code:0, data:{ ranks:[] } });
+    if (url.includes('user-info')) return json({ code:0, data:{user:{uid:123,count:0}} });
+    return new Response(html);
+  });
+  assert.equal(snapshot.solved, 2); assert.equal(snapshot.sources[1].solved, 0);
+  await assert.rejects(fetchExternalSnapshot('nowcoder', '123', '', async () => json({ code:0,data:{ranks:[],user:{uid:999,count:25}} })), /PROVIDER_FORMAT_CHANGED/);
 });
 test('reject changed difficulty schema, huge responses and upstream errors without exposing reflected credentials', async () => {
   const payload = lcPayload(); payload.data.userProfileUserQuestionProgress.numAcceptedQuestions.pop();
@@ -148,6 +180,7 @@ test('missing new migration does not break original algorithm dashboard', async 
 });
 test('frontend never uses browser storage for cookies and integrates cleanup into route/auth teardown', () => {
   const source = fs.readFileSync(new URL('../algorithm-cookie-sync.js', import.meta.url), 'utf8');
+  assert.doesNotThrow(() => new Script(source));
   assert.ok(!/localStorage|sessionStorage|document\.cookie|console\./.test(source));
   assert.match(source, /input\.type = 'password'/); assert.match(source, /input\.autocomplete = 'off'/);
   assert.match(source, /event\.preventDefault\(\);[\s\S]*?clear\(\);/);

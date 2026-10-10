@@ -51,7 +51,7 @@ Apply `migrations/0011_add_algorithm_external_snapshots.sql` to the existing DB 
 | --- | --- | --- |
 | VJudge | Username | Unique solved/attempted OJ problem IDs, grouped by source OJ; only records submitted through VJudge. Lists are checked against header counts to reject hidden/truncated data. |
 | Luogu | Numeric UID | Profile passed/submitted **problem** counts; submitted problems are not submission attempts. Hidden counts fail visibly. Uses the accessible `www.luogu.com` alternate domain directly, never by forwarding a redirect. |
-| Nowcoder | Numeric UID | Coding-practice solved problems, challenged problems and submissions. This is practice-coding coverage, not a claim of all contest history. |
+| Nowcoder | Session identifies UID; public mode accepts UID | ACM practice + Tracker section-sum solves, with separate section counts and duplicate warning. ACM attempted/submission totals remain in the section detail, not inferred for Tracker. Older ACM-only snapshots require resync. Not a claim of all contest-mode submissions. |
 | LeetCode China | Profile slug | Current progress by Easy/Medium/Hard; solved + failed problem counts. Submission attempts are unknown, not inferred from problem counts. International `leetcode.com` is not included. |
 
 These site-owned page/GraphQL interfaces are not guaranteed stable public APIs. They were read-only probed on 2026-10-11 using public demo handles. Real signed-in Cookie flows require user verification; no real Cookie was collected during development. New snapshots are not mixed into CF/AtCoder submission calendars or acceptance metrics. A difference between the last two snapshot solve counts is shown as a count change, not a fabricated daily first-solve count. Cross-platform mirrored problems remain separate.
@@ -75,5 +75,11 @@ The default session form explains F12 → Application → Cookies, the selected 
 - [LeetCode China](https://leetcode.cn/) — own `/graphql/` profile progress queries.
 
 ## Verification
+
+### 2026-10-11 provider corrections
+
+- Luogu defaults to `www.luogu.com.cn`; users can explicitly choose `www.luogu.com` if that is where their session values were obtained. Domains are a two-value allowlist, never arbitrary URLs. No credential-bearing redirect or automatic domain fallback is followed. Luogu receives the descriptive application User-Agent `KnowledgeAlgorithmCenter/1.0`, not a partial browser User-Agent which reproduced a same-URL 302 on `.com.cn` in a public probe.
+- Nowcoder also reads the same `GET /problem/tracker/ranks/problem?userId=...` count used by the current Tracker profile view. Empty ranks are not silently zero: `GET /problem/tracker/user-info?userId=...` must return that UID and an explicit numeric count. No rank-update, check-in or other mutation API is called. ACM practice and Tracker counts are displayed separately and summed with an explicit cross-section-duplicates warning; the summary is not a deduplicated unique-problem count. Combined attempted/submission totals stay unknown because Tracker does not supply comparable totals. Existing ACM-only snapshots are marked by their old scope until resynced; changing scope resets the previous-count comparison rather than presenting the added section as new training.
+- Fixed error codes now distinguish upstream 403, 429, redirects, timeouts and format changes without exposing Cookie values or upstream error bodies. Real signed-in sessions still require user verification; public probes are not proof that edge-server access or a user's session will succeed.
 
 Run `npm test`. The added tests cover isolated/additive migration, normal-user access, session checks, cross-user rejection, duplicate bindings, idempotent synchronization, upstream failures, locking, cursor boundaries, time-zone/deduplication analysis, separate rating scales, and new contest adapters. Synthetic UI previews and diagnostic assets belong in the untracked `output/` directory and must not be deployed or committed.
