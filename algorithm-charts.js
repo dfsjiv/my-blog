@@ -47,11 +47,62 @@
     data.heatmap.forEach(day=>{const n=el('button','algorithm-day');n.type='button';n.dataset.level=day.submissions?String(Math.min(4,Math.ceil(day.submissions/maxDay*4))):'0';
       const label=day.date+' · '+day.submissions+' '+t('次提交','submissions')+' · '+day.solved+' '+t('首次过题','first solves');n.title=label;n.setAttribute('aria-label',label);calendar.append(n);});
     activity.append(calendar,el('p','algorithm-note',t('浅 → 深：少 → 多。无已导入记录不代表当天没有训练。','Light → dark: fewer → more. No imported records does not prove no practice.')));grid.append(activity);
-    const topics=section(t('题目类型 · 完成情况','Problem topics · completion'),t('仅 CF 官方标签；一道题可能有多个标签。实色为已解决，淡色为未解决，横条长度表示尝试题数。','CF official tags only; a problem may have multiple tags. Solid = solved, faded = unresolved; bar length = attempted problems.'));
+    const topicNames={math:'数学',greedy:'贪心',implementation:'模拟与实现','brute force':'暴力枚举','constructive algorithms':'构造','number theory':'数论',sortings:'排序',strings:'字符串','data structures':'数据结构',dp:'动态规划',graphs:'图论',trees:'树',geometry:'几何','binary search':'二分查找','two pointers':'双指针','dfs and similar':'搜索','shortest paths':'最短路',dsu:'并查集',combinatorics:'组合数学',probabilities:'概率',bitmasks:'位运算',games:'博弈','divide and conquer':'分治','meet-in-the-middle':'折半搜索',hashing:'哈希',flows:'网络流','graph matchings':'图匹配','string suffix structures':'后缀结构',fft:'快速傅里叶变换','2-sat':'2-SAT',matrices:'矩阵',ternary:'三分查找','expression parsing':'表达式解析','chinese remainder theorem':'中国剩余定理',schedules:'调度',interactive:'交互题'};
+    const topicName=tag=>options.language==='zh'?(topicNames[tag]||tag):tag;
+    const topics=section(t('题型分布','Problem topic distribution'),t('仅 CF 官方标签；占比按当前筛选的标签次数计算。一题可有多个标签，不是去重题数，也不是能力评分。点击扇区或图例查看完成情况。','CF official tags only. Shares use tag occurrences in the current filter, not unique problems or ability scores. Click a slice or legend for completion details.'));
+    topics.classList.add('algorithm-topics-panel');
     const filter=el('select');filter.setAttribute('aria-label',t('题型样本筛选','Topic sample filter'));
     filter.append(new Option(t('显示全部题型','All topics'),'all'),new Option(t('只看至少 5 题的样本','At least 5 problems'),'5'));
     const topicBody=el('div');topics.append(filter,topicBody);
-    const refreshTopics=()=>{topicBody.replaceChildren();bars(topicBody,(d?.topics||[]).filter(r=>filter.value==='all'||r.attempted>=5).slice(0,16).map(r=>({name:r.tag,value:r.attempted,solved:r.solved,note:r.solved+'/'+r.attempted+' · '+r.completion+'%'})),t('题','problems'),true);};
+    const refreshTopics=()=>{
+      topicBody.replaceChildren();
+      let rows=(d?.topics||[]).filter(r=>r.attempted>0&&(filter.value==='all'||r.attempted>=5)).sort((a,b)=>b.attempted-a.attempted);
+      if(!rows.length){topicBody.append(el('p','algorithm-note',t('当前筛选下暂无题型数据','No topics in this filter')));return;}
+      const total=rows.reduce((n,r)=>n+r.attempted,0),ns='http://www.w3.org/2000/svg';
+      const allRows=rows;
+      if(rows.length>7){
+        const main=rows.filter(r=>r.attempted/total>=0.05).slice(0,6),members=rows.filter(r=>!main.includes(r));
+        const attempted=members.reduce((n,r)=>n+r.attempted,0),solved=members.reduce((n,r)=>n+r.solved,0);
+        rows=[...main,{tag:'__other',attempted,solved,completion:Math.round(solved/attempted*1000)/10,members}];
+      }
+      const displayName=r=>r.members?t('其他题型','Other topics'):topicName(r.tag);
+      topicBody.append(el('p','algorithm-note',allRows.length+' '+t('种题型 · ',' topics · ')+total+' '+t('次标签记录 · 小占比归入其他，完整明细在下方','tag occurrences · Smaller categories grouped; full details below')));
+      const layout=el('div','algorithm-pie-layout'),svg=document.createElementNS(ns,'svg'),legend=el('div','algorithm-pie-legend'),detail=el('div','algorithm-topic-detail');
+      svg.setAttribute('viewBox','0 0 440 440');svg.setAttribute('class','algorithm-topic-pie');svg.setAttribute('role','group');svg.setAttribute('aria-label',t('题型分布饼图','Problem topic pie chart'));detail.setAttribute('aria-live','polite');
+      const centerTitle=document.createElementNS(ns,'text'),centerValue=document.createElementNS(ns,'text'),centerCaption=document.createElementNS(ns,'text');
+      [[centerTitle,198,'algorithm-donut-title'],[centerValue,240,'algorithm-donut-value'],[centerCaption,270,'algorithm-donut-caption']].forEach(([n,y,cls])=>{n.setAttribute('x','220');n.setAttribute('y',y);n.setAttribute('text-anchor','middle');n.setAttribute('class',cls);});
+      const controls=[];let angle=-Math.PI/2;
+      const polar=(a,r=190)=>[220+r*Math.cos(a),220+r*Math.sin(a)];
+      const select=(index,customRow)=>{
+        controls.forEach((c,i)=>{c.path.setAttribute('aria-pressed',String(i===index));c.button.setAttribute('aria-pressed',String(i===index));});
+        const r=customRow||rows[index];detail.replaceChildren();
+        centerTitle.textContent=displayName(r).length>12?displayName(r).slice(0,11)+'…':displayName(r);centerValue.textContent=(r.attempted/total*100).toFixed(1)+'%';centerCaption.textContent=r.attempted+' / '+total+' '+t('次标签','tags');
+        const title=el('div','algorithm-topic-title');title.append(el('h3','',displayName(r)));if(options.language==='zh'&&!r.members&&topicName(r.tag)!==r.tag)title.append(el('small','algorithm-note',r.tag));
+        const metrics=el('div','algorithm-topic-metrics');
+        [[r.members?t('标签次数','Tag occurrences'):t('尝试题数','Attempted'),r.attempted],[r.members?t('已解决标签','Solved tags'):t('已解决','Solved'),r.solved],[r.members?t('待解决标签','Unresolved tags'):t('待解决','Unresolved'),r.attempted-r.solved],[t('完成率','Completion'),r.completion+'%']].forEach(([label,value])=>{const n=el('div');n.append(el('span','algorithm-note',label),el('strong','',value));metrics.append(n);});
+        detail.append(title,metrics);if(r.members){detail.append(el('p','algorithm-note',t('这里是多个题型的标签计数合计，不是去重题数。展开下方明细查看各题型。','Aggregated tag counts, not unique problems. Expand the details below for individual topics.')));fullDetails.open=true;}
+        else if(r.attempted<5)detail.append(el('p','algorithm-note',t('样本少于 5 题，不据此判断能力。','Fewer than 5 samples; do not infer ability.')));
+      };
+      const palette=['#78cbb4','#779fda','#b49cda','#d7b888','#87becb','#cb9cba','#77879a'];
+      rows.forEach((r,i)=>{
+        const share=r.attempted/total,end=angle+share*Math.PI*2,startPoint=polar(angle),endPoint=polar(end),innerEnd=polar(end,130),innerStart=polar(angle,130),path=document.createElementNS(ns,'path'),color=r.members?palette[6]:palette[i];
+        // Equal endpoints make a single full-circle arc empty; use two semicircles instead.
+        const shape=rows.length===1?'M 220 30 A 190 190 0 1 1 220 410 A 190 190 0 1 1 220 30 Z M 220 90 A 130 130 0 1 0 220 350 A 130 130 0 1 0 220 90 Z':'M '+startPoint.join(' ')+' A 190 190 0 '+(share>0.5?1:0)+' 1 '+endPoint.join(' ')+' L '+innerEnd.join(' ')+' A 130 130 0 '+(share>0.5?1:0)+' 0 '+innerStart.join(' ')+' Z';
+        path.setAttribute('d',shape);path.setAttribute('fill',color);path.setAttribute('class','algorithm-pie-slice');path.setAttribute('role','button');path.setAttribute('tabindex','0');
+        const label=displayName(r)+' · '+r.attempted+' '+t('题','problems')+' · '+(share*100).toFixed(1)+'%';path.setAttribute('aria-label',label);
+        const tooltip=document.createElementNS(ns,'title');tooltip.textContent=label;path.append(tooltip);
+        path.addEventListener('click',()=>select(i));path.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(i);}});svg.append(path);
+        const button=el('button','algorithm-pie-key');button.type='button';button.setAttribute('aria-label',label);button.addEventListener('click',()=>select(i));
+        const dot=el('span','algorithm-pie-dot');dot.style.background=color;dot.setAttribute('aria-hidden','true');
+        const name=el('span','algorithm-pie-name',displayName(r));if(r.members)name.append(el('small','algorithm-note',r.members.length+' '+t('种题型 · 点击展开','topics · click to expand')));else if(options.language==='zh'&&topicName(r.tag)!==r.tag)name.append(el('small','algorithm-note',r.tag));
+        const count=el('span','algorithm-pie-count',r.attempted+' '+t('题','problems'));count.append(el('small','algorithm-note',(share*100).toFixed(1)+'%'));
+        button.append(dot,name,count);legend.append(button);controls.push({path,button});angle=end;
+      });
+      const fullDetails=el('details','algorithm-topic-full');fullDetails.append(el('summary','',t('查看全部题型明细','View all topic details')+' · '+allRows.length));
+      const fullList=el('div','algorithm-topic-full-list');
+      allRows.forEach(r=>{const button=el('button','algorithm-topic-detail-key',topicName(r.tag)+' · '+r.attempted+' '+t('题','problems')+' · '+r.completion+'% '+t('完成','complete'));button.type='button';button.addEventListener('click',()=>select(Math.max(0,rows.findIndex(row=>row===r||row.members?.includes(r))),r));fullList.append(button);});fullDetails.append(fullList);
+      svg.append(centerTitle,centerValue,centerCaption);layout.append(svg,legend);topicBody.append(layout,detail,fullDetails);select(0);
+    };
     filter.addEventListener('change',refreshTopics);refreshTopics();grid.append(topics);
     const verdicts=section(t('提交判定 · 错误分布','Submission verdicts · error distribution'),t('CF / AtCoder；这是提交次数，不是题目数量。编译错误、超时等反映调试方向，不直接等于知识薄弱。','CF / AtCoder submission counts, not problem counts. Errors suggest debugging priorities, not necessarily weak knowledge.'));
     bars(verdicts,data.verdicts.slice(0,10).map(r=>({name:r.name,value:r.count})),t('次','submissions'));grid.append(verdicts);
