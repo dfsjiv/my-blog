@@ -208,6 +208,10 @@
       if (entry[0] === 'rich') button.classList.add('is-active');
       viewModes.appendChild(button);
     });
+    const markdownImportButton = element('button', '', '导入 .md');
+    markdownImportButton.type = 'button';
+    markdownImportButton.title = '导入 UTF-8 Markdown 文件；普通用户最大 256 KB，管理员最大 2 MB';
+    viewModes.appendChild(markdownImportButton);
     primaryBar.append(backButton, mode, topStatus, viewModes, author, panelToggle);
 
     const toolbar = element('div', 'knowledge-writer-toolbar');
@@ -290,6 +294,10 @@
     sourcePreview.append(sourcePreviewHeader, sourcePreviewBody);
     sourceWorkspace.append(sourcePane, sourcePreview);
     const bodyImageInput = document.createElement('input');
+    const markdownFileInput = document.createElement('input');
+    markdownFileInput.type = 'file';
+    markdownFileInput.accept = '.md,.markdown';
+    markdownFileInput.hidden = true;
     bodyImageInput.type = 'file';
     bodyImageInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
     bodyImageInput.hidden = true;
@@ -311,6 +319,7 @@
       editorHost,
       sourceWorkspace,
       bodyImageInput,
+      markdownFileInput,
       bubble,
       slashMenu,
       linkPopover,
@@ -1217,6 +1226,35 @@
       event.preventDefault();
       event.returnValue = '';
     }
+
+    markdownImportButton.addEventListener('click', function () {
+      if (state.editor && !state.destroyed) markdownFileInput.click();
+    });
+    markdownFileInput.addEventListener('change', async function () {
+      const file = markdownFileInput.files && markdownFileInput.files[0];
+      markdownFileInput.value = '';
+      if (!file || !state.editor || state.destroyed) return;
+      markdownImportButton.disabled = true;
+      try {
+        const imported = await adapter.readMarkdownFile(file, isAdmin() ? 2 * 1024 * 1024 : USER_MAX_CONTENT_LENGTH);
+        if (state.destroyed) return;
+        if (currentMarkdown().trim() && !window.confirm('导入将替换当前正文，是否继续？')) return;
+        // Keep the original Markdown rather than round-tripping through rich text.
+        setEditorMode('markdown');
+        sourceInput.value = imported.markdown;
+        if (!titleInput.value.trim()) titleInput.value = imported.title;
+        titleCount.textContent = titleInput.value.length + ' / 100';
+        titleError.textContent = '';
+        handleSourceChange();
+        saveLocalDraft();
+        sourceInput.focus();
+        showNotice('Markdown 已导入，尚未发布。文件中的本地图片需另行上传。');
+      } catch (error) {
+        if (!state.destroyed) showNotice(error.message || 'Markdown 导入失败。', true);
+      } finally {
+        markdownImportButton.disabled = false;
+      }
+    });
 
     toolbar.addEventListener('click', function (event) {
       const target = event.target.closest('[data-editor-action]');

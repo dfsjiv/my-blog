@@ -330,7 +330,28 @@
       .replace(/\\([\\`*{}\[\]()#+.!_<>-])/g, '$1');
   }
 
+  async function readMarkdownFile(file, maxBytes) {
+    if (!file || !/\.(md|markdown)$/i.test(file.name || '')) {
+      throw new Error('请选择 .md 或 .markdown 文件。');
+    }
+    if (file.size > maxBytes) throw new Error('Markdown 文件超过当前账号的导入大小限制。');
+    const buffer = await file.arrayBuffer();
+    if (buffer.byteLength > maxBytes) throw new Error('Markdown 文件超过当前账号的导入大小限制。');
+    let markdown;
+    try {
+      markdown = new TextDecoder('utf-8', { fatal: true }).decode(buffer).replace(/^\uFEFF/, '');
+    } catch (_error) {
+      throw new Error('文件编码无法识别，请另存为 UTF-8 后导入。');
+    }
+    if (markdown.includes('\0')) throw new Error('文件不是有效的 Markdown 文本。');
+    if (!markdown.trim()) throw new Error('Markdown 文件内容为空。');
+    const heading = markdown.trimStart().match(/^#\s+([^\r\n]+)/);
+    const title = heading ? heading[1].replace(/\s+#+\s*$/, '').trim() : file.name.replace(/\.(md|markdown)$/i, '');
+    return { markdown, title: title.slice(0, 100) };
+  }
+
   window.KnowledgeEditorAdapter = {
+    readMarkdownFile,
     create,
     editorDocumentToMarkdown,
     markdownToEditorDocument,
