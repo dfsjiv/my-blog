@@ -1171,6 +1171,7 @@ function validatePost(body, existing, user) {
 }
 
 function validateSolutionMeta(value) {
+    if (value === null || value === undefined) value = {};
     if (!value || typeof value !== "object" || Array.isArray(value)) {
         return { error: { solutionMeta: "算法题解必须提供 solutionMeta" } };
     }
@@ -1215,14 +1216,8 @@ function validateForPublish(post) {
     const fields = {};
     if (!post.title.trim()) fields.title = "发布前必须填写标题";
     if (!post.slug.trim()) fields.slug = "发布前必须生成 Slug";
-    if (!post.contentMarkdown.trim()) fields.contentMarkdown = "发布前必须填写正文";
+    if (!post.category?.trim()) fields.category = "发布前必须填写分类";
     if (!CONTENT_TYPES.has(post.type)) fields.type = "内容类型无效";
-    if (post.type === "solution") {
-        const meta = post.solutionMeta || {};
-        if (!meta.platform) fields["solutionMeta.platform"] = "发布题解前必须填写平台";
-        if (!meta.problemId) fields["solutionMeta.problemId"] = "发布题解前必须填写题号";
-        if (!meta.problemTitle) fields["solutionMeta.problemTitle"] = "发布题解前必须填写题目名称";
-    }
     return Object.keys(fields).length ? fields : null;
 }
 

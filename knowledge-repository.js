@@ -8,11 +8,12 @@
   const detailCache = new Map();
 
   class KnowledgeApiError extends Error {
-    constructor(message, status, code) {
+    constructor(message, status, code, fields) {
       super(message);
       this.name = 'KnowledgeApiError';
       this.status = status || 0;
       this.code = code || 'REQUEST_FAILED';
+      this.fields = fields && typeof fields === 'object' ? fields : {};
     }
   }
 
@@ -68,10 +69,14 @@
     }
     if (!response.ok || !payload || payload.success !== true) {
       const apiError = payload && payload.error;
+      const fieldMessages = apiError && apiError.code === 'VALIDATION_ERROR' && apiError.fields
+        ? Object.values(apiError.fields).filter(function (value) { return typeof value === 'string'; })
+        : [];
       throw new KnowledgeApiError(
-        apiError && apiError.message ? apiError.message : '内容暂时无法加载。',
+        fieldMessages.length ? fieldMessages.join('；') : apiError && apiError.message ? apiError.message : '内容暂时无法加载。',
         response.status,
-        apiError && apiError.code
+        apiError && apiError.code,
+        apiError && apiError.fields
       );
     }
     return payload.data;

@@ -170,6 +170,34 @@ function createApi(env) {
     };
 }
 
+test("custom-category solution collections publish without single-problem metadata", async () => {
+    const env = createDatabase();
+    const api = createApi(env);
+    for (const token of ["admin-token", "user-token"]) {
+        const created = await api("/api/knowledge/admin/posts", {
+            method: "POST", token,
+            body: articleInput({ type: "solution", title: "内部赛29 · " + token,
+                category: "自定义比赛合集", status: "published", solutionMeta: null,
+                contentMarkdown: "# 内部赛29\n\n## A\n```cpp\nint main() {}\n```\n\n## B\n题解" })
+        });
+        assert.equal(created.status, 201);
+        assert.equal(created.body.data.post.category, "自定义比赛合集");
+        assert.equal(created.body.data.post.status, "published");
+    }
+    const minimal = await api("/api/knowledge/admin/posts", {
+        method: "POST", token: "user-token",
+        body: articleInput({ title: "标题与分类", contentMarkdown: "", status: "published" })
+    });
+    assert.equal(minimal.status, 201);
+    const missing = await api("/api/knowledge/admin/posts", {
+        method: "POST", token: "admin-token",
+        body: articleInput({ category: "", status: "published" })
+    });
+    assert.equal(missing.status, 400);
+    assert.match(missing.body.error.fields.category, /分类/);
+    env.sqlite.close();
+});
+
 function articleInput(overrides = {}) {
     return {
         type: "article",

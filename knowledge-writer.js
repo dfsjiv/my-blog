@@ -721,23 +721,14 @@
         titleInput.focus();
         return false;
       }
-      if (!payload.contentMarkdown.trim()) {
-        showNotice('正文不能为空。', true);
-        if (state.editorMode === 'rich') state.editor.commands.focus();
-        else sourceInput.focus();
+      if (publishing && !payload.category.trim()) {
+        openPanel();
+        showNotice('发布前请填写分类，可以使用自定义名称。', true);
         return false;
       }
       if (!isAdmin() && payload.contentMarkdown.length > USER_MAX_CONTENT_LENGTH) {
         showNotice('普通用户的文章正文不能超过 256 KB。', true);
         return false;
-      }
-      if (publishing && payload.type === 'solution') {
-        const solution = payload.solutionMeta || {};
-        if (!solution.platform || !solution.problemId || !solution.problemTitle) {
-          openPanel();
-          showNotice('发布题解前请填写平台、题号和题目名称。', true);
-          return false;
-        }
       }
       return true;
     }
@@ -1661,7 +1652,7 @@
     featured.hidden = !isAdmin();
     const solutionFields = element('fieldset', 'knowledge-writer-solution-fields');
     solutionFields.append(
-      element('legend', '', '题解信息'),
+      element('legend', '', '题解信息（可选，多题合集可留空）'),
       inputField('平台', 'solutionPlatform', '例如：Codeforces'),
       inputField('题号', 'solutionProblemId', '例如：1A'),
       inputField('题目名称', 'solutionProblemTitle', ''),
