@@ -13,6 +13,23 @@
   let destroying = null;
   let libraryPromise = null;
   let syncQueue = Promise.resolve();
+  let activated = false;
+  let loading = false;
+  let loadTimer = 0;
+  let failed = false;
+  const wakeButton = document.createElement('button');
+  wakeButton.type = 'button';
+  wakeButton.className = 'knowledge-live2d-wake';
+  document.body.appendChild(wakeButton);
+
+  function updateWakeButton() {
+    const copy = getCopy(getLanguage());
+    wakeButton.hidden = !isKnowledgeSiteVisible() || Boolean(widget && !loading);
+    wakeButton.disabled = loading;
+    wakeButton.textContent = loading ? copy.loading : failed ? copy.retry : copy.rest;
+    wakeButton.setAttribute('aria-label', loading ? copy.loading : copy.wake);
+    wakeButton.setAttribute('aria-busy', String(loading));
+  }
 
   function isKnowledgeSiteVisible() {
     return shell.getAttribute('aria-hidden') !== 'true'
@@ -28,6 +45,9 @@
     if (language === 'zh') {
       return {
         rest: '休息中',
+        loading: '加载中…',
+        retry: '点击重试',
+        wake: '点击加载看板娘',
         sleep: '让模型休息',
         welcome: ['你好，欢迎来到我的知识站。'],
         messages: ['你在做什么？', '今天想看些什么？', '学习累了就休息一下吧。'],
@@ -36,6 +56,9 @@
 
     return {
       rest: 'Resting',
+      loading: 'Loading…',
+      retry: 'Retry',
+      wake: 'Click to load the character',
       sleep: 'Let the model rest',
       welcome: ['Hello, welcome to my knowledge site.'],
       messages: ['What are you doing?', 'What would you like to read?', 'Take a short break when you need one.'],
@@ -90,6 +113,8 @@
   }
 
   async function destroyWidget() {
+    window.clearTimeout(loadTimer);
+    loading = false;
     if (!widget) return;
     const currentWidget = widget;
     widget = null;
@@ -107,18 +132,38 @@
   }
 
   async function showWidget() {
-    if (!isKnowledgeSiteVisible() || widget) return;
+    if (!activated || !isKnowledgeSiteVisible() || widget) return;
     if (destroying) await destroying;
     if (!isKnowledgeSiteVisible() || widget) return;
 
     let api;
+    loading = true;
+    failed = false;
+    updateWakeButton();
+    // Bound the library download; a failed attempt stays retryable.
+    let libraryTimer;
     try {
-      api = await loadLibrary();
+      api = await Promise.race([
+        loadLibrary(),
+        new Promise(function (_resolve, reject) {
+          libraryTimer = window.setTimeout(function () { reject(new Error('Live2D library timed out')); }, 20000);
+        }),
+      ]);
     } catch (error) {
       console.error('Live2D widget library is unavailable:', error);
+      loading = false;
+      failed = true;
+      activated = false;
+      updateWakeButton();
+      return;
+    } finally {
+      window.clearTimeout(libraryTimer);
+    }
+    if (!isKnowledgeSiteVisible() || widget) {
+      loading = false;
+      updateWakeButton();
       return;
     }
-    if (!isKnowledgeSiteVisible() || widget) return;
 
     const language = getLanguage();
     const copy = getCopy(language);
@@ -210,8 +255,19 @@
     const currentWidget = widget;
     currentWidget.l2d.on('loaded', function () {
       if (widget !== currentWidget) return;
+      window.clearTimeout(loadTimer);
+      loading = false;
+      failed = false;
+      updateWakeButton();
       if (statusElement) statusElement.style.visibility = 'visible';
     });
+    loadTimer = window.setTimeout(async function () {
+      if (widget !== currentWidget || !loading) return;
+      activated = false;
+      failed = true;
+      await destroyWidget();
+      updateWakeButton();
+    }, 20000);
 
     if (!isKnowledgeSiteVisible()) await destroyWidget();
   }
@@ -219,20 +275,31 @@
   async function syncWidget() {
     if (!isKnowledgeSiteVisible()) {
       await destroyWidget();
+      updateWakeButton();
       return;
     }
 
     if (widget && widgetLanguage !== getLanguage()) {
       await destroyWidget();
     }
-    await showWidget();
+    if (activated) await showWidget();
+    updateWakeButton();
   }
 
   function scheduleSync() {
     syncQueue = syncQueue.then(syncWidget).catch(function (error) {
       console.error('Live2D widget synchronization failed:', error);
+      activated = false;
+      failed = true;
+      void destroyWidget().finally(updateWakeButton);
     });
   }
+
+  wakeButton.addEventListener('click', function () {
+    if (loading || !isKnowledgeSiteVisible()) return;
+    activated = true;
+    scheduleSync();
+  });
 
   new MutationObserver(scheduleSync).observe(shell, {
     attributes: true,

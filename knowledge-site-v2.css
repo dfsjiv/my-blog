@@ -4639,3 +4639,20 @@ body.auth-elegant .knowledge-site {
     animation: none;
   }
 }
+.knowledge-live2d-wake {
+  position: fixed;
+  left: 0;
+  bottom: 128px;
+  z-index: 90;
+  padding: 14px 7px;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  background: rgba(224, 83, 142, .94);
+  color: #fff;
+  font: 600 12px/1.4 "Segoe UI", "Microsoft YaHei", sans-serif;
+  writing-mode: vertical-rl;
+  cursor: pointer;
+}
+.knowledge-live2d-wake[hidden] { display: none; }
+.knowledge-live2d-wake:disabled { cursor: wait; opacity: .8; }
+.knowledge-live2d-wake:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
