@@ -385,7 +385,7 @@
     const accountRole = document.getElementById('knowledgeAccountRole');
     const initial = username.slice(0, 1).toUpperCase() || 'U';
     if (accountName) accountName.textContent = username;
-    if (accountInitial) accountInitial.textContent = initial;
+    if (accountInitial) renderUserAvatar(accountInitial, activeUser, initial);
     if (accountRole) {
       accountRole.textContent = t(activeUser && activeUser.role === 'admin'
         ? '管理员账户'
@@ -2014,6 +2014,20 @@
     }
   }
 
+  function renderUserAvatar(target, user, initial, overrideUrl) {
+    target.replaceChildren(document.createTextNode(initial));
+    if (!user || user.role === 'guest' || !Number.isSafeInteger(Number(user.id)) || Number(user.id) <= 0) return;
+    const image = document.createElement('img');
+    image.className = 'knowledge-user-avatar-image';
+    image.alt = '';
+    image.decoding = 'async';
+    image.addEventListener('error', function () {
+      if (image.parentNode === target) target.replaceChildren(document.createTextNode(initial));
+    }, { once: true });
+    image.src = overrideUrl || '/api/profile/avatar/' + Number(user.id);
+    target.replaceChildren(image);
+  }
+
   function renderProfile() {
     const user = currentUser();
     if (!user || user.role === 'guest') {
@@ -2047,6 +2061,63 @@
       contentElement('strong', '', user.username),
       element('span', '', user.role === 'admin' ? '管理员账户' : '用户账户')
     );
+    const avatar = identity.firstElementChild;
+    const initial = user.username.slice(0, 1).toUpperCase() || 'U';
+    renderUserAvatar(avatar, user, initial);
+    const avatarTools = element('div', 'knowledge-profile-actions');
+    const upload = button(state.language === 'zh' ? '上传 / 更换头像' : 'Upload / change avatar', 'knowledge-route-button');
+    const reset = button(state.language === 'zh' ? '恢复默认头像' : 'Reset avatar', 'knowledge-route-button');
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    fileInput.hidden = true;
+    const avatarStatus = element('p', 'knowledge-note', state.language === 'zh'
+      ? '支持 JPG、PNG、WebP、GIF，最大 2 MB。头像公开展示。' : 'JPG, PNG, WebP or GIF, up to 2 MB. Avatars are public.');
+    avatarStatus.setAttribute('role', 'status');
+    upload.addEventListener('click', function () { fileInput.click(); });
+    async function changeAvatar(file, remove) {
+      if (!remove && (!file || file.size > 2 * 1024 * 1024 || !file.size)) {
+        avatarStatus.textContent = state.language === 'zh' ? '请选择 2 MB 以内的图片。' : 'Select an image up to 2 MB.';
+        return;
+      }
+      const token = currentToken();
+      upload.disabled = reset.disabled = true;
+      avatarStatus.textContent = state.language === 'zh' ? '正在保存头像…' : 'Saving avatar…';
+      const controller = new AbortController();
+      const timer = window.setTimeout(function () { controller.abort(); }, 30000);
+      try {
+        const response = await fetch('/api/profile/avatar', {
+          method: remove ? 'DELETE' : 'POST', headers: { Authorization: 'Bearer ' + token },
+          body: remove ? undefined : file, signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error?.message || '头像保存失败');
+        // Do not update another account if the session changed during upload.
+        if (Number(currentUser()?.id) !== Number(user.id)) return;
+        const accountInitial = document.getElementById('knowledgeAccountInitial');
+        if (remove) {
+          avatar.replaceChildren(document.createTextNode(initial));
+          accountInitial?.replaceChildren(document.createTextNode(initial));
+        } else {
+          renderUserAvatar(avatar, user, initial, result.data.url);
+          if (accountInitial) renderUserAvatar(accountInitial, user, initial, result.data.url);
+        }
+        avatarStatus.textContent = state.language === 'zh' ? '头像已更新。' : 'Avatar updated.';
+      } catch (error) {
+        avatarStatus.textContent = error.name === 'AbortError'
+          ? (state.language === 'zh' ? '请求超时，请重试。' : 'Request timed out. Please retry.') : error.message;
+      } finally {
+        window.clearTimeout(timer);
+        upload.disabled = reset.disabled = false;
+      }
+    }
+    fileInput.addEventListener('change', function () {
+      const file = fileInput.files && fileInput.files[0];
+      fileInput.value = '';
+      if (file) void changeAvatar(file, false);
+    });
+    reset.addEventListener('click', function () { void changeAvatar(null, true); });
+    avatarTools.append(upload, reset, fileInput);
 
     const actions = element('div', 'knowledge-profile-actions');
     const home = button(t('返回首页'), 'knowledge-route-button');
@@ -2059,7 +2130,7 @@
       if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
     });
     actions.append(home, desktop, signOut);
-    card.append(identity, actions);
+    card.append(identity, avatarTools, avatarStatus, actions);
     node.appendChild(card);
   }
 

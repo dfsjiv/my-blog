@@ -1,5 +1,6 @@
 import { getContestsResponse } from "../lib/contests/index.mjs";
 import { handleAlgorithmRequest } from "../lib/algorithm-center.mjs";
+import { handleAvatarRequest } from "../lib/profile-avatar.mjs";
 import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
 import {
     handleRegistrationRequest,
@@ -156,6 +157,10 @@ export async function onRequest(context) {
                     ? context.waitUntil.bind(context)
                     : null
             });
+        }
+
+        else if (url.pathname.startsWith("/api/profile/avatar")) {
+            response = await handleAvatarRequest({ request, env, url, jsonResponse, getBearerToken, getAuthenticatedUser });
         }
 
         else if (url.pathname.startsWith("/api/algorithm/")) {

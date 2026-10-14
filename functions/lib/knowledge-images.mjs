@@ -114,7 +114,7 @@ export async function getKnowledgeImage(context, rawKey) {
     return new Response(object.body, { headers });
 }
 
-function detectImageType(bytes) {
+export function detectImageType(bytes) {
     for (const [mimeType, type] of Object.entries(IMAGE_TYPES)) {
         if (mimeType === "image/webp") {
             if (

@@ -4656,3 +4656,6 @@ body.auth-elegant .knowledge-site {
 .knowledge-live2d-wake[hidden] { display: none; }
 .knowledge-live2d-wake:disabled { cursor: wait; opacity: .8; }
 .knowledge-live2d-wake:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.knowledge-user-avatar-image { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 50%; }
+#knowledgeAccountInitial { overflow: hidden; }
+.knowledge-profile-avatar { overflow: hidden; }
