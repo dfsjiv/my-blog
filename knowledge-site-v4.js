@@ -164,6 +164,14 @@
       });
       try {
         const backgrounds = await repository.getBackgrounds();
+        let displaySettings = [];
+        try {
+          displaySettings = await window.KnowledgeBackgroundDisplay.get(['builtin-1', 'builtin-2', 'builtin-3', 'builtin-4', ...backgrounds.map(b => String(b.id))]);
+        } catch (error) { console.error('Background display settings unavailable:', error.message); }
+        const builtins = Array.from(container.querySelectorAll('[data-knowledge-hero-slide]'));
+        builtins.forEach(function (slide, index) {
+          window.KnowledgeBackgroundDisplay.apply(slide, displaySettings.find(s => s.key === 'builtin-' + (index + 1))?.display);
+        });
         backgrounds.forEach(function (background) {
           if (!background.url) return;
           const slide = element('span', 'knowledge-hero-slide');
@@ -172,6 +180,8 @@
           slide.dataset.backgroundUrl = background.url;
           slide.dataset.focalPosition = background.focalPosition;
           slide.style.backgroundPosition = background.focalPosition + ' center';
+          const legacyDisplay = { x: ({ left: 0, center: 50, right: 100 })[background.focalPosition] ?? 50, y: 50, zoom: 1.08 };
+          window.KnowledgeBackgroundDisplay.apply(slide, displaySettings.find(s => s.key === String(background.id))?.display || legacyDisplay);
           container.appendChild(slide);
         });
       } catch (error) {
@@ -2345,6 +2355,10 @@
     previewImage.hidden = true;
     const previewEmpty = element('span', '', '选择图片后在这里预览');
     preview.append(previewImage, previewEmpty);
+    const uploadAdjust = window.KnowledgeBackgroundDisplay.editor('', { x: 50, y: 50, zoom: 1.08 });
+    uploadAdjust.root.hidden = true;
+    previewImage.hidden = true;
+    preview.appendChild(uploadAdjust.root);
 
     const fields = element('div', 'knowledge-background-upload-fields');
     const fileLabel = element('label');
@@ -2365,6 +2379,7 @@
     focalLabel.appendChild(element('span', '', '画面焦点'));
     const focalSelect = backgroundFocalSelect('center');
     focalLabel.appendChild(focalSelect);
+    focalSelect.addEventListener('change', function () { uploadAdjust.setFocal(focalSelect.value); });
     const upload = button('上传并加入队列', 'knowledge-route-button is-primary');
     upload.type = 'submit';
     const message = element('p', 'knowledge-background-message');
@@ -2379,7 +2394,9 @@
     );
     const list = element('div', 'knowledge-background-list');
     list.appendChild(makeLoadingState('正在加载背景…'));
-    workspace.append(form, heading, list);
+    const builtinHeading = element('h2', '', '原有背景 · 同样可调整与预览');
+    const builtinList = element('div', 'knowledge-background-list');
+    workspace.append(form, builtinHeading, builtinList, heading, list);
     node.appendChild(workspace);
 
     let previewUrl = '';
@@ -2390,6 +2407,7 @@
       message.textContent = '';
       const file = fileInput.files?.[0];
       if (!file) {
+        uploadAdjust.root.hidden = true;
         previewImage.hidden = true;
         previewEmpty.hidden = false;
         return;
@@ -2398,13 +2416,16 @@
         message.textContent = '请选择不超过 8 MB 的 JPEG、PNG 或 WebP 图片。';
         message.classList.add('is-error');
         fileInput.value = '';
+        uploadAdjust.root.hidden = true;
         previewImage.hidden = true;
         previewEmpty.hidden = false;
         return;
       }
       previewUrl = URL.createObjectURL(file);
       previewImage.src = previewUrl;
-      previewImage.hidden = false;
+      uploadAdjust.setSource(previewUrl);
+      uploadAdjust.root.hidden = false;
+      previewImage.hidden = true;
       previewEmpty.hidden = true;
       previewImage.onload = function () {
         const dimensions = previewImage.naturalWidth + ' × ' + previewImage.naturalHeight;
@@ -2423,19 +2444,24 @@
       message.classList.remove('is-error');
       message.textContent = '正在上传背景…';
       try {
-        await repository.uploadBackground(file, {
+        const uploaded = await repository.uploadBackground(file, {
           title: titleInput.value.trim(),
           focalPosition: focalSelect.value,
         }, { token: currentToken(), signal: controller.signal });
+        let displayError = '';
+        try { await window.KnowledgeBackgroundDisplay.save(uploaded.id, uploadAdjust.value(), currentToken(), controller.signal); }
+        catch (error) { displayError = error.message; }
         if (controller.signal.aborted) return;
         fileInput.value = '';
         titleInput.value = '';
         previewImage.hidden = true;
+        uploadAdjust.root.hidden = true;
         previewImage.removeAttribute('src');
         previewEmpty.hidden = false;
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = '';
-        message.textContent = '背景已加入展示队列。';
+        message.textContent = displayError ? '背景已上传，但调整设置未保存。请在队列中重试：' + displayError : '背景已加入展示队列。';
+        message.classList.toggle('is-error', Boolean(displayError));
         await loadBackgroundList();
         await heroCarouselRefresh?.();
       } catch (error) {
@@ -2455,12 +2481,31 @@
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
+        let displays = [];
+        try { displays = await window.KnowledgeBackgroundDisplay.get(['builtin-1', 'builtin-2', 'builtin-3', 'builtin-4', ...items.map(item => String(item.id))], controller.signal); }
+        catch (error) { if (controller.signal.aborted) return; }
+        builtinList.replaceChildren();
+        for (let i = 1; i <= 4; i++) {
+          const key = 'builtin-' + i;
+          const edit = window.KnowledgeBackgroundDisplay.editor('assets/knowledge/hero-0' + i + '.webp', displays.find(d => d.key === key)?.display);
+          const row = element('article', 'knowledge-background-row');
+          const name = element('strong', '', '原有背景 ' + i);
+          const action = button('保存调整', 'knowledge-route-button is-primary');
+          const status = element('p', 'knowledge-background-row-message'); status.setAttribute('role', 'status');
+          action.addEventListener('click', async function () {
+            action.disabled = true; status.textContent = '正在保存…';
+            try { await window.KnowledgeBackgroundDisplay.save(key, edit.value(), currentToken(), controller.signal); await heroCarouselRefresh?.(); status.textContent = '已保存，首页轮播已同步。'; }
+            catch (error) { status.textContent = error.message; } finally { action.disabled = false; }
+          });
+          row.append(edit.root, name, action, status); builtinList.appendChild(row);
+        }
         list.replaceChildren();
         if (!items.length) {
           list.appendChild(makeEmptyState('还没有自定义背景。', '上传后会自动加入默认背景之后。'));
           return;
         }
         items.forEach(function (background, index) {
+          background.display = displays.find(d => d.key === String(background.id))?.display;
           list.appendChild(makeBackgroundRow(background, items, index, loadBackgroundList));
         });
       } catch (error) {
@@ -2471,10 +2516,7 @@
 
     function makeBackgroundRow(background, items, index, reload) {
       const row = element('article', 'knowledge-background-row');
-      const image = document.createElement('img');
-      image.src = background.url;
-      image.alt = background.title || '自定义背景';
-      image.style.objectPosition = background.focalPosition + ' center';
+      const displayEditor = window.KnowledgeBackgroundDisplay.editor(background.url, background.display || { x: ({ left: 0, center: 50, right: 100 })[background.focalPosition] ?? 50, y: 50, zoom: 1.08 });
       const settings = element('div', 'knowledge-background-row-settings');
       const title = document.createElement('input');
       title.type = 'text';
@@ -2483,6 +2525,7 @@
       title.setAttribute('aria-label', '背景名称');
       const focal = backgroundFocalSelect(background.focalPosition);
       focal.setAttribute('aria-label', '画面焦点');
+      focal.addEventListener('change', function () { displayEditor.setFocal(focal.value); });
       const enabledLabel = element('label', 'knowledge-background-enabled');
       const enabled = document.createElement('input');
       enabled.type = 'checkbox';
@@ -2501,7 +2544,7 @@
       const remove = button('删除', 'knowledge-route-button is-danger');
       actions.append(save, up, down, remove);
       const rowMessage = element('p', 'knowledge-background-row-message');
-      row.append(image, settings, actions, rowMessage);
+      row.append(displayEditor.root, settings, actions, rowMessage);
 
       async function run(operation) {
         actions.querySelectorAll('button').forEach(function (control) { control.disabled = true; });
@@ -2517,13 +2560,14 @@
       }
 
       save.addEventListener('click', function () {
-        run(function () {
-          return repository.updateBackground(background.id, {
+        run(async function () {
+          await repository.updateBackground(background.id, {
             title: title.value.trim(),
             focalPosition: focal.value,
             isEnabled: enabled.checked,
             sortOrder: background.sortOrder,
           }, { token: currentToken() });
+          await window.KnowledgeBackgroundDisplay.save(background.id, displayEditor.value(), currentToken(), controller.signal);
         });
       });
       up.addEventListener('click', function () {

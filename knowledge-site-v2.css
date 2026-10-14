@@ -4674,3 +4674,11 @@ body.auth-elegant .knowledge-site {
 .knowledge-avatar-crop-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 160px rgba(0,0,0,.55); pointer-events: none; }
 .knowledge-avatar-crop-dialog label { display: grid; gap: 8px; }
 .knowledge-avatar-crop-dialog button { padding: 10px 16px; border: 1px solid #40536b; border-radius: 8px; background: #243449; color: #edf2f7; cursor: pointer; }
+.knowledge-background-adjust { display: grid; gap: 12px; width: 100%; min-width: 0; padding: 12px; box-sizing: border-box; }
+.knowledge-background-adjust[hidden] { display: none; }
+.knowledge-background-stage { position: relative; width: 100%; margin: auto; overflow: hidden; background: #101722; touch-action: none; cursor: move; }
+.knowledge-background-stage > img { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.knowledge-background-adjust-controls { display: grid; gap: 10px; }
+.knowledge-background-adjust-controls label { display: grid; grid-template-columns: 70px minmax(0,1fr) 55px; align-items: center; gap: 8px; font-size: 12px; }
+.knowledge-background-adjust select { max-width: 100%; color: var(--knowledge-text); background: var(--knowledge-surface-solid); border: 1px solid var(--knowledge-border); padding: 8px; }
+.knowledge-background-row > .knowledge-background-row-message { grid-column: 1 / -1; }

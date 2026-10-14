@@ -2,6 +2,7 @@ import { getContestsResponse } from "../lib/contests/index.mjs";
 import { handleAlgorithmRequest } from "../lib/algorithm-center.mjs";
 import { handleAvatarRequest } from "../lib/profile-avatar.mjs";
 import { handleProfileRequest } from "../lib/user-profile.mjs";
+import { handleBackgroundDisplay } from "../lib/background-display.mjs";
 import { handleKnowledgeRequest } from "../lib/knowledge-api.mjs";
 import {
     handleRegistrationRequest,
@@ -166,6 +167,10 @@ export async function onRequest(context) {
 
         else if (url.pathname === '/api/profile' || url.pathname === '/api/profile/public') {
             response = await handleProfileRequest({ request, env, url, jsonResponse, getBearerToken, getAuthenticatedUser });
+        }
+
+        else if (url.pathname === '/api/background-display') {
+            response = await handleBackgroundDisplay({ request, env, url, jsonResponse, getBearerToken, getAuthenticatedUser });
         }
 
         else if (url.pathname.startsWith("/api/algorithm/")) {
