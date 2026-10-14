@@ -205,7 +205,7 @@ assert.match(comments, /addEventListener\('knowledge-auth-changed'/);
 assert.match(comments, /removeEventListener\('knowledge-auth-changed'/);
 assert.match(legacyBlog, /const LEGACY_COMMENTS_ENABLED = false/);
 assert.match(legacyBlog, /if \(LEGACY_COMMENTS_ENABLED\)/);
-assert.match(html, /knowledge-site-v2\.css\?v=20261014-background-display-1/);
+assert.match(html, /knowledge-site-v2\.css\?v=20261014-wizard-chess-1/);
 assert.match(css, /\.knowledge-hero-waves\s*\{[\s\S]*height:\s*220px/);
 assert.match(css, /viewBox='0 0 1440 220'/);
 assert.match(css, /M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 120V220H0Z/);
@@ -252,7 +252,7 @@ assert.match(css, /\.knowledge-social-links\s*\{/);
 assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
-assert.match(html, /knowledge-site-v4\.js\?v=20261014-background-display-1/);
+assert.match(html, /knowledge-site-v4\.js\?v=20261014-wizard-chess-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);

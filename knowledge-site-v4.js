@@ -1309,6 +1309,7 @@
 
     const games = [
       { number: '01', title: '2048', tone: 'cyan', type: '2048' },
+      { number: '02', title: "Wizard's Chess · 巫师国际象棋", tone: 'gold', type: 'wizard-chess' },
     ];
     const gallery = element('section', 'knowledge-game-gallery');
     gallery.setAttribute('aria-label', t('小游戏'));
@@ -1327,7 +1328,7 @@
       heading.append(
         element('span', 'knowledge-route-kicker', '游戏陈列室'),
         element('h1', '', game.title),
-        element('p', '', '合并相同数字，尝试得到 2048。支持方向键、WASD 和触摸滑动。')
+        element('p', '', game.type === '2048' ? '合并相同数字，尝试得到 2048。支持方向键、WASD 和触摸滑动。' : '哥特式教堂中的 3D 国际象棋。点击开始后加载，推荐全屏游玩。')
       );
 
       const windowFrame = element('div', 'knowledge-game-window');
@@ -1346,6 +1347,40 @@
         if (window.KnowledgeGame2048?.mount) {
           state.gameCleanup = window.KnowledgeGame2048.mount(gameRoot, { translate: t });
         }
+      }
+      if (game.type === 'wizard-chess') {
+        stage.classList.add('is-wizard-chess');
+        const controls = element('div', 'knowledge-game-embed-controls');
+        const start = button(state.language === 'zh' ? '开始游戏' : 'Start game', 'knowledge-route-button is-primary');
+        const fullscreen = button(state.language === 'zh' ? '全屏游戏' : 'Fullscreen', 'knowledge-route-button'); fullscreen.disabled = true;
+        const close = button(state.language === 'zh' ? '关闭游戏' : 'Close game', 'knowledge-route-button'); close.disabled = true;
+        const message = element('p', 'knowledge-note', state.language === 'zh' ? '启动后才下载游戏资源。需要联网及浏览器 WebGL 支持。' : 'Loads on demand. Internet access and browser WebGL support required.');
+        message.setAttribute('role', 'status');
+        const mount = element('div', 'knowledge-wizard-chess-mount');
+        let frame = null;
+        function stop() { frame?.remove(); frame = null; start.disabled = false; fullscreen.disabled = close.disabled = true; }
+        start.addEventListener('click', function () {
+          if (frame) return;
+          frame = document.createElement('iframe');
+          frame.title = "Wizard's Chess";
+          // Isolate the supplied game and its CDN scripts from account storage.
+          frame.setAttribute('sandbox', 'allow-scripts');
+          frame.setAttribute('allow', 'fullscreen; autoplay');
+          frame.allowFullscreen = true;
+          frame.src = 'assets/games/wizard-chess/index.html';
+          mount.appendChild(frame);
+          start.disabled = true; close.disabled = fullscreen.disabled = false;
+          message.textContent = state.language === 'zh' ? '正在加载游戏。若长时间空白，请检查外部资源连接。' : 'Loading. If the screen stays blank, check external resource access.';
+          frame.addEventListener('load', function () { message.textContent = state.language === 'zh' ? '游戏已打开。全屏可获得更完整的棋盘与操作面板。' : 'Game opened. Use fullscreen for the complete board and controls.'; }, { once: true });
+        });
+        fullscreen.addEventListener('click', async function () {
+          try { if (!frame?.requestFullscreen) throw new Error('Fullscreen unavailable'); await frame.requestFullscreen(); }
+          catch { message.textContent = state.language === 'zh' ? '此浏览器暂不支持全屏，请在当前窗口游玩。' : 'Fullscreen unavailable. Play in the current window.'; }
+        });
+        close.addEventListener('click', function () { stop(); message.textContent = state.language === 'zh' ? '游戏已关闭，重新开始将重置棋局。' : 'Game closed. Starting again resets the match.'; });
+        controls.append(start, fullscreen, close); stage.append(controls, message, mount);
+        const previousCleanup = state.gameCleanup;
+        state.gameCleanup = function () { previousCleanup?.(); stop(); };
       }
 
       const statusBar = element('div', 'knowledge-game-statusbar');

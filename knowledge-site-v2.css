@@ -4682,3 +4682,7 @@ body.auth-elegant .knowledge-site {
 .knowledge-background-adjust-controls label { display: grid; grid-template-columns: 70px minmax(0,1fr) 55px; align-items: center; gap: 8px; font-size: 12px; }
 .knowledge-background-adjust select { max-width: 100%; color: var(--knowledge-text); background: var(--knowledge-surface-solid); border: 1px solid var(--knowledge-border); padding: 8px; }
 .knowledge-background-row > .knowledge-background-row-message { grid-column: 1 / -1; }
+.knowledge-game-stage.is-wizard-chess { display: block; padding: 16px; min-height: 480px; }
+.knowledge-game-embed-controls { display: flex; flex-wrap: wrap; gap: 10px; }
+.knowledge-wizard-chess-mount iframe { display: block; width: 100%; height: clamp(440px,65vh,760px); border: 0; background: #0b0912; }
+.knowledge-wizard-chess-mount iframe:fullscreen { width: 100vw; height: 100vh; }
