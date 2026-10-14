@@ -1458,6 +1458,7 @@ function toListPost(post, admin = false) {
         isFeatured: post.isFeatured,
         sourceUrl: post.sourceUrl,
         author: post.author || null,
+        authorUserId: post.authorUserId,
         wordCount: post.wordCount,
         readingTimeMinutes: post.readingTimeMinutes,
         createdAt: post.createdAt,
@@ -1481,7 +1482,7 @@ function toDetailPost(post, admin) {
         renderedContent: post.renderedContent ?? null,
         contentMarkdown: post.contentMarkdown,
         contentFormat: post.contentFormat || "markdown",
-        authorUserId: admin ? post.authorUserId : undefined
+        authorUserId: post.authorUserId
     };
 }
 

@@ -575,7 +575,7 @@ test("knowledge API enforces author permissions and full post lifecycle", async 
     const publicDetail = await api(`/api/knowledge/posts/${articleSlug}`);
     assert.equal(publicDetail.status, 200);
     assert.equal(typeof publicDetail.body.data.post.contentMarkdown, "string");
-    assert.equal(publicDetail.body.data.post.authorUserId, undefined);
+    assert.equal(publicDetail.body.data.post.authorUserId, 1);
     assert.equal(
         Object.prototype.hasOwnProperty.call(
             (await api("/api/knowledge/posts")).body.data.items[0],

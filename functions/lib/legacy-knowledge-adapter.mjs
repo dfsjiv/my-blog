@@ -66,6 +66,7 @@ export function normalizeLegacyPost(row) {
         readingTimeMinutes: metrics.readingTimeMinutes,
         sourceUrl: null,
         author: row.author || null,
+        authorUserId: Number(row.author_id) || null,
         solutionMeta: null
     };
 }

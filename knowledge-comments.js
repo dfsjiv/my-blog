@@ -149,7 +149,9 @@
         : 'knowledge-comment-item');
       const header = node('header', 'knowledge-comment-header');
       header.append(
-        node('strong', '', comment.author && comment.author.username ? comment.author.username : t('用户')),
+        window.KnowledgeUserProfile
+          ? window.KnowledgeUserProfile.identity(comment.author?.id, comment.author?.username || t('用户'))
+          : node('strong', '', comment.author && comment.author.username ? comment.author.username : t('用户')),
         node('time', '', formatDate(comment.createdAt, getLanguage()))
       );
       const actions = node('div', 'knowledge-comment-actions');

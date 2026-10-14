@@ -385,6 +385,11 @@
     const accountRole = document.getElementById('knowledgeAccountRole');
     const initial = username.slice(0, 1).toUpperCase() || 'U';
     if (accountName) accountName.textContent = username;
+    if (!isGuest && window.KnowledgeUserProfile) {
+      window.KnowledgeUserProfile.get(activeUser.id).then(function (profile) {
+        if (accountName && Number(currentUser()?.id) === Number(activeUser.id)) accountName.textContent = profile.nickname || username;
+      });
+    }
     if (accountInitial) renderUserAvatar(accountInitial, activeUser, initial);
     if (accountRole) {
       accountRole.textContent = t(activeUser && activeUser.role === 'admin'
@@ -546,6 +551,7 @@
     const tags = element('div', 'knowledge-card-tags');
     appendTags(tags, post.tags);
     const meta = element('div', 'knowledge-card-meta');
+    if (window.KnowledgeUserProfile) meta.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
     appendIf(meta, '', post.category);
     appendIf(meta, t('发布：'), formatDate(post.publishedAt));
     appendIf(meta, t('更新：'), formatDate(post.updatedAt));
@@ -573,6 +579,7 @@
       contentElement('p', '', post.summary),
       tags
     );
+    if (window.KnowledgeUserProfile) card.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
     return card;
   }
 
@@ -591,6 +598,7 @@
     const tags = element('div', 'knowledge-card-tags');
     appendTags(tags, solution.algorithms);
     const meta = element('div', 'knowledge-solution-meta');
+    if (window.KnowledgeUserProfile) meta.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
     appendIf(meta, t('语言：'), solution.language);
     appendIf(meta, t('时间：'), solution.timeComplexity);
     appendIf(meta, t('发布：'), formatDate(post.publishedAt));
@@ -2111,13 +2119,58 @@
         upload.disabled = reset.disabled = false;
       }
     }
-    fileInput.addEventListener('change', function () {
+    fileInput.addEventListener('change', async function () {
       const file = fileInput.files && fileInput.files[0];
       fileInput.value = '';
-      if (file) void changeAvatar(file, false);
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024 || !/^(image\/(jpeg|png|webp|gif))$/.test(file.type)) {
+        avatarStatus.textContent = state.language === 'zh' ? '请选择 2 MB 以内的 JPG、PNG、WebP 或 GIF。' : 'Select JPG, PNG, WebP or GIF up to 2 MB.';
+        return;
+      }
+      upload.disabled = reset.disabled = true;
+      try {
+        const cropped = await window.KnowledgeUserProfile.crop(file, state.language);
+        if (cropped && Number(currentUser()?.id) === Number(user.id)) await changeAvatar(cropped, false);
+      } catch (error) { avatarStatus.textContent = error.message; }
+      finally { upload.disabled = reset.disabled = false; }
     });
     reset.addEventListener('click', function () { void changeAvatar(null, true); });
     avatarTools.append(upload, reset, fileInput);
+
+    const nicknameForm = element('form', 'knowledge-profile-nickname');
+    const nicknameLabel = element('label');
+    nicknameLabel.append(document.createTextNode(state.language === 'zh' ? '昵称' : 'Nickname'));
+    const nicknameInput = document.createElement('input');
+    nicknameInput.type = 'text'; nicknameInput.maxLength = 80;
+    nicknameInput.placeholder = state.language === 'zh' ? '中文、表情和符号均可，最多 40 字符' : 'Up to 40 characters, including emoji';
+    nicknameLabel.append(nicknameInput);
+    const nicknameSave = button(state.language === 'zh' ? '保存昵称' : 'Save nickname', 'knowledge-route-button'); nicknameSave.type = 'submit';
+    const nicknameStatus = element('p', 'knowledge-note', state.language === 'zh' ? '账号：' + user.username + '（登录账号不变；昵称留空恢复账号名）' : 'Account: ' + user.username + ' (login unchanged; blank nickname uses account name)'); nicknameStatus.setAttribute('role', 'status');
+    nicknameForm.append(nicknameLabel, nicknameSave, nicknameStatus);
+    nicknameInput.disabled = nicknameSave.disabled = true;
+    window.KnowledgeUserProfile.get(user.id).then(function (profile) {
+      nicknameInput.value = profile.nickname || '';
+      identity.lastElementChild.firstElementChild.textContent = profile.nickname || user.username;
+      nicknameInput.disabled = nicknameSave.disabled = false;
+    });
+    nicknameForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const nickname = nicknameInput.value.trim();
+      if (Array.from(nickname).length > 40) { nicknameStatus.textContent = state.language === 'zh' ? '昵称最多 40 个字符。' : 'Maximum 40 characters.'; return; }
+      nicknameSave.disabled = true;
+      const controller = new AbortController(), timer = window.setTimeout(function () { controller.abort(); }, 10000);
+      try {
+        const response = await fetch('/api/profile', { method: 'PATCH', headers: { Authorization: 'Bearer ' + currentToken(), 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname }), signal: controller.signal });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error?.message || '昵称保存失败');
+        if (Number(currentUser()?.id) !== Number(user.id)) return;
+        window.KnowledgeUserProfile.clear(user.id);
+        identity.lastElementChild.firstElementChild.textContent = result.data.nickname || user.username;
+        const name = document.getElementById('knowledgeAccountName'); if (name) name.textContent = result.data.nickname || user.username;
+        nicknameStatus.textContent = state.language === 'zh' ? '昵称已保存，登录账号仍为：' + user.username : 'Nickname saved. Login account: ' + user.username;
+      } catch (error) { nicknameStatus.textContent = error.name === 'AbortError' ? '请求超时，请重试' : error.message; }
+      finally { window.clearTimeout(timer); nicknameSave.disabled = false; }
+    });
 
     const actions = element('div', 'knowledge-profile-actions');
     const home = button(t('返回首页'), 'knowledge-route-button');
@@ -2130,7 +2183,7 @@
       if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
     });
     actions.append(home, desktop, signOut);
-    card.append(identity, avatarTools, avatarStatus, actions);
+    card.append(identity, avatarTools, avatarStatus, nicknameForm, actions);
     node.appendChild(card);
   }
 
@@ -2851,7 +2904,8 @@
     const tags = element('div', 'knowledge-card-tags');
     appendTags(tags, post.tags);
     const meta = element('div', 'knowledge-detail-meta');
-    appendIf(meta, t('作者：'), post.author || 'Lee Ethan');
+    if (window.KnowledgeUserProfile) meta.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author || 'Lee Ethan'));
+    else appendIf(meta, t('作者：'), post.author || 'Lee Ethan');
     appendIf(meta, t('发布：'), formatDate(post.publishedAt));
     appendIf(meta, t('更新：'), formatDate(post.updatedAt));
     appendIf(meta, t('分类：'), post.category);
