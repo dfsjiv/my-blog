@@ -550,30 +550,10 @@
   }
 
   function makeContentCard(post) {
-    const card = element('article', 'knowledge-content-card');
-    card.dataset.postSlug = post.slug;
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
-    card.setAttribute('aria-label', t('打开文章：') + post.title);
-    const body = element('div', 'knowledge-content-body');
-    const top = element('div', 'knowledge-card-tags');
-    top.appendChild(element('span', 'knowledge-type-badge', typeLabel(post.type)));
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, post.tags);
-    const meta = element('div', 'knowledge-card-meta');
-    if (window.KnowledgeUserProfile) meta.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
-    appendIf(meta, '', post.category);
-    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
-    appendIf(meta, t('更新：'), formatDate(post.updatedAt));
-    appendIf(meta, '', post.readingTimeMinutes ? post.readingTimeMinutes + ' ' + t('分钟') : '');
-    appendIf(meta, '', post.wordCount ? post.wordCount + ' ' + t('字') : '');
-    const flags = element('span', 'knowledge-card-flags');
-    if (post.isPinned) flags.appendChild(element('span', 'knowledge-state-badge', '置顶'));
-    if (post.isFeatured) flags.appendChild(element('span', 'knowledge-state-badge', '精选'));
-    meta.appendChild(flags);
-    body.append(top, contentElement('h3', '', post.title), contentElement('p', '', post.summary), tags, meta);
-    card.append(coverNode(post), body);
-    return card;
+    return window.KnowledgePostCard.render(post, {
+      t, typeLabel, formatDate, coverNode, appendTags,
+      identity: window.KnowledgeUserProfile?.identity,
+    });
   }
 
   function makeFeaturedCard(post) {
@@ -595,40 +575,22 @@
 
   function makeSolutionCard(post) {
     const solution = post.solution || {};
-    const card = element('article', 'knowledge-solution-card');
-    card.dataset.postSlug = post.slug;
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
+    const card = makeContentCard(Object.assign({}, post, {
+      tags: post.tags?.length ? post.tags : solution.algorithms || [],
+    }));
+    card.classList.add('knowledge-solution-card');
     card.setAttribute('aria-label', t('打开题解：') + post.title);
-    const identity = element('div', 'knowledge-solution-identity');
-    appendIf(identity, '', solution.platform);
-    appendIf(identity, '', solution.problemId);
-    appendIf(identity, '', solution.difficulty);
-    const body = element('div', 'knowledge-solution-body');
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, solution.algorithms);
-    const meta = element('div', 'knowledge-solution-meta');
-    if (window.KnowledgeUserProfile) meta.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
-    appendIf(meta, t('语言：'), solution.language);
-    appendIf(meta, t('时间：'), solution.timeComplexity);
-    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
-    body.append(
-      element('span', 'knowledge-type-badge', typeLabel(post.type)),
-      contentElement('h3', '', solution.problemTitle || post.title),
-      contentElement('p', '', post.summary),
-      tags,
-      meta
-    );
+    const row = card.querySelector('.knowledge-post-summary-row');
+    const info = [solution.platform, solution.problemId, solution.difficulty, solution.language].filter(Boolean);
+    if (info.length) row.appendChild(contentElement('span', 'knowledge-post-solution-info', info.join(' · ')));
     const problemUrl = safeExternalUrl(solution.problemUrl);
     if (problemUrl) {
-      const link = element('a', 'knowledge-problem-link', '查看原题');
+      const link = element('a', 'knowledge-post-source', '查看原题');
       link.href = problemUrl;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      body.appendChild(link);
+      row.appendChild(link);
     }
-    const visual = safeExternalUrl(post.coverUrl) ? coverNode(post) : identity;
-    card.append(visual, body);
     return card;
   }
 

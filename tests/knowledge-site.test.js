@@ -187,7 +187,7 @@ assert.match(site, /repository\.changePostState/);
 assert.match(site, /repository\.deletePost/);
 assert.match(site, /function makeShareLink/);
 assert.match(site, /navigator\.clipboard\.writeText/);
-assert.match(site, /safeExternalUrl\(post\.coverUrl\) \? coverNode\(post\) : identity/);
+assert.match(site, /KnowledgePostCard\.render\(post/);
 assert.match(site, /post\.source === 'legacy-blog' \? '转换并编辑' : '编辑'/);
 assert.match(site, /repository\.createEditableLegacyPost/);
 assert.doesNotMatch(site, /草稿箱功能待接入|文章管理功能待接入/);
@@ -252,7 +252,7 @@ assert.match(css, /\.knowledge-social-links\s*\{/);
 assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
-assert.match(html, /knowledge-site-v4\.js\?v=20261014-wizard-chess-1/);
+assert.match(html, /knowledge-site-v4\.js\?v=20261016-reference-card-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);
