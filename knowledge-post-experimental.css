@@ -1,0 +1,95 @@
+/* Armor and hand-deck appearances share the real article data and cover crop. */
+.knowledge-content-card.knowledge-post-card[data-post-appearance="armor"] {
+  grid-template-columns: minmax(0,66%) minmax(0,34%); min-height: 260px;
+  margin: 18px 16px; overflow: visible; border-color: #39c5bb66;
+  background: linear-gradient(135deg,var(--knowledge-bg),var(--knowledge-surface-solid));
+}
+.knowledge-post-card[data-post-appearance="armor"]:hover,.knowledge-post-card[data-post-appearance="armor"]:focus-visible { border-color: #00f0ff; box-shadow: 0 14px 30px #00f0ff18; }
+.knowledge-post-armor-art { position: relative; min-width: 0; z-index: 2; order: 2; }
+.knowledge-post-armor-art > .knowledge-post-cover,.knowledge-post-armor-art > .knowledge-post-armor-ghost {
+  position: absolute; inset: 28px 22px 28px 64px; width: auto; height: auto; min-height: 0; overflow: hidden;
+  border: 2px solid var(--knowledge-border); border-radius: 14px; box-sizing: border-box; clip-path: none;
+  background: var(--knowledge-primary-soft); transition: transform .45s cubic-bezier(.22,1,.36,1),opacity .4s ease,box-shadow .4s ease;
+}
+.knowledge-post-armor-art > .knowledge-post-cover { z-index: 4; }
+.knowledge-post-armor-art img { width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+.knowledge-post-armor-ghost { opacity: 0; pointer-events: none; }
+.knowledge-post-armor-ghost:nth-child(1) { filter: sepia(1) saturate(4) hue-rotate(5deg); border-color: #facc15; }
+.knowledge-post-armor-ghost:nth-child(2) { filter: sepia(1) saturate(4) hue-rotate(280deg); border-color: #ff2e7e; }
+.knowledge-post-armor-ghost:nth-child(3) { filter: sepia(1) saturate(4) hue-rotate(140deg); border-color: #00f0ff; }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-ghost:nth-child(1) { opacity: .4; transform: translate(-42px,6px) scale(.9) rotate(-6deg); }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-ghost:nth-child(2) { opacity: .55; transform: translate(-28px,4px) scale(.94) rotate(-4deg); }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-ghost:nth-child(3) { opacity: .7; transform: translate(-14px,2px) scale(.97) rotate(-2deg); }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-art > .knowledge-post-cover { transform: translate(5px,-7px) scale(1.03) rotate(1deg); box-shadow: 0 12px 25px #00f0ff30; }
+.knowledge-post-armor-plate { position: absolute; width: 130px; height: 20px; z-index: 3; background: var(--knowledge-surface-solid); border: 2px solid #39c5bb; pointer-events: none; transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
+.knowledge-post-armor-plate.is-top { top: -9px; left: 10px; clip-path: polygon(0 0,100% 0,86% 100%,0 100%); }
+.knowledge-post-armor-plate.is-bottom { bottom: -9px; right: 10px; border-color: #ff2e7e; clip-path: polygon(14% 0,100% 0,100% 100%,0 100%); }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .is-top { transform: translate(-8px,-8px) rotate(-3deg); }
+.knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .is-bottom { transform: translate(8px,8px) rotate(-3deg); }
+
+.knowledge-content-card.knowledge-post-card[data-post-appearance="hand"] {
+  grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; min-height: 0; margin: 36px 24px;
+  padding: 0; border: 0; border-radius: 0; background: transparent; overflow: visible; perspective: 1200px; box-shadow: none;
+}
+.knowledge-content-card.knowledge-post-card[data-post-appearance="hand"]:hover { transform: none; box-shadow: none; }
+.knowledge-post-card[data-post-appearance="hand"]::before { display: none; }
+.knowledge-post-hand-card {
+  position: relative; min-width: 0; min-height: 260px; padding: 22px 18px 18px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 14px; background: linear-gradient(155deg,var(--knowledge-surface-solid),var(--knowledge-bg));
+  border: 2px solid var(--knowledge-border); border-radius: 16px; box-shadow: -7px 10px 20px #0003;
+  transform-origin: bottom center; transition: transform .4s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease,border-color .3s ease;
+}
+.knowledge-post-hand-card:nth-child(1) { transform: translateX(20px) rotate(-3deg); z-index: 1; --hand-accent: #39c5bb; }
+.knowledge-post-hand-card:nth-child(2) { transform: translateX(7px) rotate(-1deg); z-index: 2; --hand-accent: #00c9df; }
+.knowledge-post-hand-card:nth-child(3) { transform: translateX(-7px) rotate(1deg); z-index: 3; --hand-accent: #d3aa09; }
+.knowledge-post-hand-card:nth-child(4) { transform: translateX(-20px) rotate(3deg); z-index: 4; --hand-accent: #ff2e7e; }
+.knowledge-post-card[data-post-appearance="hand"]:is(:hover,:focus-visible) .knowledge-post-hand-card { border-color: var(--hand-accent); box-shadow: 0 12px 24px color-mix(in srgb,var(--hand-accent) 18%,transparent); }
+.knowledge-post-card[data-post-appearance="hand"]:is(:hover,:focus-visible) .knowledge-post-hand-card:nth-child(1) { transform: translate(-14px,6px) rotate(-7deg); }
+.knowledge-post-card[data-post-appearance="hand"]:is(:hover,:focus-visible) .knowledge-post-hand-card:nth-child(2) { transform: translate(-4px,-7px) rotate(-2deg); }
+.knowledge-post-card[data-post-appearance="hand"]:is(:hover,:focus-visible) .knowledge-post-hand-card:nth-child(3) { transform: translate(4px,-7px) rotate(2deg); }
+.knowledge-post-card[data-post-appearance="hand"]:is(:hover,:focus-visible) .knowledge-post-hand-card:nth-child(4) { transform: translate(14px,6px) rotate(7deg); }
+.knowledge-post-card[data-post-appearance="hand"]:hover .knowledge-post-hand-card:hover { transform: translateY(-20px) scale(1.035); z-index: 5; }
+.knowledge-post-hand-number { font: 11px Consolas,monospace; color: var(--knowledge-muted); border-bottom: 1px solid var(--knowledge-border); padding-bottom: 10px; }
+.knowledge-post-hand-heading { font-size: 13px; color: var(--knowledge-text); }
+.knowledge-post-hand-card .knowledge-post-eyebrow { margin: 0; gap: 7px; }
+.knowledge-post-hand-card .knowledge-post-title { margin: 0; font-size: 22px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+.knowledge-post-hand-card .knowledge-post-summary-row { margin: 0; display: grid; gap: 14px; }
+.knowledge-post-hand-card .knowledge-post-summary { margin: 0; font-size: 14px; line-height: 1.7; color: var(--knowledge-muted); overflow-wrap: anywhere; }
+.knowledge-post-hand-card .knowledge-post-cover { position: relative; width: 100%; height: auto; min-height: 0; aspect-ratio: 3 / 2; border-radius: 10px; clip-path: none; box-sizing: border-box; overflow: hidden; margin-block: auto; }
+.knowledge-post-hand-card .knowledge-post-cover img { width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+.knowledge-post-hand-card .knowledge-post-footer { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; border: 0; padding: 0; margin: auto 0 0; }
+.knowledge-post-hand-card .knowledge-post-metrics { margin: 0; }
+.knowledge-post-hand-card .knowledge-post-category { max-width: 100%; }
+.is-grid .knowledge-post-card[data-post-appearance="armor"] { grid-template-columns: minmax(0,1fr); }
+.is-grid .knowledge-post-armor-art { min-height: 190px; order: -1; }
+.is-grid .knowledge-post-armor-art > .knowledge-post-cover,.is-grid .knowledge-post-armor-art > .knowledge-post-armor-ghost { inset: 20px 20px 10px 60px; }
+.is-grid .knowledge-content-card.knowledge-post-card[data-post-appearance="hand"] { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 12px 0; }
+.is-grid .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card { min-height: 200px; transform: none !important; }
+@media(max-width:1100px) {
+  .knowledge-content-card.knowledge-post-card[data-post-appearance="hand"] { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 12px 0; }
+  .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card { min-height: 220px; transform: none !important; }
+}
+@media(max-width:720px) {
+  .knowledge-content-card.knowledge-post-card[data-post-appearance="armor"] { grid-template-columns: minmax(0,1fr); margin: 16px 8px; }
+  .knowledge-post-armor-art { min-height: 190px; order: -1; }
+  .knowledge-post-armor-art > .knowledge-post-cover,.knowledge-post-armor-art > .knowledge-post-armor-ghost { inset: 20px 18px 8px 55px; }
+  .knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-ghost:nth-child(1) { transform: translate(-28px,4px) scale(.9) rotate(-5deg); }
+  .knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .knowledge-post-armor-ghost:nth-child(2) { transform: translate(-18px,3px) scale(.94) rotate(-3deg); }
+  .knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .is-top,
+  .knowledge-post-card[data-post-appearance="armor"]:is(:hover,:focus-visible) .is-bottom { transform: none; }
+  .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card { padding: 16px 12px; min-height: 180px; }
+  .knowledge-post-hand-card .knowledge-post-title { font-size: 19px; }
+  .knowledge-post-hand-card .knowledge-post-type,.knowledge-post-hand-card .knowledge-post-chip { white-space: normal; overflow-wrap: anywhere; }
+  .knowledge-post-hand-card .knowledge-post-author { gap: 8px; }
+}
+@media(max-width:480px) {
+  .knowledge-content-card.knowledge-post-card[data-post-appearance="hand"],.is-grid .knowledge-content-card.knowledge-post-card[data-post-appearance="hand"] { grid-template-columns: minmax(0,1fr); }
+  .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card { min-height: 0; }
+  .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card:hover { transform: none; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .knowledge-post-card[data-post-appearance="hand"] .knowledge-post-hand-card,
+  .knowledge-post-card[data-post-appearance="armor"] .knowledge-post-armor-art > *,
+  .knowledge-post-card[data-post-appearance="armor"] .knowledge-post-armor-plate { transform: none !important; transition: none !important; }
+  .knowledge-post-card[data-post-appearance="armor"] .knowledge-post-armor-ghost { visibility: hidden; }
+}

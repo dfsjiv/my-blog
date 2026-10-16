@@ -20,7 +20,7 @@
     const chip = (name, text, cls) => { const n = el('span', 'knowledge-post-chip ' + (cls || '')); n.append(icon(name), el('span', '', text)); return n; };
     const card = el('article', 'knowledge-content-card knowledge-post-card');
     // Unknown or legacy appearance identifiers always retain the default layout.
-    const appearance = ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider'].includes(post.appearance) ? post.appearance : 'default';
+    const appearance = ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand'].includes(post.appearance) ? post.appearance : 'default';
     card.dataset.postAppearance = appearance;
     card.dataset.postSlug = post.slug; card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', t('打开文章：') + post.title);
     const body = el('div', 'knowledge-content-body knowledge-post-body');
@@ -56,7 +56,29 @@
     const number = String(post.title || '').match(/(?:内部赛|第)\s*(\d{1,4})/);
     if (number) { const mark = el('span', 'knowledge-post-watermark', '#' + number[1]); mark.setAttribute('aria-hidden', 'true'); body.append(mark); }
     const cover = coverNode(post); cover.classList.add('knowledge-post-cover');
-    if (appearance === 'spider') {
+    if (appearance === 'hand') {
+      const panels = Array.from({ length: 4 }, (_, index) => {
+        const panel = el('section', 'knowledge-post-hand-card');
+        panel.dataset.handIndex = String(index + 1);
+        const number = el('span', 'knowledge-post-hand-number', '0' + (index + 1) + ' / 04');
+        number.setAttribute('aria-hidden', 'true'); panel.append(number); return panel;
+      });
+      panels[0].append(top, title);
+      panels[1].append(el('span', 'knowledge-post-hand-heading', t('摘要与标签')), summaryRow);
+      panels[2].append(el('span', 'knowledge-post-hand-heading', t('文章封面')), cover);
+      panels[3].append(el('span', 'knowledge-post-hand-heading', t('作者与阅读')), footer);
+      card.append(...panels);
+    } else if (appearance === 'armor') {
+      const art = el('div', 'knowledge-post-armor-art');
+      for (let i = 0; i < 3; i++) {
+        const ghost = coverNode(post); ghost.classList.add('knowledge-post-armor-ghost');
+        ghost.setAttribute('aria-hidden', 'true'); art.append(ghost);
+      }
+      art.append(cover); card.append(body, art);
+      for (const corner of ['top', 'bottom']) {
+        const plate = el('span', 'knowledge-post-armor-plate is-' + corner); plate.setAttribute('aria-hidden', 'true'); card.append(plate);
+      }
+    } else if (appearance === 'spider') {
       const middle = el('div', 'knowledge-post-spider-middle');
       const text = el('div', 'knowledge-post-spider-text'); text.append(title, summaryRow);
       middle.append(text, cover); card.append(top, middle, footer);

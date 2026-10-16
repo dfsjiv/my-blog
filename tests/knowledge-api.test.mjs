@@ -194,7 +194,7 @@ test("post appearances persist through edit, public detail and list without alte
     const env = createDatabase();
     const api = createApi(env);
     const columns = env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all();
-    for (const appearance of ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider']) {
+    for (const appearance of ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand']) {
         const created = await api('/api/knowledge/admin/posts', {
             method: 'POST', token: 'user-token', body: articleInput({ title: '外观 ' + appearance, appearance, status: 'published' })
         });
@@ -220,9 +220,9 @@ test("post appearances persist through edit, public detail and list without alte
     assert.deepEqual(env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all(), columns);
     const list = await api('/api/knowledge/posts');
     assert.equal(list.status, 200);
-    assert.equal(list.body.data.items.length, 6);
+    assert.equal(list.body.data.items.length, 8);
     assert.ok(list.body.data.items.every(post => typeof post.appearance === 'string'));
-    assert.deepEqual(new Set(list.body.data.items.map(post => post.appearance)), new Set(['vinyl','collage','mecha','island','holo','spider']));
+    assert.deepEqual(new Set(list.body.data.items.map(post => post.appearance)), new Set(['vinyl','collage','mecha','island','holo','spider','armor','hand']));
     env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
     env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
 });

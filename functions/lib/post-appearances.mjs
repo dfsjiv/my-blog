@@ -1,4 +1,4 @@
-export const POST_APPEARANCES = new Set(['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider']);
+export const POST_APPEARANCES = new Set(['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand']);
 // Additive, idempotent: never alters or rewrites existing article data.
 export const APPEARANCE_SCHEMA = `CREATE TABLE IF NOT EXISTS knowledge_post_presentation (
   post_id INTEGER PRIMARY KEY REFERENCES knowledge_posts(id) ON DELETE CASCADE,
