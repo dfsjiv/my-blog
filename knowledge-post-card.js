@@ -34,7 +34,13 @@
     if (tags.childElementCount) summaryRow.append(tags);
     const footer = el('div', 'knowledge-post-footer');
     const author = el('div', 'knowledge-post-author');
-    author.append(identity ? identity(post.authorUserId, post.author || 'User') : el('strong', '', post.author || 'User'));
+    let authorIdentity;
+    try {
+      if (typeof identity === 'function') authorIdentity = identity(post.authorUserId, post.author || 'User');
+    } catch (error) {
+      console.warn('Author identity unavailable; keeping the new article layout', error);
+    }
+    author.append(authorIdentity || el('strong', '', post.author || 'User'));
     if (post.category && post.category !== post.title) {
       const category = el('span', 'knowledge-post-category', post.category); category.title = post.category; author.append(category);
     }

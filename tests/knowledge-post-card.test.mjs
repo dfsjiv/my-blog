@@ -9,6 +9,30 @@ class Node {
   get childElementCount() { return this.children.length; }
 }
 const walk = n => [n, ...n.children.flatMap(walk)];
+test('optional author identity failure does not revert the reference layout', () => {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
+    window, console: { warn() {} },
+    document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
+  });
+  const card = window.KnowledgePostCard.render({ title: 'Test', slug: 'test', author: 'admin', tags: [] }, {
+    t: x => x, typeLabel: () => '文章', formatDate: () => '', coverNode: () => new Node('cover'),
+    appendTags() {}, identity() { throw new Error('profile unavailable'); },
+  });
+  assert.ok(card.className.includes('knowledge-post-card'));
+  assert.ok(walk(card).some(n => n.textContent === 'admin'));
+  assert.ok(walk(card).some(n => n.className === 'knowledge-post-footer'));
+});
+
+test('deployed entry includes the card renderer before its homepage consumer', () => {
+  const bundle = fs.readFileSync(new URL('../assets/vendor/knowledge/site.bundle.js', import.meta.url), 'utf8');
+  assert.ok(bundle.indexOf('KnowledgePostCard={render:') >= 0);
+  assert.ok(bundle.indexOf('KnowledgePostCard={render:') < bundle.indexOf('KnowledgePostCard.render('));
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(html.includes('assets/vendor/knowledge/site.bundle.js?v='));
+  assert.ok(!html.includes('<script src="knowledge-post-card.js'));
+  assert.ok(!html.includes('<script src="knowledge-site-v4.js'));
+});
 test('reference article card separates date, title, summary/tags and author/read footer without duplicating title as category', () => {
   const window = {};
   vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), { window,

@@ -22,7 +22,7 @@ const live2d = fs.readFileSync(path.join(root, 'knowledge-live2d-mana-position-2
 
 assert.match(html, /class="knowledge-site" id="elegantShell"/);
 assert.match(html, /knowledge-site-v2\.css/);
-assert.match(html, /knowledge-site-v4\.js/);
+assert.match(html, /assets\/vendor\/knowledge\/site\.bundle\.js/);
 assert.match(html, /knowledge-comments\.js/);
 assert.match(html, /knowledge-i18n-v3\.js/);
 assert.match(html, /id="knowledgeLatestList"/);
@@ -100,8 +100,8 @@ assert.ok(
 assert.ok(
   html.indexOf('tiptap.bundle.js') < html.indexOf('knowledge-editor-adapter.js')
   && html.indexOf('knowledge-editor-adapter.js') < html.indexOf('knowledge-writer.js')
-  && html.indexOf('knowledge-writer.js') < html.indexOf('knowledge-site-v4.js')
-  && html.indexOf('knowledge-comments.js') < html.indexOf('knowledge-site-v4.js')
+  && html.indexOf('knowledge-writer.js') < html.indexOf('assets/vendor/knowledge/site.bundle.js')
+  && html.indexOf('knowledge-comments.js') < html.indexOf('assets/vendor/knowledge/site.bundle.js')
 );
 
 assert.match(css, /--knowledge-bg:/);
@@ -122,7 +122,7 @@ assert.match(css, /\.knowledge-comment-item/);
 
 assert.match(data, /placeholder:\s*true/);
 assert.match(html, /knowledge-data\.js/);
-assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('knowledge-site-v4.js'));
+assert.ok(html.indexOf('knowledge-data.js') < html.indexOf('assets/vendor/knowledge/site.bundle.js'));
 assert.doesNotMatch(repository, /KnowledgeMockData/);
 assert.doesNotMatch(repository, /source\.posts/);
 assert.match(repository, /const API_ROOT = '\/api\/knowledge'/);
@@ -252,7 +252,7 @@ assert.match(css, /\.knowledge-social-links\s*\{/);
 assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
-assert.match(html, /knowledge-site-v4\.js\?v=20261016-card-fallback-1/);
+assert.match(html, /site\.bundle\.js\?v=20261016-new-cards-2/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);
