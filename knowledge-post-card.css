@@ -2,8 +2,12 @@
   --knowledge-grid-line: color-mix(in srgb,var(--knowledge-text) 6%,transparent);
 }
 .knowledge-site[data-route="home"] > .knowledge-backdrop {
-  background-image: linear-gradient(var(--knowledge-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--knowledge-grid-line) 1px,transparent 1px);
-  background-size: 36px 36px;
+  background-image:
+    radial-gradient(circle at 15% 20%,rgba(57,197,187,.08) 0%,transparent 40%),
+    radial-gradient(circle at 85% 75%,rgba(255,46,126,.06) 0%,transparent 40%),
+    linear-gradient(var(--knowledge-grid-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--knowledge-grid-line) 1px,transparent 1px);
+  background-size: 100% 100%,100% 100%,36px 36px,36px 36px;
 }
 .knowledge-site[data-route="home"][data-theme="dark"] { --knowledge-grid-line: rgba(255,255,255,.045); }
 .knowledge-home-view .knowledge-layout { max-width: 1280px; }
