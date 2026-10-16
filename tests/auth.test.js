@@ -62,6 +62,36 @@ function response(status, data, jsonError) {
 
 (async function run() {
   const BlogAuth = loadAuthModule();
+  {
+    const format = BlogAuth.formatAuthError;
+    const cases = [
+      ['api_error', '该用户名已存在', 409, /username is already in use/],
+      ['api_error', '密码长度需为 8 至 128 位', 400, /8–128 characters/],
+      ['api_error', '邀请码无效或已失效', 400, /invalid or expired/],
+      ['api_error', '邀请码已被使用或已经失效', 400, /used or expired/],
+      ['api_error', '用户名需为 2 至 32 位中文、字母、数字或下划线', 400, /2–32/],
+      ['api_error', '尝试次数过多，注册已暂停 2 小时', 429, /Too many attempts/],
+      ['network', 'network down', 0, /Network request failed/],
+      ['invalid_response', 'parse failure', 403, /Unexpected server response \(HTTP 403\)/],
+      ['api_error', 'private database error details', 500, /temporarily unavailable \(HTTP 500\)/],
+      ['invalid_credentials', 'username exists', 401, /^Invalid username or password\.$/],
+    ];
+    for (const [code, message, status, expected] of cases) {
+      assert.match(format(new BlogAuth.AuthError(code, message, status), 'register'), expected);
+    }
+    assert.doesNotMatch(format(new BlogAuth.AuthError('api_error', 'private database error details', 500), 'register'), /private|database/);
+    assert.doesNotMatch(format(new Error('sensitive implementation details'), 'register'), /sensitive/);
+    assert.match(format(new BlogAuth.AuthError('api_error', '字段校验失败', 422), 'register'), /字段校验失败.*HTTP 422/);
+    // Exercise the real request manager with mocked responses: no registration
+    // requests, passwords or invitation codes are sent to the live service.
+    const manager = BlogAuth.createAuthManager({ storage: createStorage(), fetch: async () => response(409, { success: false, message: '该用户名已存在' }) });
+    await assert.rejects(manager.register('test_user', 'test-password', 'test-invitation'), error => {
+      assert.match(format(error, 'register'), /username is already in use/);
+      return true;
+    });
+    assert.match(source, /setMessage\(formatAuthError\(error, authMode\), false\)/);
+    assert.match(source, /setMessage\(formatAuthError\(error, 'invitation'\), false\)/);
+  }
   assert.ok(BlogAuth);
   assert.strictEqual(BlogAuth.TOKEN_KEY, 'blog_session_token');
   assert.strictEqual(typeof BlogAuth.createAuthManager, 'function');
@@ -241,7 +271,7 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20260922-auth-lines-1"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20261016-auth-errors-2"><\/script>/);
   assert.match(indexHtml, /<h1>SIGN IN<\/h1>/);
   assert.match(indexHtml, /placeholder="USERNAME"/);
   assert.match(indexHtml, /placeholder="PASSWORD"/);

@@ -12,6 +12,39 @@
     }
   }
 
+  function formatAuthError(error, mode) {
+    if (error?.code === 'invalid_credentials') return 'Invalid username or password.';
+    if (error?.code === 'network') return 'Network request failed. Check your connection and try again.';
+    const status = Number(error?.status) || 0;
+    if (error?.code === 'invalid_response') {
+      return 'Unexpected server response' + (status ? ' (HTTP ' + status + ')' : '') + '. Please refresh and try again.';
+    }
+    if (status >= 500 || error?.code === 'server_error') {
+      return 'The account service is temporarily unavailable' + (status ? ' (HTTP ' + status + ')' : '') + '. Please try again later.';
+    }
+    if (status === 429) return 'Too many attempts. Registration is temporarily locked; please try again later.';
+    const messages = {
+      '该用户名已存在': 'This username is already in use. Choose another username.',
+      '用户名需为 2 至 32 位中文、字母、数字或下划线': 'Username must be 2–32 Chinese characters, letters, numbers or underscores.',
+      '密码长度需为 8 至 128 位': 'Password must be 8–128 characters long.',
+      '邀请码无效或已失效': 'Invitation code is invalid or expired. Please verify it again.',
+      '邀请码已被使用或已经失效': 'Invitation code has been used or expired. Please use another code.',
+      '请先输入并验证邀请码': 'Please enter and verify your invitation code first.',
+      '邀请码不能为空': 'Invitation code is required.',
+      '用户名不能为空': 'Username is required.',
+      '密码不能为空': 'Password is required.',
+      '请求数据格式错误': 'Invalid registration data. Please refresh and try again.',
+    };
+    if (Object.prototype.hasOwnProperty.call(messages, error?.message)) return messages[error.message];
+    if (mode === 'register' && status === 409) return 'This username is already in use. Choose another username.';
+    // Only show validation messages from our structured API errors; never expose
+    // arbitrary JavaScript exceptions or internal 5xx details. UI uses textContent.
+    if (error?.code === 'api_error' && status >= 400 && status < 500 && typeof error.message === 'string') {
+      return error.message.slice(0, 240) + ' (HTTP ' + status + ')';
+    }
+    return mode === 'invitation' ? 'Invitation verification failed. Please try again.' : 'Unable to complete sign-in or registration. Please refresh and try again.';
+  }
+
   function getSessionStorage() {
     try {
       return window.sessionStorage || null;
@@ -484,10 +517,12 @@
           : await auth.login(username, password);
         showAuthenticatedDestination(user);
       } catch (error) {
+        if (authMode === 'register' && error?.code === 'api_error' && /^邀请码/.test(error.message || '')) {
+          invitationVerified = false;
+          elements.verifyButton.textContent = 'VERIFY';
+        }
         setLoginPending(false, '');
-        setMessage(error && error.code === 'invalid_credentials'
-          ? 'Invalid username or password.'
-          : 'Unable to connect. Please try again.', false);
+        setMessage(formatAuthError(error, authMode), false);
       }
     });
 
@@ -521,7 +556,7 @@
         elements.username.focus();
       } catch (error) {
         invitationVerified = false;
-        setMessage('Invitation code could not be verified.', false);
+        setMessage(formatAuthError(error, 'invitation'), false);
       } finally {
         verificationPending = false;
         elements.verifyButton.textContent = invitationVerified ? 'VERIFIED' : 'VERIFY';
@@ -568,6 +603,7 @@
     API_BASE_URL,
     TOKEN_KEY,
     AuthError,
+    formatAuthError,
     createAuthManager,
     initAuthUi,
   };
