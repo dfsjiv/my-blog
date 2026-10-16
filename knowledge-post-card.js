@@ -20,7 +20,8 @@
     const chip = (name, text, cls) => { const n = el('span', 'knowledge-post-chip ' + (cls || '')); n.append(icon(name), el('span', '', text)); return n; };
     const card = el('article', 'knowledge-content-card knowledge-post-card');
     // Unknown or legacy appearance identifiers always retain the default layout.
-    card.dataset.postAppearance = 'default';
+    const appearance = ['vinyl', 'collage', 'mecha', 'island', 'holo'].includes(post.appearance) ? post.appearance : 'default';
+    card.dataset.postAppearance = appearance;
     card.dataset.postSlug = post.slug; card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', t('打开文章：') + post.title);
     const body = el('div', 'knowledge-content-body knowledge-post-body');
     const top = el('div', 'knowledge-post-eyebrow');
@@ -55,7 +56,38 @@
     const number = String(post.title || '').match(/(?:内部赛|第)\s*(\d{1,4})/);
     if (number) { const mark = el('span', 'knowledge-post-watermark', '#' + number[1]); mark.setAttribute('aria-hidden', 'true'); body.append(mark); }
     const cover = coverNode(post); cover.classList.add('knowledge-post-cover');
-    card.append(body, cover); return card;
+    card.append(body, cover);
+    if (appearance === 'vinyl') {
+      const disc = el('div', 'knowledge-post-vinyl-disc'); disc.setAttribute('aria-hidden', 'true'); card.append(disc);
+      const wave = el('span', 'knowledge-post-sound-wave'); wave.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < 4; i++) wave.append(el('i', '')); metrics.append(wave);
+    }
+    if (appearance === 'mecha') {
+      const scan = el('span', 'knowledge-post-scan'); scan.setAttribute('aria-hidden', 'true'); card.append(scan);
+    }
+    if (appearance === 'holo' && typeof card.addEventListener === 'function') {
+      let frame = null;
+      function reset() {
+        if (frame !== null) window.cancelAnimationFrame(frame);
+        frame = null;
+        ['--card-rx', '--card-ry', '--glare-x', '--glare-y'].forEach(key => card.style.removeProperty(key));
+      }
+      card.addEventListener('pointermove', event => {
+        if (event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const bounds = card.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+        const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+        if (frame !== null) window.cancelAnimationFrame(frame);
+        frame = window.requestAnimationFrame(() => {
+          frame = null;
+          card.style.setProperty('--card-rx', (y - .5) * -10 + 'deg');
+          card.style.setProperty('--card-ry', (x - .5) * 10 + 'deg');
+          card.style.setProperty('--glare-x', x * 100 + '%'); card.style.setProperty('--glare-y', y * 100 + '%');
+        });
+      });
+      card.addEventListener('pointerleave', reset); card.addEventListener('pointercancel', reset); card.addEventListener('blur', reset);
+    }
+    return card;
   }
   window.KnowledgePostCard = { render };
 }());

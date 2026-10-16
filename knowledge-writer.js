@@ -1,7 +1,7 @@
 (function () {
   const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
-  const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面']];
+  const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面'], ['vinyl', '黑胶机舱'], ['collage', '街头贴纸'], ['mecha', '机甲切片'], ['island', '玻璃群岛'], ['holo', '3D 全息']];
   const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
   const USER_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
   const USER_MAX_CONTENT_LENGTH = 256 * 1024;
@@ -368,7 +368,7 @@
     appearanceClose.type = 'button';
     appearanceHeader.append(element('strong', '', '帖子外观预览'), appearanceClose);
     const appearanceStage = element('div', 'knowledge-writer-card-stage');
-    appearanceDialog.append(appearanceHeader, element('p', 'knowledge-writer-card-hint', '将鼠标移到卡片上，查看亮边和浮起效果；此处不会发布文章或跳转。'), appearanceStage);
+    appearanceDialog.append(appearanceHeader, element('p', 'knowledge-writer-card-hint', '将鼠标移到卡片上，查看所选外观的动态效果；此处不会发布文章或跳转。'), appearanceStage);
     page.append(topbar, body, bottom, previewOverlay.root, appearanceDialog);
     container.replaceChildren(page);
 
@@ -1734,7 +1734,7 @@
     const previewText = element('div', 'knowledge-writer-appearance-text');
     previewText.append(element('span', '', '分类 · 日期'), element('span', '', '文章标题'), element('span', '', '摘要与标签'), element('span', '', '作者 · 阅读信息'));
     appearancePreview.append(previewText, element('div', 'knowledge-writer-appearance-cover'));
-    const appearanceHint = element('p', 'knowledge-writer-appearance-hint', '用于首页和文章列表卡片，不影响正文排版。目前提供默认款，后续增加更多外观。');
+    const appearanceHint = element('p', 'knowledge-writer-appearance-hint', '用于首页和文章列表，不影响正文。上方示意为默认款；选好外观后，点击底部「帖子外观预览」查看对应动态效果。');
     const source = inputField('来源链接', 'sourceUrl', 'https://');
     const status = selectField('发布状态', 'status', [
       ['draft', '草稿'],

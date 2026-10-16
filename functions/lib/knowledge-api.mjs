@@ -29,6 +29,8 @@ import {
     isKnowledgeBackgroundPath
 } from "./knowledge-backgrounds.mjs";
 
+import { POST_APPEARANCES, ensureAppearanceStorage, readAppearances, appearanceCreate, appearanceUpdate } from './post-appearances.mjs';
+
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
     "all", "article", "solution", "note", "project",
@@ -621,6 +623,8 @@ async function createPost(request, env, user, jsonResponse) {
         statements.push(solutionInsertBySlug(env, post.slug, post.solutionMeta));
     }
 
+    await ensureAppearanceStorage(env);
+    statements.push(appearanceCreate(env, post.slug, post.appearance));
     let batchResults;
     try {
         batchResults = await env.DB.batch(statements);
@@ -771,6 +775,8 @@ async function updatePost(request, id, env, user, jsonResponse) {
         ));
     }
 
+    await ensureAppearanceStorage(env);
+    statements.push(appearanceUpdate(env, id, nextVersion, now, post.appearance));
     const results = await env.DB.batch(statements);
     if (!Number(results[0]?.meta?.changes)) {
         return errorResponse(jsonResponse, 409, "VERSION_CONFLICT", "文章已被其他页面修改");
@@ -1029,6 +1035,7 @@ const POST_COLUMNS = `
 async function hydratePosts(env, rows) {
     if (!rows.length) return [];
     const ids = rows.map((row) => Number(row.id));
+    const appearances = await readAppearances(env, ids);
     const placeholders = ids.map(() => "?").join(", ");
     const [tagResult, solutionResult] = await env.DB.batch([
         env.DB.prepare(`
@@ -1054,7 +1061,7 @@ async function hydratePosts(env, rows) {
         resultRows(solutionResult).map((row) => [Number(row.post_id), mapSolution(row)])
     );
     return rows.map((row) => mapPost(
-        row,
+        { ...row, post_appearance: appearances.get(Number(row.id)) || 'default' },
         tagsByPost.get(Number(row.id)) || [],
         solutionsByPost.get(Number(row.id)) || null
     ));
@@ -1094,10 +1101,9 @@ function validatePost(body, existing, user) {
     };
     const fields = {};
     const type = cleanOptional(merged.type);
-    // Only the default appearance exists in this release. No schema change is
-    // needed until there is an actual per-post choice to persist.
-    if (merged.appearance !== undefined && merged.appearance !== 'default') {
-        fields.appearance = "帖子外观无效，请选择默认外观";
+    const appearance = body.appearance === undefined ? (existing?.appearance || 'default') : body.appearance;
+    if (!POST_APPEARANCES.has(appearance)) {
+        fields.appearance = "帖子外观无效，请选择支持的外观";
     }
     const title = typeof merged.title === "string" ? merged.title.trim() : "";
     const suppliedSlug = typeof merged.slug === "string" ? merged.slug.trim() : "";
@@ -1157,6 +1163,7 @@ function validatePost(body, existing, user) {
         value: {
             type,
             title,
+            appearance,
             slug: suppliedSlug ? normalizeSlug(suppliedSlug) : normalizeSlug(title),
             summary: explicitSummary || createMarkdownSummary(contentMarkdown),
             contentMarkdown,
@@ -1399,6 +1406,7 @@ function mapPost(row, tags, solutionMeta) {
         contentMarkdown: row.content_markdown,
         contentFormat: "markdown",
         coverUrl: row.cover_url || null,
+        appearance: POST_APPEARANCES.has(row.post_appearance) ? row.post_appearance : 'default',
         category: row.category || null,
         categorySlug: row.category_slug || null,
         tags,
@@ -1455,7 +1463,7 @@ function toListPost(post, admin = false) {
         title: post.title,
         summary: post.summary,
         coverUrl: post.coverUrl,
-        appearance: "default",
+        appearance: post.appearance || 'default',
         category: post.category,
         categorySlug: post.categorySlug,
         tags: post.tags,

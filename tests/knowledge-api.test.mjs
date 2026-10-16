@@ -170,6 +170,43 @@ function createApi(env) {
     };
 }
 
+test("post appearances persist through edit, public detail and list without altering article schema", async () => {
+    const env = createDatabase();
+    const api = createApi(env);
+    const columns = env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all();
+    for (const appearance of ['vinyl', 'collage', 'mecha', 'island', 'holo']) {
+        const created = await api('/api/knowledge/admin/posts', {
+            method: 'POST', token: 'user-token', body: articleInput({ title: '外观 ' + appearance, appearance, status: 'published' })
+        });
+        assert.equal(created.status, 201, JSON.stringify(created.body));
+        const post = created.body.data.post;
+        assert.equal(post.appearance, appearance);
+        const detail = await api('/api/knowledge/posts/' + post.slug);
+        assert.equal(detail.body.data.post.appearance, appearance);
+        const edited = await api('/api/knowledge/admin/posts/' + post.id, {
+            method: 'PATCH', token: 'user-token', body: { version: post.version, summary: '保留外观' }
+        });
+        assert.equal(edited.status, 200);
+        assert.equal(edited.body.data.post.appearance, appearance);
+        const conflict = await api('/api/knowledge/admin/posts/' + post.id, {
+            method: 'PATCH', token: 'user-token', body: { version: post.version, appearance: 'default' }
+        });
+        assert.equal(conflict.status, 409);
+        const denied = await api('/api/knowledge/admin/posts/' + post.id, {
+            method: 'PATCH', body: { version: edited.body.data.post.version, appearance: 'default' }
+        });
+        assert.equal(denied.status, 401);
+    }
+    assert.deepEqual(env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all(), columns);
+    const list = await api('/api/knowledge/posts');
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.items.length, 5);
+    assert.ok(list.body.data.items.every(post => typeof post.appearance === 'string'));
+    assert.deepEqual(new Set(list.body.data.items.map(post => post.appearance)), new Set(['vinyl','collage','mecha','island','holo']));
+    env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
+    env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
+});
+
 test("default post appearance is compatible with old clients and rejects unavailable styles", async () => {
     const env = createDatabase();
     const api = createApi(env);

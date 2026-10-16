@@ -9,6 +9,20 @@ class Node {
   get childElementCount() { return this.children.length; }
 }
 const walk = n => [n, ...n.children.flatMap(walk)];
+test('all optional card styles keep safe real post content and unknown styles fall back', () => {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
+    window, document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
+  });
+  for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', '<script>unknown</script>']) {
+    const card = window.KnowledgePostCard.render({ title: '<img onerror=alert(1)>', slug: 'post', author: 'name', appearance, tags: [] }, {
+      t: x => x, typeLabel: () => '文章', formatDate: () => '', coverNode: () => new Node('cover'), appendTags() {},
+    });
+    assert.equal(card.dataset.postAppearance, appearance.startsWith('<') ? 'default' : appearance);
+    assert.ok(walk(card).some(n => n.textContent === '<img onerror=alert(1)>'));
+    assert.ok(walk(card).some(n => n.className === 'knowledge-post-footer'));
+  }
+});
 test('optional author identity failure does not revert the reference layout', () => {
   const window = {};
   vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
