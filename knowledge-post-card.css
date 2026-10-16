@@ -1,9 +1,11 @@
 .knowledge-site[data-route="home"] {
-  --knowledge-grid-line: color-mix(in srgb,var(--knowledge-text) 4%,transparent);
+  --knowledge-grid-line: color-mix(in srgb,var(--knowledge-text) 6%,transparent);
+}
+.knowledge-site[data-route="home"] > .knowledge-backdrop {
   background-image: linear-gradient(var(--knowledge-grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--knowledge-grid-line) 1px,transparent 1px);
   background-size: 36px 36px;
 }
-.knowledge-site[data-route="home"][data-theme="dark"] { --knowledge-grid-line: rgba(255,255,255,.02); }
+.knowledge-site[data-route="home"][data-theme="dark"] { --knowledge-grid-line: rgba(255,255,255,.045); }
 .knowledge-home-view .knowledge-layout { max-width: 1280px; }
 .knowledge-post-list,.knowledge-solution-list { gap: 24px; }
 .knowledge-content-card.knowledge-post-card {
