@@ -1,6 +1,7 @@
 (function () {
   const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
+  const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面']];
   const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
   const USER_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
   const USER_MAX_CONTENT_LENGTH = 256 * 1024;
@@ -407,6 +408,7 @@
 
     function applyPostSettings(post) {
       setField('type', post.type || 'article');
+      setField('appearance', post.appearance || 'default');
       setField('category', post.category || '');
       setField('tags', (post.tags || []).map(function (tag) { return tag.name; }).join(', '));
       setField('summary', post.summary || '');
@@ -658,6 +660,7 @@
     function collectSettings() {
       return {
         type: fieldValue('type') || 'article',
+        appearance: fieldValue('appearance') || 'default',
         category: fieldValue('category'),
         tags: fieldValue('tags'),
         summary: fieldValue('summary'),
@@ -684,6 +687,7 @@
       return {
         type,
         title: titleInput.value.trim(),
+        appearance: values.appearance,
         slug: values.slug,
         summary: values.summary,
         contentMarkdown: currentMarkdown(),
@@ -1641,6 +1645,14 @@
     const summary = textareaField('摘要', 'summary', '用于文章列表和分享摘要');
     const slug = inputField('Slug', 'slug', '留空时根据标题生成');
     const cover = buildCoverField();
+    const appearance = selectField('帖子外观', 'appearance', APPEARANCE_OPTIONS);
+    const appearancePreview = element('div', 'knowledge-writer-appearance-preview');
+    appearancePreview.setAttribute('role', 'img');
+    appearancePreview.setAttribute('aria-label', '默认帖子外观示意：左侧标题和摘要，右侧斜切封面');
+    const previewText = element('div', 'knowledge-writer-appearance-text');
+    previewText.append(element('span', '', '分类 · 日期'), element('span', '', '文章标题'), element('span', '', '摘要与标签'), element('span', '', '作者 · 阅读信息'));
+    appearancePreview.append(previewText, element('div', 'knowledge-writer-appearance-cover'));
+    const appearanceHint = element('p', 'knowledge-writer-appearance-hint', '用于首页和文章列表卡片，不影响正文排版。目前提供默认款，后续增加更多外观。');
     const source = inputField('来源链接', 'sourceUrl', 'https://');
     const status = selectField('发布状态', 'status', [
       ['draft', '草稿'],
@@ -1661,7 +1673,7 @@
     );
     solutionFields.hidden = true;
     settingsPanel.append(
-      type, category, tags, summary, slug, cover.root,
+      type, category, tags, summary, slug, cover.root, appearance, appearancePreview, appearanceHint,
       pinned, featured, source, status, solutionFields
     );
     const tocPanel = element('div', 'knowledge-writer-toc-panel');

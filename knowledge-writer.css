@@ -1280,3 +1280,8 @@
     transition: none;
   }
 }
+.knowledge-writer-appearance-preview { position: relative; display: flex; min-height: 112px; overflow: hidden; border: 1px solid var(--knowledge-border); border-radius: 10px; background: var(--knowledge-bg); }
+.knowledge-writer-appearance-text { display: grid; gap: 8px; width: 72%; padding: 14px; color: var(--knowledge-muted); font-size: 10px; }
+.knowledge-writer-appearance-text span:nth-child(2) { color: var(--knowledge-text); font-size: 14px; font-weight: 400; }
+.knowledge-writer-appearance-cover { position: absolute; inset: 0 0 0 auto; width: 28%; background: linear-gradient(135deg,var(--knowledge-primary-soft),var(--knowledge-primary)); clip-path: polygon(16% 0,100% 0,100% 100%,0 100%); }
+.knowledge-writer-appearance-hint { margin: 0; color: var(--knowledge-muted); font-size: 12px; line-height: 1.6; }

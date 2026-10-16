@@ -170,6 +170,32 @@ function createApi(env) {
     };
 }
 
+test("default post appearance is compatible with old clients and rejects unavailable styles", async () => {
+    const env = createDatabase();
+    const api = createApi(env);
+    for (const token of ["admin-token", "user-token"]) {
+        const created = await api("/api/knowledge/admin/posts", {
+            method: "POST", token,
+            body: articleInput({ title: "外观 " + token, appearance: "default", status: "published" })
+        });
+        assert.equal(created.status, 201);
+        const post = created.body.data.post;
+        assert.equal(post.appearance, "default");
+        const detail = await api("/api/knowledge/posts/" + post.slug);
+        assert.equal(detail.body.data.post.appearance, "default");
+        const updated = await api("/api/knowledge/admin/posts/" + post.id, {
+            method: "PATCH", token, body: { version: post.version, title: "编辑外观 " + token }
+        });
+        assert.equal(updated.status, 200);
+        assert.equal(updated.body.data.post.appearance, "default");
+    }
+    const invalid = await api("/api/knowledge/admin/posts", {
+        method: "POST", token: "user-token", body: articleInput({ appearance: "<script>custom</script>" })
+    });
+    assert.equal(invalid.status, 400);
+    assert.ok(JSON.stringify(invalid.body).includes("appearance"));
+});
+
 test("custom-category solution collections publish without single-problem metadata", async () => {
     const env = createDatabase();
     const api = createApi(env);

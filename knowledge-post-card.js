@@ -19,6 +19,8 @@
     const el = (tag, cls, text) => { const n = document.createElement(tag); n.className = cls; if (text != null) n.textContent = text; return n; };
     const chip = (name, text, cls) => { const n = el('span', 'knowledge-post-chip ' + (cls || '')); n.append(icon(name), el('span', '', text)); return n; };
     const card = el('article', 'knowledge-content-card knowledge-post-card');
+    // Unknown or legacy appearance identifiers always retain the default layout.
+    card.dataset.postAppearance = 'default';
     card.dataset.postSlug = post.slug; card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', t('打开文章：') + post.title);
     const body = el('div', 'knowledge-content-body knowledge-post-body');
     const top = el('div', 'knowledge-post-eyebrow');

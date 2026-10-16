@@ -252,7 +252,7 @@ assert.match(css, /\.knowledge-social-links\s*\{/);
 assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
-assert.match(html, /site\.bundle\.js\?v=20261016-new-cards-2/);
+assert.match(html, /site\.bundle\.js\?v=20261016-post-appearance-1/);
 
 assert.match(markdown, /markedApi\.parse/);
 assert.match(markdown, /window\.renderMathInElement/);

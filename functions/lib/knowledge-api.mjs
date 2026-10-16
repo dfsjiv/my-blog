@@ -1094,6 +1094,11 @@ function validatePost(body, existing, user) {
     };
     const fields = {};
     const type = cleanOptional(merged.type);
+    // Only the default appearance exists in this release. No schema change is
+    // needed until there is an actual per-post choice to persist.
+    if (merged.appearance !== undefined && merged.appearance !== 'default') {
+        fields.appearance = "帖子外观无效，请选择默认外观";
+    }
     const title = typeof merged.title === "string" ? merged.title.trim() : "";
     const suppliedSlug = typeof merged.slug === "string" ? merged.slug.trim() : "";
     const contentMarkdown = typeof merged.contentMarkdown === "string"
@@ -1450,6 +1455,7 @@ function toListPost(post, admin = false) {
         title: post.title,
         summary: post.summary,
         coverUrl: post.coverUrl,
+        appearance: "default",
         category: post.category,
         categorySlug: post.categorySlug,
         tags: post.tags,
