@@ -375,6 +375,7 @@
     const commandButtons = Array.from(page.querySelectorAll('[data-editor-action]'));
     const slashItems = createSlashItems();
     let noticeTimer = null;
+    let coverOriginal = null;
 
     function localKey() {
       return DRAFT_PREFIX + (state.postId ? 'post:' + state.postId : 'new');
@@ -974,23 +975,44 @@
       }
     }
 
-    async function uploadCoverImage(file) {
-      if (!file || state.coverUploading) return;
-      const validationError = validateImageFile(file);
-      if (validationError) {
-        sidePanel.cover.setStatus(validationError, true);
-        sidePanel.cover.fileInput.value = '';
-        return;
-      }
+    async function uploadCoverImage(file, adjustExisting) {
+      if ((!file && !adjustExisting) || state.coverUploading) return;
       state.coverUploading = true;
       sidePanel.cover.setUploading(true);
       try {
-        const image = await repository.uploadImage(file, { token: currentToken() });
+        if (!window.KnowledgeUserProfile?.crop) throw new Error('裁剪模块未加载，请刷新后重试。');
+        if (adjustExisting) {
+          const current = fieldValue('coverUrl');
+          if (coverOriginal?.url === current) file = coverOriginal.file;
+          else {
+            const url = new URL(current, window.location.href);
+            if (!['http:', 'https:'].includes(url.protocol)) throw new Error('封面链接无效');
+            const response = await fetch(url.href, { signal: AbortSignal.timeout(15000) });
+            if (!response.ok) throw new Error('无法读取原封面，请重新上传图片。');
+            if (Number(response.headers.get('Content-Length')) > maxImageBytes()) throw new Error('原封面过大，请重新上传较小图片。');
+            const original = await response.blob();
+            file = new File([original], 'cover-original', { type: original.type });
+          }
+        }
+        const validationError = validateImageFile(file);
+        if (validationError) throw new Error(validationError);
+        const cropped = await window.KnowledgeUserProfile.crop(file, 'zh', { kind: 'cover' });
+        if (!cropped) { sidePanel.cover.setStatus('已取消调整，原封面未改变。'); return; }
+        if (state.destroyed) return;
+        const adjusted = new File([cropped], 'cover-cropped.jpg', { type: cropped.type });
+        const adjustedError = validateImageFile(adjusted);
+        if (adjustedError) throw new Error(adjustedError);
+        const image = await repository.uploadImage(adjusted, { token: currentToken() });
+        if (state.destroyed) return;
+        coverOriginal = { file, url: image.url };
         setField('coverUrl', image.url);
         markDirty();
-        sidePanel.cover.setStatus('封面已上传，保存文章后生效。');
+        sidePanel.cover.setStatus('封面裁剪已上传，可点击帖子外观预览检查；保存文章后生效。');
       } catch (error) {
-        sidePanel.cover.setStatus(error.message || '封面上传失败，请稍后重试。', true);
+        const reason = adjustExisting && error instanceof TypeError
+          ? '外链图片可能不允许跨域读取，请下载后重新上传。'
+          : (error.message || '请稍后重试。');
+        sidePanel.cover.setStatus('调整失败，原封面已保留。' + reason, true);
       } finally {
         state.coverUploading = false;
         sidePanel.cover.setUploading(false);
@@ -1442,6 +1464,7 @@
     sidePanel.cover.fileInput.addEventListener('change', function () {
       uploadCoverImage(sidePanel.cover.fileInput.files && sidePanel.cover.fileInput.files[0]);
     });
+    sidePanel.cover.adjustButton.addEventListener('click', function () { uploadCoverImage(null, true); });
     sidePanel.cover.removeButton.addEventListener('click', function () {
       setField('coverUrl', '');
       sidePanel.cover.setStatus('封面已移除，保存文章后生效。');
@@ -1784,11 +1807,13 @@
     uploadButton.type = 'button';
     const removeButton = element('button', '', '移除');
     removeButton.type = 'button';
+    const adjustButton = element('button', '', '调整位置 / 大小');
+    adjustButton.type = 'button';
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
     fileInput.hidden = true;
-    actions.append(uploadButton, removeButton, fileInput);
+    actions.append(uploadButton, adjustButton, removeButton, fileInput);
     const status = element('small', 'knowledge-writer-cover-status');
     root.append(preview, input, actions, status);
 
@@ -1797,12 +1822,15 @@
       image.hidden = !url;
       empty.hidden = Boolean(url);
       removeButton.disabled = !url;
+      adjustButton.disabled = !url;
       if (url) image.src = url;
       else image.removeAttribute('src');
     }
 
     function setUploading(uploading) {
       uploadButton.disabled = uploading;
+      adjustButton.disabled = uploading || !input.value;
+      removeButton.disabled = uploading || !input.value;
       uploadButton.textContent = uploading ? '上传中…' : '上传或替换';
     }
 
@@ -1827,6 +1855,7 @@
       input,
       preview,
       uploadButton,
+      adjustButton,
       removeButton,
       fileInput,
       updatePreview,

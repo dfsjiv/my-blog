@@ -36,6 +36,23 @@ test('profile saves only own nickname and public batches expose no account secre
   assert.equal(JSON.parse(saved.get('profiles/7')).nickname, '');
 });
 
+test('rectangular cover crop stays bounded and preserves avatar crop geometry', () => {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-user-profile.js', import.meta.url), 'utf8'), { window });
+  for (const [w, h] of [[1000, 500], [500, 1000], [400, 400], [10, 5000]]) {
+    for (const zoom of [1, 1.5, 3]) for (const x of [-10000, 0, 10000]) for (const y of [-10000, 0, 10000]) {
+      const r = window.KnowledgeUserProfile.cropRegion(w, h, 480, 320, zoom, x, y);
+      assert.ok(r.sx >= -1e-8 && r.sy >= -1e-8);
+      assert.ok(r.sx + r.sw <= w + 1e-8 && r.sy + r.sh <= h + 1e-8);
+      assert.ok(Math.abs(r.sw / r.sh - 1.5) < 1e-8);
+      const square = window.KnowledgeUserProfile.cropRegion(w, h, 320, 320, zoom, x, y);
+      const old = window.KnowledgeUserProfile.cropRect(w, h, 320, zoom, x, y);
+      assert.ok(Math.abs(square.sx - old.sx) < 1e-8 && Math.abs(square.sy - old.sy) < 1e-8);
+      assert.ok(Math.abs(square.sw - old.side) < 1e-8);
+    }
+  }
+});
+
 test('square crop stays inside portrait/landscape images at every zoom and drag extreme', () => {
   const window = {};
   vm.runInNewContext(fs.readFileSync(new URL('../knowledge-user-profile.js', import.meta.url), 'utf8'), { window });

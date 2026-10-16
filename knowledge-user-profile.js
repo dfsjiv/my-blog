@@ -55,7 +55,15 @@
     return { x, y, sx: (width * scale / 2 - size / 2 - x) / scale,
       sy: (height * scale / 2 - size / 2 - y) / scale, side: size / scale };
   }
-  async function crop(file, language) {
+  function cropRegion(width, height, viewWidth, viewHeight, zoom, x, y) {
+    const scale = Math.max(viewWidth / width, viewHeight / height) * zoom;
+    x = Math.max(-(width * scale - viewWidth) / 2, Math.min((width * scale - viewWidth) / 2, x));
+    y = Math.max(-(height * scale - viewHeight) / 2, Math.min((height * scale - viewHeight) / 2, y));
+    return { x, y, sx: (width * scale - viewWidth) / 2 / scale - x / scale,
+      sy: (height * scale - viewHeight) / 2 / scale - y / scale, sw: viewWidth / scale, sh: viewHeight / scale };
+  }
+  async function crop(file, language, options) {
+    const cover = options?.kind === 'cover', viewWidth = cover ? 480 : 320, viewHeight = 320;
     const url = URL.createObjectURL(file), image = new Image();
     try { image.src = url; await image.decode(); }
     catch { URL.revokeObjectURL(url); throw new Error(language === 'zh' ? '无法读取图片' : 'Cannot read image'); }
@@ -64,24 +72,27 @@
       const previousFocus = document.activeElement;
       const overlay = document.createElement('div'); overlay.className = 'knowledge-avatar-crop-overlay';
       const dialog = document.createElement('section'); dialog.className = 'knowledge-avatar-crop-dialog';
-      dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true'); dialog.setAttribute('aria-label', language === 'zh' ? '调整头像' : 'Adjust avatar');
-      const title = document.createElement('h2'); title.textContent = language === 'zh' ? '调整头像' : 'Adjust avatar';
-      const note = document.createElement('p'); note.textContent = language === 'zh' ? '拖动图片调整位置，放缩后保存。动图裁剪后为静态头像。' : 'Drag to position, zoom and save. Animated images become static.';
+      const titleText = cover ? '调整文章封面' : (language === 'zh' ? '调整头像' : 'Adjust avatar');
+      dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true'); dialog.setAttribute('aria-label', titleText);
+      const title = document.createElement('h2'); title.textContent = titleText;
+      const note = document.createElement('p'); note.textContent = cover ? '拖动图片或使用方向键调整位置，滑动缩放。横向 3:2 裁剪；首页左侧会斜切，重要内容请靠中间。动图裁剪后为静态图片。' : (language === 'zh' ? '拖动图片调整位置，放缩后保存。动图裁剪后为静态头像。' : 'Drag to position, zoom and save. Animated images become static.');
       const stage = document.createElement('div'); stage.className = 'knowledge-avatar-crop-stage';
-      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 320; canvas.tabIndex = 0;
+      if (cover) { dialog.style.width = 'min(580px,100%)'; stage.style.width = '100%'; stage.style.aspectRatio = '3 / 2'; }
+      const canvas = document.createElement('canvas'); canvas.width = viewWidth; canvas.height = viewHeight; canvas.tabIndex = 0;
       canvas.setAttribute('aria-label', language === 'zh' ? '拖动图片或使用方向键调整裁剪位置' : 'Drag or use arrow keys to move image');
       const ring = document.createElement('div'); ring.className = 'knowledge-avatar-crop-ring';
+      if (cover) { ring.style.borderRadius = '0'; ring.style.boxShadow = 'none'; }
       stage.append(canvas, ring);
       const label = document.createElement('label'); label.textContent = language === 'zh' ? '缩放' : 'Zoom';
       const zoom = document.createElement('input'); zoom.type = 'range'; zoom.min = '1'; zoom.max = '3'; zoom.step = '.01'; zoom.value = '1'; label.append(zoom);
       const actions = document.createElement('div'); actions.className = 'knowledge-profile-actions';
       const cancel = document.createElement('button'), save = document.createElement('button');
-      cancel.type = save.type = 'button'; cancel.textContent = language === 'zh' ? '取消' : 'Cancel'; save.textContent = language === 'zh' ? '保存头像' : 'Save avatar';
+      cancel.type = save.type = 'button'; cancel.textContent = language === 'zh' ? '取消' : 'Cancel'; save.textContent = cover ? '使用此封面' : (language === 'zh' ? '保存头像' : 'Save avatar');
       actions.append(cancel, save); dialog.append(title, note, stage, label, actions); overlay.append(dialog); document.body.append(overlay);
       let x = 0, y = 0, drag = null;
       function draw() {
-        const r = cropRect(image.naturalWidth, image.naturalHeight, 320, Number(zoom.value), x, y); x = r.x; y = r.y;
-        const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, 320, 320); ctx.drawImage(image, r.sx, r.sy, r.side, r.side, 0, 0, 320, 320);
+        const r = cropRegion(image.naturalWidth, image.naturalHeight, viewWidth, viewHeight, Number(zoom.value), x, y); x = r.x; y = r.y;
+        const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, viewWidth, viewHeight); ctx.drawImage(image, r.sx, r.sy, r.sw, r.sh, 0, 0, viewWidth, viewHeight);
       }
       function finish(blob) { document.removeEventListener('keydown', keydown); overlay.remove(); URL.revokeObjectURL(url); previousFocus?.focus(); resolve(blob); }
       function keydown(event) {
@@ -99,19 +110,20 @@
       });
       canvas.addEventListener('pointerdown', e => { drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
       canvas.addEventListener('pointermove', e => { if (!drag || drag.id !== e.pointerId) return;
-        const factor = 320 / canvas.getBoundingClientRect().width; x += (e.clientX - drag.x) * factor; y += (e.clientY - drag.y) * factor;
+        const factor = viewWidth / canvas.getBoundingClientRect().width; x += (e.clientX - drag.x) * factor; y += (e.clientY - drag.y) * factor;
         drag.x = e.clientX; drag.y = e.clientY; draw(); });
       canvas.addEventListener('pointerup', () => { drag = null; }); canvas.addEventListener('pointercancel', () => { drag = null; });
       cancel.addEventListener('click', () => finish(null));
       save.addEventListener('click', () => {
         save.disabled = cancel.disabled = true;
-        const output = document.createElement('canvas'); output.width = output.height = 512;
-        const r = cropRect(image.naturalWidth, image.naturalHeight, 320, Number(zoom.value), x, y);
-        output.getContext('2d').drawImage(image, r.sx, r.sy, r.side, r.side, 0, 0, 512, 512);
-        output.toBlob(blob => finish(blob), 'image/png');
+        save.disabled = true;
+        const output = document.createElement('canvas'); output.width = cover ? 1200 : 512; output.height = cover ? 800 : 512;
+        const r = cropRegion(image.naturalWidth, image.naturalHeight, viewWidth, viewHeight, Number(zoom.value), x, y);
+        output.getContext('2d').drawImage(image, r.sx, r.sy, r.sw, r.sh, 0, 0, output.width, output.height);
+        output.toBlob(blob => finish(blob), cover ? 'image/jpeg' : 'image/png', .9);
       });
       draw(); zoom.focus();
     });
   }
-  window.KnowledgeUserProfile = { get, identity, crop, cropRect, clear: id => cache.delete(Number(id)) };
+  window.KnowledgeUserProfile = { get, identity, crop, cropRect, cropRegion, clear: id => cache.delete(Number(id)) };
 }());
