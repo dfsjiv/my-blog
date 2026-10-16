@@ -28,3 +28,19 @@ test('reference article card separates date, title, summary/tags and author/read
   assert.ok(nodes.some(n => n.textContent === '<script>纯文本</script>'));
   assert.equal(card.children[1].className.includes('knowledge-post-cover'), true);
 });
+
+test('real homepage card factory keeps article data visible if the cosmetic module is missing or throws', () => {
+  const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+  const factory = source.slice(source.indexOf('  function makeContentCard(post)'), source.indexOf('  function makeFeaturedCard(post)'));
+  const element = (tag, cls, text) => { const n = new Node(tag); n.className = cls; n.textContent = text || ''; return n; };
+  const options = { console: { error() {} }, element, contentElement: element, t: x => x,
+    typeLabel: () => '文章', formatDate: x => x || '', coverNode: () => new Node('cover'), appendTags() {},
+    appendIf: (root, label, value) => { if (value) root.append(element('span', '', label + value)); } };
+  for (const module of [undefined, { render() { throw new Error('render failed'); } }]) {
+    const context = { ...options, window: { KnowledgePostCard: module } };
+    vm.runInNewContext(factory + ';globalThis.make = makeContentCard;', context);
+    const card = context.make({ slug: 'kept', title: '不能消失的文章', author: 'author', tags: [] });
+    assert.equal(card.dataset.postSlug, 'kept');
+    assert.ok(walk(card).some(n => n.textContent === '不能消失的文章'));
+  }
+});

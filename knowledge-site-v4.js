@@ -550,10 +550,29 @@
   }
 
   function makeContentCard(post) {
-    return window.KnowledgePostCard.render(post, {
-      t, typeLabel, formatDate, coverNode, appendTags,
-      identity: window.KnowledgeUserProfile?.identity,
-    });
+    try {
+      if (typeof window.KnowledgePostCard?.render === 'function') {
+        return window.KnowledgePostCard.render(post, {
+          t, typeLabel, formatDate, coverNode, appendTags,
+          identity: window.KnowledgeUserProfile?.identity,
+        });
+      }
+      console.error('Post card module unavailable; using basic card');
+    } catch (error) {
+      console.error('Post card rendering failed; using basic card:', error);
+    }
+    // Cosmetic modules must not prevent visitors from reading article data.
+    const card = element('article', 'knowledge-content-card');
+    card.dataset.postSlug = post.slug; card.tabIndex = 0; card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', t('打开文章：') + post.title);
+    const body = element('div', 'knowledge-content-body');
+    body.append(element('span', 'knowledge-type-badge', typeLabel(post.type)),
+      contentElement('h3', '', post.title), contentElement('p', '', post.summary || ''));
+    const tags = element('div', 'knowledge-card-tags'); appendTags(tags, post.tags); body.append(tags);
+    const meta = element('div', 'knowledge-card-meta');
+    appendIf(meta, '', post.author);
+    appendIf(meta, t('发布：'), formatDate(post.publishedAt));
+    body.append(meta); card.append(coverNode(post), body); return card;
   }
 
   function makeFeaturedCard(post) {
@@ -580,7 +599,7 @@
     }));
     card.classList.add('knowledge-solution-card');
     card.setAttribute('aria-label', t('打开题解：') + post.title);
-    const row = card.querySelector('.knowledge-post-summary-row');
+    const row = card.querySelector('.knowledge-post-summary-row') || card.querySelector('.knowledge-content-body');
     const info = [solution.platform, solution.problemId, solution.difficulty, solution.language].filter(Boolean);
     if (info.length) row.appendChild(contentElement('span', 'knowledge-post-solution-info', info.join(' · ')));
     const problemUrl = safeExternalUrl(solution.problemUrl);
@@ -616,12 +635,19 @@
     return loading;
   }
 
-  function makeErrorState(retry) {
+  function makeErrorState(retry, reason) {
     const error = element('div', 'knowledge-error-state');
     error.appendChild(element('strong', '', '内容暂时无法加载。'));
     const retryButton = button('重新加载', 'knowledge-route-button');
     retryButton.addEventListener('click', retry);
     error.appendChild(retryButton);
+    if (reason) {
+      const details = element('details');
+      details.appendChild(element('summary', '', '错误详情'));
+      const code = reason.code || reason.name || 'REQUEST_FAILED';
+      details.appendChild(contentElement('p', '', code + (reason.status ? ' · HTTP ' + reason.status : '')));
+      error.appendChild(details);
+    }
     return error;
   }
 
@@ -919,7 +945,8 @@
     } else {
       state.homeLatestHasNext = false;
       updateHomeLoadMoreButton();
-      latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
+      console.error('Latest article request failed:', results[1].reason);
+      latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }, results[1].reason));
     }
   }
 
@@ -933,7 +960,7 @@
       container.replaceChildren(makeErrorState(function () {
         repository.clearCache();
         loadHome({ refresh: true }).catch(renderHomeFailure);
-      }));
+      }, error));
     });
   }
 
