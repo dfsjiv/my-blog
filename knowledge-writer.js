@@ -352,13 +352,24 @@
     saveDraftButton.type = 'button';
     const previewButton = element('button', 'knowledge-writer-secondary', '预览');
     previewButton.type = 'button';
+    const appearanceButton = element('button', 'knowledge-writer-secondary', '帖子外观预览');
+    appearanceButton.type = 'button';
     const publishButton = element('button', 'knowledge-writer-publish', '发布');
     publishButton.type = 'button';
-    bottomRight.append(saveStatus, savedAt, saveDraftButton, previewButton, publishButton);
+    bottomRight.append(saveStatus, savedAt, appearanceButton, saveDraftButton, previewButton, publishButton);
     bottom.append(bottomLeft, bottomRight);
 
     const previewOverlay = buildPreviewOverlay();
-    page.append(topbar, body, bottom, previewOverlay.root);
+    const appearanceDialog = document.createElement('dialog');
+    appearanceDialog.className = 'knowledge-writer-card-dialog';
+    appearanceDialog.setAttribute('aria-label', '帖子外观预览');
+    const appearanceHeader = element('header');
+    const appearanceClose = element('button', 'knowledge-writer-secondary', '关闭');
+    appearanceClose.type = 'button';
+    appearanceHeader.append(element('strong', '', '帖子外观预览'), appearanceClose);
+    const appearanceStage = element('div', 'knowledge-writer-card-stage');
+    appearanceDialog.append(appearanceHeader, element('p', 'knowledge-writer-card-hint', '将鼠标移到卡片上，查看亮边和浮起效果；此处不会发布文章或跳转。'), appearanceStage);
+    page.append(topbar, body, bottom, previewOverlay.root, appearanceDialog);
     container.replaceChildren(page);
 
     const commandButtons = Array.from(page.querySelectorAll('[data-editor-action]'));
@@ -783,6 +794,7 @@
       saveDraftButton.disabled = busy;
       publishButton.disabled = busy;
       previewButton.disabled = busy;
+      appearanceButton.disabled = busy;
     }
 
     function setSaveState(label, error) {
@@ -1153,6 +1165,49 @@
       sidePanel.solutionFields.hidden = !visible;
     }
 
+    function openAppearancePreview() {
+      if (!window.KnowledgePostCard?.render) {
+        showNotice('帖子外观模块尚未加载，请刷新后重试。', true);
+        return;
+      }
+      const payload = collectPayload();
+      const count = payload.contentMarkdown.replace(/\s/g, '').length;
+      const user = window.authManager?.getCurrentUser?.();
+      const now = new Date().toISOString();
+      const post = Object.assign({}, state.post || {}, payload, {
+        title: payload.title || '未命名文章',
+        author: user?.username || state.post?.author || '作者',
+        authorUserId: user?.id || state.post?.authorUserId,
+        publishedAt: state.post?.publishedAt || now,
+        updatedAt: state.post?.updatedAt || now,
+        wordCount: count,
+        readingTimeMinutes: Math.max(1, Math.ceil(count / 300)),
+      });
+      const card = window.KnowledgePostCard.render(post, {
+        t: text => text,
+        typeLabel: type => TYPE_OPTIONS.find(entry => entry[0] === type)?.[1] || '文章',
+        formatDate: value => value ? new Date(value).toLocaleDateString('zh-CN') : '',
+        identity: window.KnowledgeUserProfile?.identity,
+        appendTags: (root, tags) => tags.forEach(tag => root.append(element('span', 'knowledge-tag', typeof tag === 'string' ? tag : tag.name))),
+        coverNode: function (item) {
+          const root = element('div', 'knowledge-cover-placeholder', '暂无封面');
+          let url;
+          try { url = new URL(item.coverUrl || '', window.location.href); } catch { return root; }
+          if (!item.coverUrl || !['https:', 'http:'].includes(url.protocol)) return root;
+          const image = document.createElement('img');
+          image.src = url.href; image.alt = item.title; image.decoding = 'async';
+          image.addEventListener('error', () => root.replaceChildren(document.createTextNode('封面加载失败')), { once: true });
+          root.replaceChildren(image);
+          return root;
+        },
+      });
+      card.removeAttribute('data-post-slug');
+      card.removeAttribute('role');
+      card.setAttribute('aria-label', '帖子外观预览卡片');
+      appearanceStage.replaceChildren(card);
+      appearanceDialog.showModal();
+    }
+
     function openPreview() {
       const payload = collectPayload();
       if (!validatePayload(payload, false)) return;
@@ -1401,6 +1456,10 @@
     saveDraftButton.addEventListener('click', function () { saveToServer('draft'); });
     publishButton.addEventListener('click', function () { saveToServer('published'); });
     previewButton.addEventListener('click', openPreview);
+    appearanceButton.addEventListener('click', openAppearancePreview);
+    appearanceClose.addEventListener('click', () => appearanceDialog.close());
+    appearanceDialog.addEventListener('click', event => { if (event.target === appearanceDialog) appearanceDialog.close(); });
+    appearanceDialog.addEventListener('close', () => appearanceButton.focus());
     previewOverlay.close.addEventListener('click', closePreview);
     previewOverlay.root.addEventListener('click', function (event) {
       if (event.target === previewOverlay.root) closePreview();

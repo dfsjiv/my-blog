@@ -1285,3 +1285,10 @@
 .knowledge-writer-appearance-text span:nth-child(2) { color: var(--knowledge-text); font-size: 14px; font-weight: 400; }
 .knowledge-writer-appearance-cover { position: absolute; inset: 0 0 0 auto; width: 28%; background: linear-gradient(135deg,var(--knowledge-primary-soft),var(--knowledge-primary)); clip-path: polygon(16% 0,100% 0,100% 100%,0 100%); }
 .knowledge-writer-appearance-hint { margin: 0; color: var(--knowledge-muted); font-size: 12px; line-height: 1.6; }
+.knowledge-writer-card-dialog { box-sizing: border-box; width: min(1328px,calc(100vw - 40px)); max-height: calc(100dvh - 40px); padding: 24px; overflow: auto; color: var(--knowledge-text); background: var(--knowledge-bg); border: 1px solid var(--knowledge-border); border-radius: 16px; }
+.knowledge-writer-card-dialog::backdrop { background: rgba(0,0,0,.72); }
+.knowledge-writer-card-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.knowledge-writer-card-hint { color: var(--knowledge-muted); font-size: 13px; line-height: 1.6; margin: 12px 0 24px; }
+.knowledge-writer-card-stage { padding: 4px; }
+.knowledge-writer-card-stage .knowledge-post-card { text-align: left; }
+@media (max-width:720px) { .knowledge-writer-card-dialog { width: calc(100vw - 20px); padding: 14px; } }
