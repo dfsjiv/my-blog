@@ -1,7 +1,7 @@
 (function () {
   const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
-  const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面'], ['vinyl', '黑胶机舱'], ['collage', '街头贴纸'], ['mecha', '机甲切片'], ['island', '玻璃群岛'], ['holo', '3D 全息']];
+  const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面'], ['vinyl', '黑胶机舱'], ['collage', '街头贴纸'], ['mecha', '机甲切片'], ['island', '玻璃群岛'], ['holo', '3D 全息'], ['spider', '错位故障 · 三段切片']];
   const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
   const USER_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
   const USER_MAX_CONTENT_LENGTH = 256 * 1024;

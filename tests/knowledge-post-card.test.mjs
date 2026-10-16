@@ -14,7 +14,7 @@ test('all optional card styles keep safe real post content and unknown styles fa
   vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
     window, document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
   });
-  for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', '<script>unknown</script>']) {
+  for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', '<script>unknown</script>']) {
     const card = window.KnowledgePostCard.render({ title: '<img onerror=alert(1)>', slug: 'post', author: 'name', appearance, tags: [] }, {
       t: x => x, typeLabel: () => '文章', formatDate: () => '', coverNode: () => new Node('cover'), appendTags() {},
     });

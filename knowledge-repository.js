@@ -151,7 +151,7 @@
       originalContent: typeof source.originalContent === 'string' ? source.originalContent : '',
       contentFormat: typeof source.contentFormat === 'string' ? source.contentFormat : 'markdown',
       coverUrl: source.coverUrl || null,
-      appearance: ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo'].includes(source.appearance) ? source.appearance : 'default',
+      appearance: ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider'].includes(source.appearance) ? source.appearance : 'default',
       category: source.category || null,
       categorySlug: source.categorySlug || null,
       tags: Array.isArray(source.tags) ? source.tags.map(adaptTag).filter(function (tag) {

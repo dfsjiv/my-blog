@@ -1,4 +1,44 @@
 /* Optional per-post styles. Default card typography and data stay shared. */
+.knowledge-content-card.knowledge-post-card[data-post-appearance="spider"] {
+  display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; min-height: 0; margin: 0 14px;
+  background: transparent; border: 0; border-radius: 0; overflow: visible; box-shadow: none;
+}
+.knowledge-content-card.knowledge-post-card[data-post-appearance="spider"]:hover { transform: none; box-shadow: none; }
+.knowledge-post-card[data-post-appearance="spider"]::before { display: none; }
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-eyebrow,
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-spider-middle,
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-footer {
+  box-sizing: border-box; min-width: 0; margin: 0; padding: 14px 20px; background: var(--knowledge-surface-solid);
+  border: 1px solid var(--knowledge-border); transition: transform .24s ease,box-shadow .24s ease;
+}
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-eyebrow { border-radius: 12px 12px 0 0; transform: translateX(-8px); }
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-footer { border-radius: 0 0 12px 12px; transform: translateX(-6px); }
+.knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-spider-middle { display: grid; grid-template-columns: minmax(0,1fr) minmax(180px,24%); align-items: center; gap: 20px; transform: translateX(8px); padding-block: 20px; }
+.knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-eyebrow { transform: translateX(-12px); }
+.knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-spider-middle { transform: translateX(12px); box-shadow: -3px 0 0 #39c5bb,3px 0 0 #ff2e7e; }
+.knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-footer { transform: translateX(-10px); }
+.knowledge-post-spider-text { min-width: 0; }
+.knowledge-post-spider-text .knowledge-post-title { position: relative; margin: 0 0 16px; font-size: clamp(21px,1.7vw,26px); line-height: 1.4; font-weight: 400; overflow-wrap: anywhere; }
+.knowledge-post-card[data-post-appearance="spider"]:hover .knowledge-post-title { text-shadow: -1px 0 #39c5bb,1px 0 #ff2e7e; }
+.knowledge-post-spider-text .knowledge-post-summary-row { margin: 0; }
+.knowledge-post-spider-text .knowledge-post-summary { margin: 0; padding: 4px 8px; border-left: 0; color: #17212e; background: #facc15; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.knowledge-post-spider-middle > .knowledge-post-cover { position: relative; width: 100%; height: auto; aspect-ratio: 3 / 2; min-height: 0; box-sizing: border-box; border: 2px solid var(--knowledge-text); border-radius: 8px; overflow: hidden; box-shadow: 5px 5px 0 #ff2e7e; clip-path: none; }
+.knowledge-post-spider-middle > .knowledge-post-cover img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.knowledge-post-glitch-text { display: none; position: absolute; inset: 0; pointer-events: none; color: var(--knowledge-primary); background: var(--knowledge-surface-solid); overflow-wrap: anywhere; }
+.is-glitching .knowledge-post-glitch-text { display: block; }
+.is-grid .knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-spider-middle { grid-template-columns: minmax(0,1fr); }
+.is-grid .knowledge-post-spider-middle > .knowledge-post-cover { order: -1; }
+@media(max-width:720px) {
+  .knowledge-content-card.knowledge-post-card[data-post-appearance="spider"] { margin-inline: 5px; }
+  .knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-spider-middle { grid-template-columns: minmax(0,1fr); }
+  .knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-eyebrow,
+  .knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-spider-middle,
+  .knowledge-post-card[data-post-appearance="spider"] > .knowledge-post-footer { padding: 14px; transform: none; }
+  .knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-eyebrow,
+  .knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-spider-middle,
+  .knowledge-post-card[data-post-appearance="spider"]:hover > .knowledge-post-footer { transform: none; }
+  .knowledge-post-spider-middle > .knowledge-post-cover { order: -1; }
+}
 .knowledge-post-card[data-post-appearance="vinyl"] {
   overflow: visible; margin-top: 22px; background: linear-gradient(135deg,var(--knowledge-bg),var(--knowledge-surface-solid));
 }

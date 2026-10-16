@@ -20,7 +20,7 @@
     const chip = (name, text, cls) => { const n = el('span', 'knowledge-post-chip ' + (cls || '')); n.append(icon(name), el('span', '', text)); return n; };
     const card = el('article', 'knowledge-content-card knowledge-post-card');
     // Unknown or legacy appearance identifiers always retain the default layout.
-    const appearance = ['vinyl', 'collage', 'mecha', 'island', 'holo'].includes(post.appearance) ? post.appearance : 'default';
+    const appearance = ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider'].includes(post.appearance) ? post.appearance : 'default';
     card.dataset.postAppearance = appearance;
     card.dataset.postSlug = post.slug; card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', t('打开文章：') + post.title);
     const body = el('div', 'knowledge-content-body knowledge-post-body');
@@ -56,7 +56,31 @@
     const number = String(post.title || '').match(/(?:内部赛|第)\s*(\d{1,4})/);
     if (number) { const mark = el('span', 'knowledge-post-watermark', '#' + number[1]); mark.setAttribute('aria-hidden', 'true'); body.append(mark); }
     const cover = coverNode(post); cover.classList.add('knowledge-post-cover');
-    card.append(body, cover);
+    if (appearance === 'spider') {
+      const middle = el('div', 'knowledge-post-spider-middle');
+      const text = el('div', 'knowledge-post-spider-text'); text.append(title, summaryRow);
+      middle.append(text, cover); card.append(top, middle, footer);
+      if (typeof card.addEventListener === 'function') {
+        const glitch = el('span', 'knowledge-post-glitch-text'); glitch.setAttribute('aria-hidden', 'true'); title.append(glitch);
+        const original = Array.from(String(post.title || ''));
+        let timer = null, step = 0;
+        function stop() { window.clearTimeout(timer); timer = null; glitch.textContent = ''; card.classList.remove('is-glitching'); }
+        function start() {
+          stop();
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+          step = 0; card.classList.add('is-glitching');
+          function tick() {
+            if (!card.isConnected || step >= 6) { stop(); return; }
+            glitch.textContent = original.map((char, i) => i < original.length * step / 6 || /\s/.test(char) ? char : '#%/01<>_'[Math.floor(Math.random() * 8)]).join('');
+            step++; timer = window.setTimeout(tick, 70);
+          }
+          tick();
+        }
+        card.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') start(); });
+        card.addEventListener('focus', start);
+        card.addEventListener('pointerleave', stop); card.addEventListener('blur', stop); card.addEventListener('pointercancel', stop);
+      }
+    } else card.append(body, cover);
     if (appearance === 'vinyl') {
       const disc = el('div', 'knowledge-post-vinyl-disc'); disc.setAttribute('aria-hidden', 'true'); card.append(disc);
       const wave = el('span', 'knowledge-post-sound-wave'); wave.setAttribute('aria-hidden', 'true');

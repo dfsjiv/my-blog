@@ -170,11 +170,31 @@ function createApi(env) {
     };
 }
 
+test("old saved appearances remain readable and new choices override without rewriting them", async () => {
+    const env = createDatabase(), api = createApi(env);
+    const created = await api('/api/knowledge/admin/posts', {
+        method: 'POST', token: 'user-token', body: articleInput({ title: '原外观兼容', status: 'published' })
+    });
+    const post = created.body.data.post;
+    env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
+    env.sqlite.prepare('DELETE FROM knowledge_post_presentation WHERE post_id = ?').run(post.id);
+    env.sqlite.prepare('INSERT INTO knowledge_post_appearances VALUES (?, ?)').run(post.id, 'holo');
+    assert.equal((await api('/api/knowledge/posts/' + post.slug)).body.data.post.appearance, 'holo');
+    const updated = await api('/api/knowledge/admin/posts/' + post.id, {
+        method: 'PATCH', token: 'user-token', body: { version: post.version, appearance: 'spider' }
+    });
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.data.post.appearance, 'spider');
+    assert.equal((await api('/api/knowledge/posts/' + post.slug)).body.data.post.appearance, 'spider');
+    assert.equal(env.sqlite.prepare('SELECT appearance FROM knowledge_post_appearances WHERE post_id = ?').get(post.id).appearance, 'holo');
+    for (let i = 0; i < 2; i++) env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0013_add_extensible_post_presentation.sql'), 'utf8'));
+});
+
 test("post appearances persist through edit, public detail and list without altering article schema", async () => {
     const env = createDatabase();
     const api = createApi(env);
     const columns = env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all();
-    for (const appearance of ['vinyl', 'collage', 'mecha', 'island', 'holo']) {
+    for (const appearance of ['vinyl', 'collage', 'mecha', 'island', 'holo', 'spider']) {
         const created = await api('/api/knowledge/admin/posts', {
             method: 'POST', token: 'user-token', body: articleInput({ title: '外观 ' + appearance, appearance, status: 'published' })
         });
@@ -200,9 +220,9 @@ test("post appearances persist through edit, public detail and list without alte
     assert.deepEqual(env.sqlite.prepare('PRAGMA table_info(knowledge_posts)').all(), columns);
     const list = await api('/api/knowledge/posts');
     assert.equal(list.status, 200);
-    assert.equal(list.body.data.items.length, 5);
+    assert.equal(list.body.data.items.length, 6);
     assert.ok(list.body.data.items.every(post => typeof post.appearance === 'string'));
-    assert.deepEqual(new Set(list.body.data.items.map(post => post.appearance)), new Set(['vinyl','collage','mecha','island','holo']));
+    assert.deepEqual(new Set(list.body.data.items.map(post => post.appearance)), new Set(['vinyl','collage','mecha','island','holo','spider']));
     env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
     env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0012_add_post_appearances.sql'), 'utf8'));
 });
