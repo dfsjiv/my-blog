@@ -263,6 +263,7 @@
     navLinks.classList.toggle('is-open', Boolean(open));
     menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     menuToggle.setAttribute('aria-label', t(open ? '关闭导航菜单' : '打开导航菜单'));
+    menuToggle.textContent = open ? '×' : '☰';
     if (!open) closeNavMenus();
   }
 
@@ -320,6 +321,12 @@
     navMenus.forEach(function (menu) {
       const trigger = menu.querySelector('.knowledge-nav-menu-trigger');
       if (!trigger) return;
+      trigger.addEventListener('keydown', function (event) {
+        if (event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        setNavMenuOpen(menu, true);
+        menu.querySelector('.knowledge-nav-submenu button:not(:disabled)')?.focus();
+      });
       trigger.addEventListener('click', function () {
         const isCompact = window.matchMedia('(max-width: 1040px)').matches;
         setNavMenuOpen(menu, isCompact ? !menu.classList.contains('is-open') : true);
@@ -348,11 +355,18 @@
 
     document.addEventListener('click', function (event) {
       if (!event.target.closest('[data-knowledge-nav-menu]')) closeNavMenus();
+      if (navLinks.classList.contains('is-open') && !header.contains(event.target)) setNavOpen(false);
     });
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
       const openMenu = navMenus.find(function (menu) { return menu.classList.contains('is-open'); });
-      if (!openMenu) return;
+      if (!openMenu) {
+        if (navLinks.classList.contains('is-open')) {
+          setNavOpen(false);
+          menuToggle.focus();
+        }
+        return;
+      }
       openMenu.querySelector('.knowledge-nav-menu-trigger')?.focus();
       setNavMenuOpen(openMenu, false);
     });
