@@ -10,6 +10,41 @@
   background-size: 100% 100%,100% 100%,36px 36px,36px 36px;
 }
 .knowledge-site[data-route="home"][data-theme="dark"] { --knowledge-grid-line: rgba(255,255,255,.045); }
+/* Light-only photo wash: the image stays intact, its lower edge meets the page. */
+.knowledge-site[data-route="home"] {
+  --knowledge-home-blend: 0;
+  --knowledge-home-rear-wave: rgba(8,16,24,.34);
+}
+.knowledge-site[data-route="home"]:not([data-theme="dark"]) {
+  --knowledge-bg: #f0f4f8;
+  --knowledge-home-blend: 1;
+  --knowledge-home-rear-wave: rgba(207,222,235,.48);
+}
+@media (prefers-color-scheme: dark) {
+  .knowledge-site[data-route="home"]:not([data-theme="light"]) {
+    --knowledge-bg: #081018;
+    --knowledge-home-blend: 0;
+    --knowledge-home-rear-wave: rgba(8,16,24,.34);
+  }
+}
+.knowledge-site[data-route="home"] .knowledge-intro::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    transparent 34%,
+    color-mix(in srgb,var(--knowledge-bg) 10%,transparent) 52%,
+    color-mix(in srgb,var(--knowledge-bg) 48%,transparent) 72%,
+    color-mix(in srgb,var(--knowledge-bg) 92%,transparent) 91%,
+    var(--knowledge-bg) 100%);
+  opacity: var(--knowledge-home-blend);
+}
+.knowledge-site[data-route="home"] .knowledge-wave-back {
+  background: var(--knowledge-home-rear-wave);
+}
 .knowledge-home-view .knowledge-layout { max-width: 1280px; }
 .knowledge-post-list,.knowledge-solution-list { gap: 24px; }
 .knowledge-content-card.knowledge-post-card {
