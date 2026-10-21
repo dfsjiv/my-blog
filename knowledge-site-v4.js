@@ -590,20 +590,9 @@
   }
 
   function makeFeaturedCard(post) {
-    const card = element('article', 'knowledge-featured-card');
-    card.dataset.postSlug = post.slug;
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
-    const tags = element('div', 'knowledge-card-tags');
-    appendTags(tags, post.tags);
-    card.append(
-      element('span', 'knowledge-type-badge', typeLabel(post.type)),
-      contentElement('h3', '', post.title),
-      contentElement('p', '', post.summary),
-      tags
-    );
-    if (window.KnowledgeUserProfile) card.appendChild(window.KnowledgeUserProfile.identity(post.authorUserId, post.author));
-    return card;
+    // Featured is a collection flag, not a separate presentation style.
+    // Reuse the same renderer, animations and safe fallback as the latest feed.
+    return makeContentCard(post);
   }
 
   function makeSolutionCard(post) {

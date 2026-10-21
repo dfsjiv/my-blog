@@ -9,6 +9,26 @@ class Node {
   get childElementCount() { return this.children.length; }
 }
 const walk = n => [n, ...n.children.flatMap(walk)];
+test('featured posts use the shared renderer and retain every saved appearance, cover and metadata', () => {
+  const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+  const factories = source.slice(source.indexOf('  function makeContentCard(post)'), source.indexOf('  function makeSolutionCard(post)'));
+  const context = { window: {}, document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
+    t: x => x, typeLabel: () => '文章', formatDate: x => x || '', coverNode: () => new Node('cover'), appendTags() {} };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8') + '\n' + factories, context);
+  for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand']) {
+    const card = context.makeFeaturedCard({ slug: 'featured', title: '精选文章', author: '作者', appearance,
+      isFeatured: true, tags: [], publishedAt: '2026-10-21', wordCount: 1234, readingTimeMinutes: 4 });
+    assert.equal(card.dataset.postAppearance, appearance);
+    assert.equal(card.dataset.postSlug, 'featured');
+    assert.equal(card.attrs.role, 'button');
+    assert.ok(card.className.includes('knowledge-post-card'));
+    assert.ok(!card.className.includes('knowledge-featured-card'));
+    const nodes = walk(card);
+    for (const text of ['精选', '2026-10-21', '作者', '4 分钟', '1,234 字']) assert.ok(nodes.some(n => n.textContent === text), text);
+    assert.ok(nodes.some(n => n.tag === 'cover'));
+  }
+});
 test('all optional card styles keep safe real post content and unknown styles fall back', () => {
   const window = {};
   vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {

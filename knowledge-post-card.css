@@ -47,6 +47,7 @@
 }
 .knowledge-home-view .knowledge-layout { max-width: 1280px; }
 .knowledge-post-list,.knowledge-solution-list { gap: 24px; }
+.knowledge-featured-grid { grid-template-columns: minmax(0,1fr); gap: 24px; }
 .knowledge-content-card.knowledge-post-card {
   position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0,1fr) 28%;
   min-height: 240px; padding: 0; gap: 0; overflow: hidden; border-radius: 18px;
