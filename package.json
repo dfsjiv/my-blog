@@ -4,6 +4,7 @@
   "scripts": {
     "build:knowledge-site": "node scripts/build-knowledge-site.mjs",
     "check:knowledge-build": "node scripts/build-knowledge-site.mjs --check",
+    "sync:katex": "node scripts/sync-katex.mjs",
     "build:knowledge-editor": "esbuild src/knowledge-editor-vendor.js --bundle --format=iife --global-name=KnowledgeEditorVendor --outfile=assets/vendor/knowledge-editor/tiptap.bundle.js --minify --legal-comments=linked",
     "test": "node --test tests/*.test.js tests/*.test.mjs"
   },
@@ -17,7 +18,7 @@
     "@tiptap/extensions": "^3.31.3",
     "@tiptap/markdown": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
-    "katex": "0.16.22"
+    "katex": "0.18.2"
   },
   "devDependencies": {
     "esbuild": "0.28.1"

@@ -1,0 +1,13 @@
+import { cp, copyFile, mkdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const source = path.join(root, 'node_modules/katex');
+const target = path.join(root, 'assets/vendor/katex');
+await mkdir(target, { recursive: true });
+for (const name of ['katex.min.js', 'katex.min.css']) await copyFile(path.join(source, 'dist', name), path.join(target, name));
+await copyFile(path.join(source, 'dist/contrib/auto-render.min.js'), path.join(target, 'auto-render.min.js'));
+await copyFile(path.join(source, 'LICENSE'), path.join(target, 'LICENSE'));
+await cp(path.join(source, 'dist/fonts'), path.join(target, 'fonts'), { recursive: true });
+const pkg = JSON.parse(await readFile(path.join(source, 'package.json'), 'utf8'));
+console.log('Synced local KaTeX ' + pkg.version);
