@@ -188,6 +188,30 @@ test('list queries do not load full Markdown bodies; detail and author editing r
     assert.equal((await api('/api/knowledge/admin/posts/' + id, { token: 'user-token' })).body.data.post.contentMarkdown, content);
 });
 
+test('authors may edit their featured posts without changing admin-only presentation flags', async () => {
+    const env = createDatabase(), api = createApi(env);
+    const created = await api('/api/knowledge/admin/posts', { method: 'POST', token: 'user-token', body: articleInput({ title: '被管理员精选的用户文章', status: 'published' }) });
+    const post = created.body.data.post;
+    const featured = await api('/api/knowledge/admin/posts/' + post.id, { method: 'PATCH', token: 'admin-token', body: { version: post.version, isFeatured: true, isPinned: true } });
+    assert.equal(featured.status, 200);
+    let current = featured.body.data.post;
+    for (const body of [{ summary: '作者正常更新摘要' }, { contentMarkdown: '# 作者更新正文', isFeatured: true, isPinned: true }]) {
+        const updated = await api('/api/knowledge/admin/posts/' + post.id, { method: 'PATCH', token: 'user-token', body: { version: current.version, ...body } });
+        assert.equal(updated.status, 200);
+        current = updated.body.data.post;
+        assert.equal(current.isFeatured, true); assert.equal(current.isPinned, true);
+    }
+    for (const body of [{ isFeatured: false }, { isPinned: false }]) {
+        const denied = await api('/api/knowledge/admin/posts/' + post.id, { method: 'PATCH', token: 'user-token', body: { version: current.version, ...body } });
+        assert.equal(denied.status, 400);
+        assert.match(denied.body.error.fields.permissions, /普通用户不能/);
+    }
+    const publicPost = await api('/api/knowledge/posts/' + post.slug);
+    assert.equal(publicPost.body.data.post.contentMarkdown, '# 作者更新正文');
+    assert.equal(publicPost.body.data.post.isFeatured, true);
+    env.sqlite.close();
+});
+
 test("old saved appearances remain readable and new choices override without rewriting them", async () => {
     const env = createDatabase(), api = createApi(env);
     const created = await api('/api/knowledge/admin/posts', {

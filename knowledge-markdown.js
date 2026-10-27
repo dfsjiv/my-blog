@@ -213,21 +213,29 @@
 
   async function copyCode(button) {
     const code = button.closest('.knowledge-code-block')?.querySelector('code');
-    if (!code || !navigator.clipboard || !navigator.clipboard.writeText) return false;
+    if (!code) return false;
+    let copied = false;
     try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(code.textContent);
       button.textContent = '已复制';
-      window.setTimeout(function () {
-        if (button.isConnected) button.textContent = '复制';
-      }, 1400);
-      return true;
+      copied = true;
     } catch (error) {
-      button.textContent = '复制失败';
-      window.setTimeout(function () {
-        if (button.isConnected) button.textContent = '复制';
-      }, 1400);
-      return false;
+      // Some in-app browsers deny clipboard access. Select only the code as a
+      // manual-copy fallback instead of leaving a button that silently does nothing.
+      try {
+        const selection = window.getSelection();
+        if (!selection) throw new Error('Selection unavailable');
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        selection.removeAllRanges(); selection.addRange(range);
+        button.textContent = '请手动复制';
+      } catch { button.textContent = '复制失败'; }
     }
+    window.setTimeout(function () {
+      if (button.isConnected) button.textContent = '复制';
+    }, 1400);
+    return copied;
   }
 
   function render(markdown, container) {

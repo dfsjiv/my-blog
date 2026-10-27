@@ -1140,7 +1140,7 @@ function validatePost(body, existing, user) {
     if (tags.error) fields.tags = tags.error;
     if (typeof merged.isPinned !== "boolean") fields.isPinned = "必须为布尔值";
     if (typeof merged.isFeatured !== "boolean") fields.isFeatured = "必须为布尔值";
-    if (!isAdmin && (merged.isPinned || merged.isFeatured)) {
+    if (!isAdmin && (merged.isPinned !== Boolean(existing?.isPinned) || merged.isFeatured !== Boolean(existing?.isFeatured))) {
         fields.permissions = "普通用户不能设置置顶或精选";
     }
 
