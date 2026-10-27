@@ -18,7 +18,7 @@ function loadAuthModule() {
       listeners[eventName] = handler;
     },
   };
-  const window = { document };
+  const window = { document, setTimeout, clearTimeout };
   const sandbox = {
     window,
     document,
@@ -27,6 +27,7 @@ function loadAuthModule() {
     Error,
     JSON,
     Object,
+    AbortController,
   };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: authPath });
@@ -271,7 +272,7 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20261016-auth-errors-2"><\/script>/);
+  assert.match(indexHtml, /<script src="auth\.js\?v=20261027-request-timeout-1"><\/script>/);
   assert.match(indexHtml, /<h1>SIGN IN<\/h1>/);
   assert.match(indexHtml, /placeholder="USERNAME"/);
   assert.match(indexHtml, /placeholder="PASSWORD"/);

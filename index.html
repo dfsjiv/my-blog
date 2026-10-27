@@ -101,8 +101,6 @@
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
   <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
   <link rel="stylesheet" href="knowledge-navigation.css?v=20261019-spatial-1" />
-  <link rel="stylesheet" href="contest-center.css" />
-  <link rel="stylesheet" href="particle-wallpaper.css" />
   <script type="importmap">
     {
       "imports": {
@@ -466,7 +464,7 @@
             <button class="window-control close" id="windowClose" type="button" aria-label="关闭">×</button>
           </div>
         </header>
-        <iframe class="blog-frame" id="blogFrame" src="blog.html" title="博客内容"></iframe>
+        <iframe class="blog-frame" id="blogFrame" data-src="blog.html" title="博客内容"></iframe>
         <span class="window-resize-handle resize-n" id="resizeN" data-resize-edge="n" aria-hidden="true"></span>
         <span class="window-resize-handle resize-e" id="resizeE" data-resize-edge="e" aria-hidden="true"></span>
         <span class="window-resize-handle resize-s" id="resizeS" data-resize-edge="s" aria-hidden="true"></span>
@@ -820,16 +818,13 @@ Camera: --, --, --</pre>
   <script src="site-entry-loader.js?v=20261027-bounded-ready-1"></script>
   <script src="home-device.js"></script>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
-  <script src="night-rain-city-3d.js"></script>
-  <script src="particle-wallpaper.js"></script>
-  <script src="home-desktop.js"></script>
-  <script src="auth.js?v=20261016-auth-errors-2"></script>
+  <script src="auth.js?v=20261027-request-timeout-1"></script>
   <script src="knowledge-data.js"></script>
   <script src="knowledge-i18n-v3.js?v=20261010-algorithms-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="knowledge-markdown.js?v=20260825-3"></script>
-  <script src="knowledge-repository.js?v=20261016-armor-hand-1"></script>
+  <script src="knowledge-repository.js?v=20261027-body-timeout-1"></script>
   <script src="knowledge-favorites.js"></script>
   <script src="knowledge-user-profile.js?v=20261016-cover-crop-1"></script>
   <script src="knowledge-background-display.js?v=20261014-background-display-1"></script>
@@ -859,6 +854,11 @@ Camera: --, --, --</pre>
         "styles": ["algorithm-center.css?v=20261011-5"],
         "scripts": ["algorithm-cookie-sync.js?v=20261011-4", "algorithm-charts.js?v=20261011-5", "algorithm-center.js?v=20261011-4"],
         "ready": "KnowledgeAlgorithmCenter"
+      },
+      "desktop": {
+        "styles": ["contest-center.css", "particle-wallpaper.css"],
+        "scripts": ["night-rain-city-3d.js", "particle-wallpaper.js?v=20261027-visible-only-1", "home-desktop.js", "chat.js", "ai-chat.js", "contest-center.js?v=20261010-1", "city-world-app.js"],
+        "ready": "homeDesktop"
       }
     }
   </script>
@@ -866,9 +866,5 @@ Camera: --, --, --</pre>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
   <script src="assets/vendor/knowledge/site.bundle.js?v=20261027-discovery-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
-  <script src="chat.js"></script>
-  <script src="ai-chat.js"></script>
-  <script src="contest-center.js?v=20261010-1"></script>
-  <script src="city-world-app.js"></script>
 </body>
 </html>

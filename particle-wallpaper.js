@@ -748,6 +748,10 @@
     bindEvents() {
       window.addEventListener('resize', this.handleResize);
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
+      if (window.MutationObserver && document.body) {
+        this.desktopVisibilityObserver = new window.MutationObserver(this.handleVisibilityChange);
+        this.desktopVisibilityObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      }
       this.surface.addEventListener('mousemove', this.handleMouseMove);
       this.surface.addEventListener('mouseleave', this.handleMouseLeave);
       if (this.toggleButton) this.toggleButton.addEventListener('click', this.handleToggle);
@@ -803,8 +807,12 @@
       if (this.nightRainScene) this.nightRainScene.setMouse(0, 0);
     }
 
+    isViewVisible() {
+      return !document.hidden && (!document.getElementById('desktopShell') || document.body.classList.contains('auth-desktop'));
+    }
+
     onVisibilityChange() {
-      if (document.hidden) this.stop();
+      if (!this.isViewVisible()) this.stop();
       else if (this.enabled) this.start();
     }
 
@@ -974,6 +982,7 @@
     }
 
     renderFrame(time) {
+      if (!this.isViewVisible()) { this.stop(); return; }
       if (this.animationFrameId === null || !this.enabled || document.hidden) return;
       const deltaSeconds = this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.033) : 0;
       this.lastTime = time;
@@ -1040,7 +1049,7 @@
     }
 
     start() {
-      if (!this.initialized || this.destroyed || !this.enabled || this.animationFrameId !== null) return;
+      if (!this.initialized || this.destroyed || !this.enabled || this.animationFrameId !== null || !this.isViewVisible()) return;
       this.canvas.classList.remove('is-disabled');
       this.lastTime = 0;
       this.animationFrameId = window.requestAnimationFrame(this.renderFrame);
@@ -1173,6 +1182,7 @@
       this.stop();
       window.removeEventListener('resize', this.handleResize);
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      if (this.desktopVisibilityObserver) this.desktopVisibilityObserver.disconnect();
       this.surface.removeEventListener('mousemove', this.handleMouseMove);
       this.surface.removeEventListener('mouseleave', this.handleMouseLeave);
       if (this.toggleButton) this.toggleButton.removeEventListener('click', this.handleToggle);

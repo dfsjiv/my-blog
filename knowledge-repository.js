@@ -55,17 +55,19 @@
         credentials: 'same-origin',
       });
     } catch (error) {
+      requestSignal.cleanup();
       if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('内容暂时无法加载。', 0, 'NETWORK_ERROR');
-    } finally {
-      requestSignal.cleanup();
     }
 
     let payload;
     try {
       payload = await response.json();
     } catch (error) {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('服务器返回了无效数据。', response.status, 'INVALID_RESPONSE');
+    } finally {
+      requestSignal.cleanup();
     }
     if (!response.ok || !payload || payload.success !== true) {
       const apiError = payload && payload.error;
@@ -438,16 +440,18 @@
         credentials: 'same-origin',
       });
     } catch (error) {
+      requestSignal.cleanup();
       if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('背景上传失败，请稍后重试。', 0, 'NETWORK_ERROR');
-    } finally {
-      requestSignal.cleanup();
     }
     let payload;
     try {
       payload = await response.json();
     } catch (error) {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('服务器返回了无效数据。', response.status, 'INVALID_RESPONSE');
+    } finally {
+      requestSignal.cleanup();
     }
     if (!response.ok || !payload || payload.success !== true) {
       const apiError = payload && payload.error;
@@ -495,17 +499,19 @@
         credentials: 'same-origin',
       });
     } catch (error) {
+      requestSignal.cleanup();
       if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('图片上传失败，请稍后重试。', 0, 'NETWORK_ERROR');
-    } finally {
-      requestSignal.cleanup();
     }
 
     let payload;
     try {
       payload = await response.json();
     } catch (error) {
+      if (requestSignal.signal.aborted) throw requestSignal.signal.reason || error;
       throw new KnowledgeApiError('服务器返回了无效数据。', response.status, 'INVALID_RESPONSE');
+    } finally {
+      requestSignal.cleanup();
     }
     if (!response.ok || !payload || payload.success !== true) {
       const apiError = payload && payload.error;

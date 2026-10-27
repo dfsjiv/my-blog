@@ -13,6 +13,7 @@
   }
 
   function formatAuthError(error, mode) {
+    if (error?.code === 'timeout') return 'The request timed out. Please check your connection and try again.';
     if (error?.code === 'invalid_credentials') return 'Invalid username or password.';
     if (error?.code === 'network') return 'Network request failed. Check your connection and try again.';
     const status = Number(error?.status) || 0;
@@ -151,10 +152,15 @@
         headers.Authorization = 'Bearer ' + options.token;
       }
 
+      const controller = new AbortController();
+      const timeout = window.setTimeout(function () { controller.abort(); }, 15000);
+      fetchOptions.signal = controller.signal;
       let response;
       try {
         response = await fetchImpl(API_BASE_URL + path, fetchOptions);
       } catch (error) {
+        window.clearTimeout(timeout);
+        if (controller.signal.aborted) throw new AuthError('timeout', '请求超时，请检查网络后重试');
         throw new AuthError('network', '无法连接服务器，请稍后重试');
       }
 
@@ -162,7 +168,10 @@
       try {
         data = await response.json();
       } catch (error) {
+        if (controller.signal.aborted) throw new AuthError('timeout', '请求超时，请检查网络后重试');
         throw new AuthError('invalid_response', '服务器返回了无法识别的数据', response.status);
+      } finally {
+        window.clearTimeout(timeout);
       }
 
       if (!response.ok || !data || data.success === false) {
@@ -194,6 +203,7 @@
         });
       } catch (error) {
         if (error.code === 'network') throw error;
+        if (error.code === 'timeout') throw error;
         if (error.code === 'invalid_response') throw error;
         if (error.status >= 500) {
           throw new AuthError('server_error', '无法连接服务器，请稍后重试', error.status);
@@ -447,7 +457,13 @@
       showElegantVersion(user);
     }
 
-    function showDesktop(user) {
+    async function showDesktop(user) {
+      try {
+        if (window.KnowledgeFeatures) await window.KnowledgeFeatures.ensure('desktop');
+      } catch {
+        window.alert('系统模块暂时无法加载，请检查网络后重试。');
+        return;
+      }
       updateUserIdentityUI(user);
       document.body.classList.remove('auth-pending', 'auth-login', 'auth-elegant');
       document.body.classList.add('auth-desktop');

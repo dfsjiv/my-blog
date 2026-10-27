@@ -365,7 +365,8 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
   assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260922-auth-lines-1"\s*\/>/);
-  assert.match(indexHtml, /<script\s+src="home-desktop\.js"><\/script>/);
+  assert.match(indexHtml, /"home-desktop\.js"/);
+  assert.doesNotMatch(indexHtml, /<script\s+src="home-desktop\.js"/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/src="assets\/chat-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 8);
