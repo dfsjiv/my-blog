@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /*knowledge=writer
+Disallow: /*knowledge=drafts
+Disallow: /*knowledge=manage
+Disallow: /*knowledge=profile
+Disallow: /*knowledge=invitations
+Disallow: /*knowledge=backgrounds
+Disallow: /*knowledge=mover
+
+Sitemap: https://lilinzheng.top/sitemap.xml

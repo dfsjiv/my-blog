@@ -1267,6 +1267,7 @@
     const route = state.route;
     const details = state.routePayload;
     shell.dataset.route = route;
+    window.KnowledgePageMetadata?.update(route);
     if (route !== 'writer') {
       shell.classList.remove('knowledge-writing-mode');
       window.KnowledgeWriter?.destroy?.();
@@ -2983,6 +2984,7 @@
 
     routeView.replaceChildren();
     const layout = element('div', 'knowledge-detail-layout');
+    window.KnowledgePageMetadata?.update('detail', post);
     const main = element('article', 'knowledge-article');
     const header = element('header', 'knowledge-detail-header');
     const badges = element('div', 'knowledge-card-tags');
