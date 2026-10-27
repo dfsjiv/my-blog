@@ -74,7 +74,14 @@
 
     const loadReady = settings.force
       ? Promise.resolve()
-      : waitForPageReady();
+      : new Promise(function (resolve) {
+        // Slow/failed third-party images must never trap a visitor behind the loader.
+        const deadline = window.setTimeout(resolve, 6000);
+        waitForPageReady().finally(function () {
+          window.clearTimeout(deadline);
+          resolve();
+        });
+      });
 
     loadReady.then(function () {
       target = 100;

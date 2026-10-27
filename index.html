@@ -93,15 +93,11 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
-  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <link rel="stylesheet" href="knowledge-site-v2.css?v=20261014-wizard-chess-1" />
   <link rel="stylesheet" href="knowledge-post-card.css?v=20261021-featured-1" />
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
   <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
   <link rel="stylesheet" href="knowledge-navigation.css?v=20261019-spatial-1" />
-  <link rel="stylesheet" href="algorithm-center.css?v=20261011-5" />
-  <link rel="stylesheet" href="knowledge-writer.css?v=20261016-card-preview-2" />
-  <link rel="stylesheet" href="knowledge-article-mover.css" />
   <link rel="stylesheet" href="contest-center.css" />
   <link rel="stylesheet" href="particle-wallpaper.css" />
   <script type="importmap">
@@ -818,7 +814,7 @@ Camera: --, --, --</pre>
     </div>
   </section>
 
-  <script src="site-entry-loader.js?v=20260915-loader-ready-1"></script>
+  <script src="site-entry-loader.js?v=20261027-bounded-ready-1"></script>
   <script src="home-device.js"></script>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="night-rain-city-3d.js"></script>
@@ -829,23 +825,43 @@ Camera: --, --, --</pre>
   <script src="knowledge-i18n-v3.js?v=20261010-algorithms-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
-  <script src="assets/vendor/katex/katex.min.js"></script>
-  <script src="assets/vendor/katex/auto-render.min.js"></script>
   <script src="knowledge-markdown.js?v=20260825-3"></script>
   <script src="knowledge-repository.js?v=20261016-armor-hand-1"></script>
   <script src="knowledge-favorites.js"></script>
   <script src="knowledge-user-profile.js?v=20261016-cover-crop-1"></script>
   <script src="knowledge-background-display.js?v=20261014-background-display-1"></script>
-  <script src="assets/vendor/knowledge-editor/tiptap.bundle.js"></script>
-  <script src="knowledge-editor-adapter.js?v=20261012-md-import-1"></script>
-  <script src="knowledge-writer.js?v=20261016-armor-hand-1"></script>
-  <script src="knowledge-article-mover.js"></script>
-  <script src="knowledge-game-2048.js?v=20260812-2"></script>
+  <script type="application/json" id="knowledgeFeatureManifest">
+    {
+      "math": {
+        "styles": ["assets/vendor/katex/katex.min.css"],
+        "scripts": ["assets/vendor/katex/katex.min.js", "assets/vendor/katex/auto-render.min.js"],
+        "ready": "renderMathInElement"
+      },
+      "writer": {
+        "depends": ["math"],
+        "styles": ["knowledge-writer.css?v=20261016-card-preview-2"],
+        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js", "knowledge-editor-adapter.js?v=20261012-md-import-1", "knowledge-writer.js?v=20261016-armor-hand-1"],
+        "ready": "KnowledgeWriter"
+      },
+      "mover": {
+        "styles": ["knowledge-article-mover.css"],
+        "scripts": ["knowledge-article-mover.js"],
+        "ready": "KnowledgeArticleMover"
+      },
+      "games": {
+        "scripts": ["knowledge-game-2048.js?v=20260812-2"],
+        "ready": "KnowledgeGame2048"
+      },
+      "algorithms": {
+        "styles": ["algorithm-center.css?v=20261011-5"],
+        "scripts": ["algorithm-cookie-sync.js?v=20261011-4", "algorithm-charts.js?v=20261011-5", "algorithm-center.js?v=20261011-4"],
+        "ready": "KnowledgeAlgorithmCenter"
+      }
+    }
+  </script>
+  <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="algorithm-cookie-sync.js?v=20261011-4"></script>
-  <script src="algorithm-charts.js?v=20261011-5"></script>
-  <script src="algorithm-center.js?v=20261011-4"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=20261021-featured-1"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
   <script src="chat.js"></script>
   <script src="ai-chat.js"></script>

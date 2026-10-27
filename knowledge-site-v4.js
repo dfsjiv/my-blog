@@ -915,41 +915,42 @@
     updateHomeLoadMoreButton();
 
     const settings = { signal: controller.signal, refresh: Boolean(options && options.refresh) };
-    const jobs = [
-      repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings),
-      repository.getPosts(homeLatestFilters(1), settings),
-    ];
-    const results = await Promise.allSettled(jobs);
-    if (controller.signal.aborted) return;
-    if (results[0].status === 'fulfilled') {
-      const featuredPosts = results[0].value.items;
+    // Latest content is the critical path; featured content hydrates independently.
+    const latestJob = repository.getPosts(homeLatestFilters(1), settings);
+    repository.getPosts({ page: 1, pageSize: 3, featured: true, sort: 'latest' }, settings).then(function (result) {
+      if (controller.signal.aborted) return;
+      const featuredPosts = result.items;
       featured.closest('.knowledge-feed-section').hidden = !featuredPosts.length;
       if (featuredPosts.length) renderCollection(featured, featuredPosts, makeFeaturedCard);
       else featured.replaceChildren();
-    } else {
+    }).catch(function () {
+      if (controller.signal.aborted) return;
       featured.closest('.knowledge-feed-section').hidden = false;
       featured.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }));
-    }
-    if (results[1].status === 'fulfilled') {
+    });
+    try {
+      const result = await latestJob;
+      if (controller.signal.aborted) return;
       latest.replaceChildren();
-      appendLatestPosts(latest, results[1].value.items);
-      if (!results[1].value.items.length) {
+      appendLatestPosts(latest, result.items);
+      if (!result.items.length) {
         latest.appendChild(makeEmptyState(
           '这里暂时还没有发布内容。',
           '发布后的内容会显示在这里。',
           true
         ));
       }
-      state.homeLatestPage = results[1].value.pagination.page;
-      state.homeLatestHasNext = Boolean(results[1].value.pagination.hasNext);
+      state.homeLatestPage = result.pagination.page;
+      state.homeLatestHasNext = Boolean(result.pagination.hasNext);
       updateHomeLoadMoreButton();
       updateHomeLatestFilterControls();
       applyViewMode();
-    } else {
+    } catch (error) {
+      if (controller.signal.aborted) return;
       state.homeLatestHasNext = false;
       updateHomeLoadMoreButton();
-      console.error('Latest article request failed:', results[1].reason);
-      latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }, results[1].reason));
+      console.error('Latest article request failed:', error);
+      latest.replaceChildren(makeErrorState(function () { loadHome({ refresh: true }); }, error));
     }
   }
 
@@ -1275,6 +1276,22 @@
       routeView.hidden = true;
       await loadHome(options);
       return;
+    }
+    const feature = ({ detail: 'math', writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms' })[route];
+    if (route === 'writer' && !isAuthor() || route === 'mover' && !isAdmin()) {
+      return navigate('home', {}, { replace: true });
+    }
+    if (feature && window.KnowledgeFeatures) {
+      showRouteShell('LOADING', '正在加载…', '');
+      try {
+        await window.KnowledgeFeatures.ensure(feature);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        const failed = showRouteShell('ERROR', '内容暂时无法加载。', '');
+        failed.appendChild(makeErrorState(function () { navigate(route, details, { refresh: true }); }, error));
+        return;
+      }
+      if (controller.signal.aborted) return;
     }
     if (route === 'games') return renderGameGallery();
     if (route === 'contests') return renderContestPage(controller);
