@@ -3875,18 +3875,6 @@ body.auth-elegant .knowledge-site {
   background-image: url("assets/knowledge/hero-01.webp");
 }
 
-.knowledge-hero-slide:nth-child(2) {
-  background-image: url("assets/knowledge/hero-02.webp");
-}
-
-.knowledge-hero-slide:nth-child(3) {
-  background-image: url("assets/knowledge/hero-03.webp");
-}
-
-.knowledge-hero-slide:nth-child(4) {
-  background-image: url("assets/knowledge/hero-04.webp");
-}
-
 .knowledge-hero-slide.is-active {
   opacity: 1;
 }

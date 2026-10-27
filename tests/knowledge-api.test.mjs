@@ -170,6 +170,24 @@ function createApi(env) {
     };
 }
 
+test('list queries do not load full Markdown bodies; detail and author editing retain them', async () => {
+    const env = createDatabase(), api = createApi(env);
+    const content = '# Full content\n' + '算法正文 '.repeat(12000);
+    const created = await api('/api/knowledge/admin/posts', { method: 'POST', token: 'user-token', body: articleInput({ title: '列表无需读取正文', contentMarkdown: content, status: 'published' }) });
+    assert.equal(created.status, 201);
+    const statements = [], prepare = env.DB.prepare.bind(env.DB);
+    env.DB.prepare = sql => { statements.push(sql); return prepare(sql); };
+    const list = await api('/api/knowledge/posts');
+    assert.equal(list.status, 200);
+    const query = statements.find(sql => sql.includes('LIMIT ? OFFSET ?') && sql.includes('FROM knowledge_posts AS p'));
+    assert.ok(query);
+    assert.doesNotMatch(query, /p\.content_markdown/);
+    assert.equal(list.body.data.items[0].contentMarkdown, undefined);
+    const slug = created.body.data.post.slug, id = created.body.data.post.id;
+    assert.equal((await api('/api/knowledge/posts/' + slug)).body.data.post.contentMarkdown, content);
+    assert.equal((await api('/api/knowledge/admin/posts/' + id, { token: 'user-token' })).body.data.post.contentMarkdown, content);
+});
+
 test("old saved appearances remain readable and new choices override without rewriting them", async () => {
     const env = createDatabase(), api = createApi(env);
     const created = await api('/api/knowledge/admin/posts', {

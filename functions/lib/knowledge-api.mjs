@@ -983,7 +983,7 @@ async function queryPostList(env, filters, publicOnly) {
         SELECT COUNT(*) AS total FROM knowledge_posts AS p ${whereSql}
     `).bind(...bindings).first();
     const rows = await env.DB.prepare(`
-        SELECT ${POST_COLUMNS}
+        SELECT ${POST_LIST_COLUMNS}
         FROM knowledge_posts AS p
         ${whereSql}
         ORDER BY ${orderSql}
@@ -1031,6 +1031,10 @@ const POST_COLUMNS = `
     p.published_at, p.deleted_at,
     (SELECT u.username FROM users AS u WHERE u.id = p.author_user_id) AS author_username
 `;
+
+// Lists never serialize article bodies. Avoid transferring up to 50 full 2 MB
+// documents into the Worker just to discard them in toListPost().
+const POST_LIST_COLUMNS = POST_COLUMNS.replace('p.content_markdown,', "'' AS content_markdown,");
 
 async function hydratePosts(env, rows) {
     if (!rows.length) return [];

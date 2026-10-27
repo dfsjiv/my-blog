@@ -96,6 +96,12 @@
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let activeIndex = 0;
     let timer = 0;
+    let slideSequence = 0;
+    let backgroundsRequested = false;
+
+    function isHomeVisible() {
+      return !document.hidden && shell.dataset.route === 'home' && document.body.classList.contains('auth-elegant');
+    }
 
     function ensureSlideImage(slide) {
       const url = slide?.dataset.backgroundUrl;
@@ -103,22 +109,29 @@
       if (slide._backgroundPromise) return slide._backgroundPromise;
       slide._backgroundPromise = new Promise(function (resolve) {
         const image = new Image();
-        image.onload = function () {
-          slide.style.backgroundImage = 'url("' + url.replace(/["\\]/g, '\\$&') + '")';
-          slide.dataset.backgroundReady = 'true';
-          resolve(true);
-        };
-        image.onerror = function () {
-          slide.dataset.backgroundFailed = 'true';
-          resolve(false);
-        };
+        let settled = false;
+        function finish(loaded) {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(deadline);
+          image.onload = image.onerror = null;
+          if (loaded) {
+            slide.style.backgroundImage = 'url("' + url.replace(/["\\]/g, '\\$&') + '")';
+            slide.dataset.backgroundReady = 'true';
+          } else slide.dataset.backgroundFailed = 'true';
+          resolve(loaded);
+        }
+        const deadline = window.setTimeout(function () { finish(false); }, 8000);
+        image.onload = function () { finish(true); };
+        image.onerror = function () { finish(false); };
         image.src = url;
       });
       return slide._backgroundPromise;
     }
 
     async function showSlide(index) {
-      if (!heroSlides.length) return;
+      if (!heroSlides.length || !isHomeVisible()) return;
+      const sequence = ++slideSequence;
       let nextIndex = ((index % heroSlides.length) + heroSlides.length) % heroSlides.length;
       let attempts = 0;
       while (attempts < heroSlides.length) {
@@ -127,12 +140,13 @@
         nextIndex = (nextIndex + 1) % heroSlides.length;
         attempts += 1;
       }
+      if (attempts >= heroSlides.length || sequence !== slideSequence || !isHomeVisible()) return;
       activeIndex = nextIndex;
       heroSlides.forEach(function (slide, slideIndex) {
         slide.classList.toggle('is-active', slideIndex === activeIndex);
       });
       const following = heroSlides[(activeIndex + 1) % heroSlides.length];
-      void ensureSlideImage(following);
+      if (!reducedMotion.matches) void ensureSlideImage(following);
     }
 
     function stop() {
@@ -143,7 +157,13 @@
 
     function start() {
       stop();
-      if (document.hidden || reducedMotion.matches) return;
+      if (!isHomeVisible()) { slideSequence++; return; }
+      if (!backgroundsRequested && heroCarouselRefresh) {
+        backgroundsRequested = true;
+        void heroCarouselRefresh();
+      }
+      void showSlide(activeIndex);
+      if (reducedMotion.matches) return;
       timer = window.setInterval(function () {
         void showSlide((activeIndex + 1) % heroSlides.length);
       }, 7000);
@@ -153,8 +173,9 @@
     if (typeof reducedMotion.addEventListener === 'function') {
       reducedMotion.addEventListener('change', start);
     }
-    void showSlide(0);
-    start();
+    const visibilityObserver = new MutationObserver(start);
+    visibilityObserver.observe(shell, { attributes: true, attributeFilter: ['data-route'] });
+    visibilityObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     heroCarouselRefresh = async function () {
       const container = shell.querySelector('.knowledge-hero-slides');
@@ -191,7 +212,7 @@
       if (activeIndex >= heroSlides.length) activeIndex = 0;
       void showSlide(activeIndex);
     };
-    void heroCarouselRefresh();
+    start();
   }
 
   function t(value) {
