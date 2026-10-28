@@ -37,7 +37,7 @@ test('the entry loader reveals the page even if a readiness task never settles',
   const loaderSource = fs.readFileSync(new URL('../site-entry-loader.js', import.meta.url), 'utf8');
   const timers = [], frames = [];
   const node = { hidden: false, classList: { add() {}, remove() {} } };
-  const progress = { textContent: '' };
+  const progress = { textContent: '', style: {} };
   const window = {
     sessionStorage: { getItem: () => null, setItem() {} }, addEventListener() {},
     requestAnimationFrame: fn => { frames.push(fn); return frames.length; }, cancelAnimationFrame() {},
@@ -49,7 +49,8 @@ test('the entry loader reveals the page even if a readiness task never settles',
   assert.ok(deadline);
   deadline.fn(); await Promise.resolve(); await Promise.resolve();
   for (let i = 0; i < 40 && frames.length; i++) frames.shift()(6100 + i * 17);
-  const hide = timers.find(t => t.ms === 380);
+  assert.equal(progress.style.width, '100%');
+  const hide = timers.find(t => t.ms === 920);
   assert.ok(hide); hide.fn();
   assert.equal(node.hidden, true);
 });

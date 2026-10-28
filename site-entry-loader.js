@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'lee_site_entry_seen_v1';
   const loader = document.getElementById('siteEntryLoader');
   const progressLabel = document.getElementById('siteEntryLoaderProgress');
+  const progressLine = document.getElementById('siteEntryLoaderLine');
   const readinessTasks = new Set();
   let animationFrame = 0;
   let activeRun = 0;
@@ -66,11 +67,13 @@
     rememberVisit();
     const run = ++activeRun;
     const startedAt = performance.now();
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let target = 88;
     let displayed = 0;
     loader.hidden = false;
     loader.classList.remove('is-leaving');
     progressLabel.textContent = '0';
+    if (progressLine) progressLine.style.width = '0%';
 
     const loadReady = settings.force
       ? Promise.resolve()
@@ -94,7 +97,7 @@
           if (run !== activeRun) return;
           loader.hidden = true;
           resolve();
-        }, 380);
+        }, reducedMotion ? 120 : 920);
       }
 
       function frame(now) {
@@ -104,7 +107,8 @@
         displayed = Math.min(target, displayed + step);
         const rounded = Math.min(100, Math.floor(displayed));
         progressLabel.textContent = String(rounded);
-        if (rounded >= 100 && elapsed >= 720) {
+        if (progressLine) progressLine.style.width = rounded + '%';
+        if (rounded >= 100 && elapsed >= (reducedMotion ? 0 : 720)) {
           finish();
           return;
         }
