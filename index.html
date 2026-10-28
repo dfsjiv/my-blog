@@ -9,6 +9,15 @@
   <link rel="canonical" href="https://lilinzheng.top/" />
   <link rel="alternate" type="application/rss+xml" title="阿臻的 Blog · RSS" href="/feed.xml" />
   <link rel="icon" href="data:," />
+  <script>
+    // Match the saved site theme before the opening panels are first painted.
+    (function () {
+      var theme = 'dark';
+      try { theme = localStorage.getItem('knowledge-site-theme') || 'dark'; } catch (_) {}
+      document.documentElement.dataset.entryTheme = theme === 'light' ||
+        (theme === 'system' && !matchMedia('(prefers-color-scheme: dark)').matches) ? 'light' : 'dark';
+    })();
+  </script>
   <style>
     :root {
       color-scheme: dark;
@@ -47,11 +56,42 @@
     }
 
     .site-entry-loader {
+      --entry-panel: #081018;
+      --entry-ink: #69b7ff;
       position: fixed;
       inset: 0;
       z-index: 20000;
       overflow: hidden;
-      color: #141413;
+      color: var(--entry-ink);
+    }
+
+    html[data-entry-theme="light"] .site-entry-loader {
+      --entry-panel: #eef3f8;
+      --entry-ink: #4f91d8;
+    }
+
+    body:has(#elegantShell[data-theme="dark"]) .site-entry-loader {
+      --entry-panel: #081018;
+      --entry-ink: #69b7ff;
+    }
+
+    body:has(#elegantShell[data-theme="light"]) .site-entry-loader {
+      --entry-panel: #eef3f8;
+      --entry-ink: #4f91d8;
+    }
+
+    @media (prefers-color-scheme: light) {
+      body.auth-elegant:has(#elegantShell:not([data-theme])) .site-entry-loader {
+        --entry-panel: #eef3f8;
+        --entry-ink: #4f91d8;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body.auth-elegant:has(#elegantShell:not([data-theme])) .site-entry-loader {
+        --entry-panel: #081018;
+        --entry-ink: #69b7ff;
+      }
     }
 
     .site-entry-loader[hidden] {
@@ -67,7 +107,7 @@
       left: 0;
       width: 100%;
       height: 50%;
-      background: #e6e4dd;
+      background: var(--entry-panel);
       transition: transform 900ms cubic-bezier(0.76, 0, 0.24, 1);
     }
 
@@ -82,7 +122,7 @@
       left: 0;
       width: 0;
       height: 1px;
-      background: #141413;
+      background: var(--entry-ink);
       z-index: 2;
       transition: opacity 200ms ease;
     }
@@ -110,11 +150,11 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20261027-hero-lazy-1" />
+  <link rel="stylesheet" href="knowledge-site-v2.css?v=20261028-text-brand-1" />
   <link rel="stylesheet" href="knowledge-post-card.css?v=20261021-featured-1" />
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
   <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
-  <link rel="stylesheet" href="knowledge-navigation.css?v=20261019-spatial-1" />
+  <link rel="stylesheet" href="knowledge-navigation.css?v=20261028-text-brand-1" />
   <script type="importmap">
     {
       "imports": {
@@ -182,7 +222,7 @@
     <header class="knowledge-header">
       <nav class="knowledge-nav" aria-label="知识站主导航">
         <button class="knowledge-brand" type="button" data-knowledge-route="home">
-          <img class="knowledge-brand-logo" src="assets/knowledge/zhen-miku-logo.png" alt="Zhen" />
+          <span class="knowledge-brand-wordmark" aria-label="Zhen，返回首页">Zhen</span>
         </button>
 
         <div class="knowledge-nav-links" id="knowledgeNavLinks">
@@ -314,9 +354,9 @@
             </div>
           </details>
           <div class="knowledge-guest-auth" id="knowledgeGuestAuth" hidden>
-            <img src="assets/knowledge/login-register-entry.png" alt="" aria-hidden="true" />
-            <button type="button" data-auth-mode="login" aria-label="登录"></button>
-            <button type="button" data-auth-mode="register" aria-label="注册"></button>
+            <button type="button" data-auth-mode="login" aria-label="登录">登录</button>
+            <span aria-hidden="true">/</span>
+            <button type="button" data-auth-mode="register" aria-label="注册">注册</button>
           </div>
           <details class="knowledge-account-menu" id="knowledgeAccountMenu">
             <summary aria-label="打开账户菜单" aria-haspopup="dialog"><span id="knowledgeAccountInitial">U</span></summary>
@@ -835,7 +875,7 @@ Camera: --, --, --</pre>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="auth.js?v=20261027-request-timeout-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20261010-algorithms-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20261028-auth-text-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="knowledge-markdown.js?v=20261027-copy-fallback-1"></script>

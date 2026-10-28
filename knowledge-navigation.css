@@ -1,4 +1,11 @@
 /* Spatial navigation, adapted to a compact reading site. No canvas or font CDN. */
+@font-face {
+  font-family: "Zhen Handwriting";
+  src: url("assets/vendor/caveat/Caveat.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
 .knowledge-site .knowledge-header {
   padding: 12px 0;
   background: transparent;
@@ -50,6 +57,16 @@
   background: var(--knowledge-primary-soft);
 }
 .knowledge-site .knowledge-nav .knowledge-brand-logo { width: 96px; }
+.knowledge-site .knowledge-nav .knowledge-brand-wordmark {
+  display: block;
+  font-family: "Zhen Handwriting", "Segoe Script", cursive;
+  font-size: 32px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.25;
+  letter-spacing: -2px;
+  color: var(--knowledge-primary);
+}
 .knowledge-site .knowledge-nav-links {
   counter-reset: nav-sector;
   align-self: stretch;
@@ -203,6 +220,7 @@
   .knowledge-site .knowledge-menu-toggle[aria-expanded="true"] { background: var(--knowledge-primary-soft); }
 }
 @media (max-width: 480px) {
+  .knowledge-site .knowledge-nav .knowledge-brand-wordmark { font-size: 27px; }
   .knowledge-site .knowledge-brand::before { width: 26px; height: 26px; font-size: 16px; }
   .knowledge-site .knowledge-nav .knowledge-brand { gap: 10px; }
   .knowledge-site .knowledge-nav .knowledge-brand-logo { width: 68px; }

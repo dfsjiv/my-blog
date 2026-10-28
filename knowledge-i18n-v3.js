@@ -498,6 +498,7 @@
     '还没有评论，来留下第一条吧。': 'No comments yet. Leave the first one.',
     '登录后可以发表评论。': 'Sign in to leave a comment.',
     '登录': 'Sign In',
+    '注册': 'Sign Up',
     '用户': 'User',
     '回复': 'Reply',
     '写下回复…': 'Write a reply…',
