@@ -1063,8 +1063,20 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-home-search {
-  margin-bottom: 14px;
-  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 8px 4px 12px;
+}
+
+.knowledge-home-search > h2 {
+  margin: 0 0 8px;
+  color: var(--knowledge-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .knowledge-home-classification-heading span {
@@ -1452,6 +1464,72 @@ body.auth-elegant .knowledge-site {
 .knowledge-side-search button {
   min-height: 38px;
   padding: 0 10px;
+}
+
+/* The reference's compact underline field is scoped to homepage search only. */
+.knowledge-home-search .knowledge-side-search {
+  display: flex;
+  align-items: center;
+  width: 288px;
+  max-width: 100%;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--knowledge-text) 20%, transparent);
+  transition: border-color 180ms ease;
+}
+
+.knowledge-home-search .knowledge-side-search:focus-within {
+  border-bottom-color: var(--knowledge-text);
+}
+
+.knowledge-home-search .knowledge-side-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.knowledge-home-search .knowledge-side-search input::placeholder {
+  color: var(--knowledge-muted);
+  opacity: 1;
+}
+
+.knowledge-home-search .knowledge-side-search button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  min-height: 36px;
+  padding: 0;
+  color: var(--knowledge-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  transition: color 180ms ease;
+}
+
+.knowledge-home-search .knowledge-side-search button:hover,
+.knowledge-home-search .knowledge-side-search button:focus-visible {
+  color: var(--knowledge-text);
+}
+
+.knowledge-home-search .knowledge-side-search button:focus-visible {
+  outline: 2px solid var(--knowledge-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .knowledge-home-search {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .knowledge-home-search > h2 { margin-bottom: 0; }
+  .knowledge-home-search .knowledge-side-search { width: 100%; }
 }
 
 .knowledge-panel > small {
