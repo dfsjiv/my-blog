@@ -706,7 +706,9 @@
       const type = counter.dataset.homeTypeCount;
       const count = type ? ((facets.types || []).find(item => item.type === type)?.count ?? 0) : facets.stats?.posts;
       counter.hidden = count == null || !Number.isFinite(Number(count));
-      counter.textContent = counter.hidden ? '' : String(Number(count));
+      counter.textContent = counter.hidden ? '' : '(' + Number(count) + ')';
+      counter.title = counter.hidden ? '' : (state.language === 'zh' ? '已发布文章：' : 'Published posts: ') + Number(count);
+      counter.setAttribute('aria-label', counter.title);
     });
   }
 
