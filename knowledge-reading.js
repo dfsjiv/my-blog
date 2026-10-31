@@ -249,6 +249,25 @@
     const fill = node('span'); progress.appendChild(fill); shell.appendChild(progress);
     let timer = 0, pending = null, destroyed = false;
     const headings = Array.from(body.querySelectorAll('h2[id],h3[id],h4[id]'));
+    const sectionButtons = headings.map(heading => {
+      const button = control('#', async () => {
+        const url = new URL(window.location.pathname, window.location.origin);
+        url.searchParams.set('knowledge', 'post'); url.searchParams.set('slug', post.slug); url.hash = heading.id;
+        try {
+          await navigator.clipboard.writeText(url.href);
+          if (!destroyed) status.textContent = text('章节链接已复制。', 'Section link copied.');
+        } catch {
+          if (destroyed) return;
+          const field = node('input', 'knowledge-reading-permalink-fallback');
+          field.type = 'text'; field.readOnly = true; field.value = url.href;
+          field.setAttribute('aria-label', text('章节链接', 'Section link'));
+          status.replaceChildren(node('span', '', text('请手动复制章节链接：', 'Copy this section link: ')), field);
+          field.focus(); field.select();
+        }
+      }, 'knowledge-reader-section-link');
+      button.setAttribute('aria-label', text('复制章节链接：', 'Copy section link: ') + heading.textContent.trim());
+      button.title = text('复制章节链接', 'Copy section link'); heading.appendChild(button); return button;
+    });
     const imageDialog = node('dialog', 'knowledge-reader-image-dialog');
     imageDialog.setAttribute('aria-label', text('图片查看器', 'Image viewer'));
     const imageBar = node('header');
@@ -307,6 +326,7 @@
       if (destroyed) return;
       flush(); destroyed = true; clearTimeout(startTimer);
       observer.disconnect(); tools.remove(); progress.remove();
+      sectionButtons.forEach(button => button.remove());
       focus(false); exitFocus.remove(); imageDialog.close(); imageDialog.remove();
       body.removeEventListener('click', imageClick); body.removeEventListener('keydown', imageKey);
       window.removeEventListener('keydown', escapeFocus);

@@ -42,6 +42,9 @@
 .knowledge-reader-focus-exit[hidden] { display: none; }
 .knowledge-reader-zoomable { cursor: zoom-in; }
 .knowledge-reader-zoomable:focus-visible { outline: 2px solid var(--knowledge-primary); outline-offset: 4px; }
+.knowledge-reader-section-link { margin-left: 9px; padding: 0 5px; border: 0; border-radius: 4px; color: var(--knowledge-muted); background: transparent; font: 400 14px "Segoe UI", sans-serif; opacity: .35; cursor: pointer; vertical-align: middle; }
+.knowledge-reader-section-link:hover, .knowledge-reader-section-link:focus-visible { color: var(--knowledge-primary); opacity: 1; outline: 1px solid var(--knowledge-primary); }
+.knowledge-reading-permalink-fallback { width: min(100%, 500px); min-height: 34px; margin: 6px 0; padding: 4px 8px; color: var(--knowledge-text); background: var(--knowledge-bg); border: 1px solid var(--knowledge-border); }
 .knowledge-reader-image-dialog { width: min(1200px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 16px; background: var(--knowledge-surface-solid); color: var(--knowledge-text); border: 1px solid var(--knowledge-border); border-radius: 12px; }
 .knowledge-reader-image-dialog::backdrop { background: rgba(0, 0, 0, .82); }
 .knowledge-reader-image-dialog > header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }

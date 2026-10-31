@@ -107,8 +107,31 @@
     });
   }
 
+  const pendingMath = new WeakSet();
+  function hasMath(container) {
+    const walker = document.createTreeWalker(container, 4);
+    let current;
+    while ((current = walker.nextNode())) {
+      if (current.parentElement?.closest('pre, code, .katex, .knowledge-code-toolbar')) continue;
+      if (/\$\$|\\\[|\\\(|(?:^|[^\\])\$(?!\s)[^$\n]{1,4000}\$/.test(current.nodeValue || '')) return true;
+    }
+    return false;
+  }
+
   function enhanceMath(container) {
-    if (typeof window.renderMathInElement !== 'function') return;
+    if (typeof window.renderMathInElement !== 'function') {
+      if (!window.KnowledgeFeatures || pendingMath.has(container) || !hasMath(container)) return;
+      pendingMath.add(container);
+      // Render ordinary content immediately; formulas enhance once the engine arrives.
+      window.KnowledgeFeatures.ensure('math').then(function () {
+        pendingMath.delete(container);
+        if (container.isConnected !== false && typeof window.renderMathInElement === 'function') enhanceMath(container);
+      }).catch(function () {
+        pendingMath.delete(container);
+        // Raw formulas remain readable; another render can retry the optional engine.
+      });
+      return;
+    }
     window.renderMathInElement(container, {
       delimiters: [
         { left: '$$', right: '$$', display: true },
@@ -253,10 +276,11 @@
     container.replaceChildren(fragment);
     secureLinks(container);
     secureImages(container);
+    const headings = addHeadingAnchors(container);
     enhanceMath(container);
     enhanceCodeBlocks(container);
     return {
-      headings: addHeadingAnchors(container),
+      headings,
     };
   }
 
@@ -276,10 +300,11 @@
     container.replaceChildren(fragment);
     secureLinks(container);
     secureImages(container);
+    const headings = addHeadingAnchors(container);
     enhanceMath(container);
     enhanceCodeBlocks(container);
     return {
-      headings: addHeadingAnchors(container),
+      headings,
     };
   }
 
@@ -295,6 +320,7 @@
     headingSlug,
     safeUrl,
     enhanceMath,
+    hasMath,
     expandLegacyCenteredTextBlocks,
     expandLegacyIndentedVectorBlocks,
   };

@@ -412,6 +412,11 @@
     return role === 'admin' || role === 'user';
   }
 
+  function canEditPost(post) {
+    const user = currentUser();
+    return user?.role === 'admin' || user?.role === 'user' && post.source !== 'legacy-blog' && Number(post.authorUserId) > 0 && Number(post.authorUserId) === Number(user.id);
+  }
+
   function isAdmin() {
     return currentUser()?.role === 'admin';
   }
@@ -1129,6 +1134,7 @@
 
   function writeRouteUrl(route, payload, replace) {
     const url = new URL(window.location.href);
+    if (route !== 'detail' || url.searchParams.get('slug') !== payload.slug) url.hash = '';
     URL_KEYS.forEach(function (key) { url.searchParams.delete(key); });
     if (route === 'detail') {
       url.searchParams.set('knowledge', 'post');
@@ -1195,8 +1201,18 @@
     });
   }
 
+  function restoreArticleHash() {
+    if (state.route !== 'detail' || !window.location.hash) return false;
+    let id;
+    try { id = decodeURIComponent(window.location.hash.slice(1)); } catch { return false; }
+    const target = Array.from(routeView.querySelectorAll('.knowledge-detail-body [id]')).find(node => node.id === id);
+    if (!target) return false;
+    shell.scrollTop = Math.max(0, target.getBoundingClientRect().top - shell.getBoundingClientRect().top + shell.scrollTop - 100);
+    return true;
+  }
+
   function resetRouteScroll() {
-    shell.scrollTop = 0;
+    if (!restoreArticleHash()) shell.scrollTop = 0;
     shell.scrollLeft = 0;
     routeView.scrollTop = 0;
   }
@@ -1322,7 +1338,7 @@
       await loadHome(options);
       return;
     }
-    const feature = ({ detail: 'math', writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading' })[route];
+    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading' })[route];
     if (route === 'writer' && !isAuthor() || route === 'mover' && !isAdmin()) {
       return navigate('home', {}, { replace: true });
     }
@@ -1804,7 +1820,7 @@
       return window.KnowledgeFavorites.render(node, {
         kind,
         language: state.language,
-        isAdmin: isAuthor(),
+        isAdmin: isAdmin(),
         token: currentToken(),
         repository,
         signal: controller.signal,
@@ -3063,7 +3079,7 @@
       header.appendChild(sourceLink);
     }
     header.appendChild(makeShareLink(post));
-    if (isAdmin()) {
+    if (canEditPost(post)) {
       const authorActions = element('div', 'knowledge-detail-author-actions');
       const edit = button(
         post.source === 'legacy-blog' ? '转换并编辑' : '编辑文章',
@@ -3107,6 +3123,7 @@
     const comments = element('section', 'knowledge-comments');
     main.appendChild(comments);
     routeView.appendChild(layout);
+    window.requestAnimationFrame(function () { if (!controller.signal.aborted) restoreArticleHash(); });
     // Personal reading tools are optional and must never delay article content.
     window.KnowledgeFeatures?.ensure('reading').then(function () {
       if (controller.signal.aborted) return;
@@ -3368,6 +3385,9 @@
     if (headingTarget) {
       document.getElementById(headingTarget.dataset.knowledgeHeading)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const url = new URL(window.location.href);
+      url.hash = headingTarget.dataset.knowledgeHeading;
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
       return;
     }
     if (viewModeTarget) {

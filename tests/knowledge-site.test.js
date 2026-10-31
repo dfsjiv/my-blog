@@ -253,7 +253,7 @@ assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
 assert.match(html, /site\.bundle\.js\?v=[a-f0-9]{12}/);
-assert.match(html, /knowledge-navigation\.css\?v=20261101-search-1/);
+assert.match(html, /knowledge-navigation\.css\?v=20261101-font-subset-1/);
 assert.match(html, /id="knowledgeMenuToggle"[^>]*aria-controls="knowledgeNavLinks"/);
 
 assert.match(markdown, /markedApi\.parse/);
