@@ -61,6 +61,7 @@
     sectionObserver: null,
     gameCleanup: null,
     contestCleanup: null,
+    readingCleanup: null,
     routeTransitionActive: false,
     pendingNavigation: null,
     facets: null,
@@ -1106,7 +1107,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'contests', 'algorithms', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
-      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1150,6 +1151,7 @@
 
   function abortRouteWork() {
     if (state.routeController) state.routeController.abort();
+    if (state.readingCleanup) { state.readingCleanup(); state.readingCleanup = null; }
     if (state.route !== 'home' && state.homeController) state.homeController.abort();
     if (state.sectionObserver) {
       state.sectionObserver.disconnect();
@@ -1319,7 +1321,7 @@
       await loadHome(options);
       return;
     }
-    const feature = ({ detail: 'math', writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms' })[route];
+    const feature = ({ detail: 'math', writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading' })[route];
     if (route === 'writer' && !isAuthor() || route === 'mover' && !isAdmin()) {
       return navigate('home', {}, { replace: true });
     }
@@ -1344,6 +1346,11 @@
     if (route === 'archives') return renderFacetIndex('archives', controller);
     if (route === 'about') return renderAbout(controller);
     if (route === 'profile') return renderProfile();
+    if (route === 'reading') {
+      const root = showRouteShell('READING', state.language === 'zh' ? '我的阅读' : 'My reading', state.language === 'zh' ? '稍后读、阅读历史与上次进度。' : 'Saved articles, reading history and your place.');
+      state.readingCleanup = window.KnowledgeReading.mountLibrary(root, { user: currentUser(), language: state.language, navigate, signal: controller.signal });
+      return;
+    }
     if (route === 'detail') return renderDetail(details.slug, controller);
     if (route === 'mover') return renderArticleMover();
     if (route === 'writer') return renderWriter(details);
@@ -2279,6 +2286,9 @@
       if (window.authUi && window.authUi.logoutToLogin) window.authUi.logoutToLogin('');
     });
     actions.append(home, desktop, signOut);
+    const reading = button(state.language === 'zh' ? '我的阅读' : 'My reading', 'knowledge-route-button');
+    reading.dataset.knowledgeRoute = 'reading';
+    actions.prepend(reading);
     card.append(identity, avatarTools, avatarStatus, nicknameForm, actions);
     node.appendChild(card);
   }
@@ -3096,6 +3106,12 @@
     const comments = element('section', 'knowledge-comments');
     main.appendChild(comments);
     routeView.appendChild(layout);
+    // Personal reading tools are optional and must never delay article content.
+    window.KnowledgeFeatures?.ensure('reading').then(function () {
+      if (controller.signal.aborted) return;
+      state.readingCleanup = window.KnowledgeReading.mountDetail({ post, body, header, shell, navigate,
+        user: currentUser(), language: state.language, signal: controller.signal });
+    }).catch(function () { /* Reading tools can be retried from the Reading page. */ });
     if (detailAside) setupSectionObserver(renderedHeadings, detailAside);
     loadDetailExtras(post, navigation, related, controller);
     if (commentsModule && typeof commentsModule.render === 'function') {

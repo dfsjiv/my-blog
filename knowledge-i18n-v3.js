@@ -499,6 +499,7 @@
     '登录后可以发表评论。': 'Sign in to leave a comment.',
     '登录': 'Sign In',
     '注册': 'Sign Up',
+    '我的阅读': 'My reading',
     '文章与笔记': 'Writing & Notes',
     '用户': 'User',
     '回复': 'Reply',

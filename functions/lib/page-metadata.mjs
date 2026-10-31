@@ -1,7 +1,7 @@
 import { SITE_ORIGIN, SITE_NAME, SITE_DESCRIPTION, postUrl, escapeXml, readPublicData } from './public-discovery.mjs';
 
-const privateRoutes = new Set(['writer', 'drafts', 'manage', 'profile', 'mover', 'invitations', 'backgrounds']);
-const titles = { all: '全部文章', articles: '技术文章', solutions: '算法题解', notes: '学习笔记', projects: '项目记录', games: '小游戏', contests: '竞赛中心', algorithms: '算法中心', archives: '归档', categories: '分类', tags: '标签', about: '关于阿臻' };
+const privateRoutes = new Set(['writer', 'drafts', 'manage', 'profile', 'mover', 'invitations', 'backgrounds', 'reading']);
+const titles = { all: '全部文章', articles: '技术文章', solutions: '算法题解', notes: '学习笔记', projects: '项目记录', games: '小游戏', contests: '竞赛中心', algorithms: '算法中心', archives: '归档', categories: '分类', tags: '标签', about: '关于阿臻', reading: '我的阅读' };
 export function buildMetadata(url, post = null) {
   const route = url.searchParams.get('knowledge') || 'home';
   const canonical = new URL(SITE_ORIGIN);

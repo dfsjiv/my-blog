@@ -258,6 +258,10 @@
                 <span class="knowledge-nav-menu-icon" data-icon-zh="档" data-icon-en="AR" aria-hidden="true"></span>
                 <span>归档</span>
               </button>
+              <button type="button" data-knowledge-route="reading" role="menuitem">
+                <span class="knowledge-nav-menu-icon" data-icon-zh="读" data-icon-en="R" aria-hidden="true"></span>
+                <span>我的阅读</span>
+              </button>
             </div>
           </div>
           <button type="button" data-knowledge-route="games">小游戏</button>
@@ -887,7 +891,7 @@ Camera: --, --, --</pre>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="auth.js?v=20261027-request-timeout-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20261101-archive-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20261101-reading-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="knowledge-markdown.js?v=20261027-copy-fallback-1"></script>
@@ -907,6 +911,11 @@ Camera: --, --, --</pre>
         "styles": ["knowledge-writer.css?v=20261016-card-preview-2"],
         "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js", "knowledge-editor-adapter.js?v=20261012-md-import-1", "knowledge-writer.js?v=20261016-armor-hand-1"],
         "ready": "KnowledgeWriter"
+      },
+      "reading": {
+        "styles": ["knowledge-reading.css?v=20261101-1"],
+        "scripts": ["knowledge-reading.js?v=20261101-1"],
+        "ready": "KnowledgeReading"
       },
       "mover": {
         "styles": ["knowledge-article-mover.css"],
@@ -931,7 +940,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=fc1c9d1ff34d"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=e6ed6578de5a"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>
