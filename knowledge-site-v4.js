@@ -701,8 +701,18 @@
     });
   }
 
+  function updateHomeTypeCounts(facets) {
+    shell.querySelectorAll('[data-home-type-count]').forEach(function (counter) {
+      const type = counter.dataset.homeTypeCount;
+      const count = type ? ((facets.types || []).find(item => item.type === type)?.count ?? 0) : facets.stats?.posts;
+      counter.hidden = count == null || !Number.isFinite(Number(count));
+      counter.textContent = counter.hidden ? '' : String(Number(count));
+    });
+  }
+
   function renderFacets(facets) {
     state.facets = facets;
+    updateHomeTypeCounts(facets);
     const categories = document.getElementById('knowledgeCategoryList');
     const domains = document.getElementById('knowledgeDomainList');
     const topics = document.getElementById('knowledgeTopicList');
@@ -966,6 +976,14 @@
       updateHomeLoadMoreButton();
       updateHomeLatestFilterControls();
       applyViewMode();
+      // Counts hydrate after the article list; they never hold up first render.
+      if (typeof repository.getFacets === 'function') {
+        repository.getFacets(settings).then(function (facets) {
+          if (!controller.signal.aborted) updateHomeTypeCounts(facets);
+        }).catch(function () {
+          // Keep counts absent when unavailable, rather than showing invented totals.
+        });
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       state.homeLatestHasNext = false;

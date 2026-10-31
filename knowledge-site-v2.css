@@ -1052,14 +1052,11 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-home-classification {
-  margin-bottom: 22px;
-  padding: 16px 18px;
+  margin-bottom: 28px;
+  padding: 0 4px 16px;
   display: grid;
-  gap: 13px;
-  background: var(--knowledge-surface);
-  border: 1px solid var(--knowledge-border);
-  border-radius: var(--knowledge-radius);
-  box-shadow: var(--knowledge-shadow);
+  gap: 14px;
+  border-bottom: 1px solid var(--knowledge-border);
 }
 
 .knowledge-home-search {
@@ -1067,66 +1064,119 @@ body.auth-elegant .knowledge-site {
   justify-content: space-between;
   align-items: flex-end;
   gap: 24px;
-  margin-bottom: 20px;
-  padding: 8px 4px 12px;
+  margin-bottom: 24px;
+  padding: 12px 4px 8px;
 }
 
-.knowledge-home-search > h2 {
-  margin: 0 0 8px;
+.knowledge-archive-heading p {
+  margin: 0 0 10px;
+  color: var(--knowledge-muted);
+  font: 11px/1.5 ui-monospace, monospace;
+  letter-spacing: .2em;
+}
+
+.knowledge-home-search .knowledge-archive-heading h2 {
+  margin: 0;
   color: var(--knowledge-text);
-  font-size: 16px;
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+  font-size: clamp(32px, 4vw, 46px);
+  font-style: italic;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.15;
 }
 
-.knowledge-home-classification-heading span {
-  color: var(--knowledge-primary);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.knowledge-home-classification-heading h2 {
-  margin: 3px 0 0;
-  font-size: 19px;
+.knowledge-archive-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .knowledge-home-filter-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
   gap: 10px;
 }
 
 .knowledge-home-filter-row strong {
-  padding-top: 7px;
   color: var(--knowledge-muted);
-  font-size: 12px;
+  font: 11px/1.5 ui-monospace, monospace;
+  letter-spacing: .08em;
 }
 
 .knowledge-home-filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  align-items: baseline;
+  gap: 6px 10px;
 }
 
 .knowledge-home-filter-options button {
-  min-height: 32px;
-  padding: 0 11px;
+  min-height: 30px;
+  padding: 4px 0;
   color: var(--knowledge-muted);
   background: transparent;
-  border: 1px solid var(--knowledge-border);
-  border-radius: 999px;
-  font: 12px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+  border: 0;
+  border-radius: 0;
+  font: 14px "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  transition: color 160ms ease, background 160ms ease;
 }
 
 .knowledge-home-filter-options button:hover,
 .knowledge-home-filter-options button:focus-visible,
 .knowledge-home-filter-options button.is-active {
-  color: var(--knowledge-primary);
-  background: var(--knowledge-primary-soft);
-  border-color: color-mix(in srgb, var(--knowledge-primary) 42%, var(--knowledge-border));
-  outline: none;
+  color: var(--knowledge-text);
+}
+
+.knowledge-home-topics button.is-active {
+  text-decoration: underline;
+  text-decoration-color: var(--knowledge-primary);
+  text-underline-offset: 6px;
+}
+
+.knowledge-home-topics sup {
+  margin-left: 4px;
+  color: var(--knowledge-muted);
+  font: 10px ui-monospace, monospace;
+}
+
+.knowledge-home-topics button.is-active sup { color: var(--knowledge-primary); }
+.knowledge-topic-divider { color: color-mix(in srgb, var(--knowledge-muted) 45%, transparent); }
+.knowledge-home-order-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  padding-top: 10px;
+  border-top: 1px solid var(--knowledge-border);
+}
+.knowledge-home-order button { padding: 4px 7px; border-radius: 4px; }
+.knowledge-home-order button.is-active { background: color-mix(in srgb, var(--knowledge-text) 8%, transparent); }
+.knowledge-home-classification .knowledge-view-toggle { display: flex; align-items: center; gap: 8px; }
+.knowledge-home-classification .knowledge-view-toggle button {
+  min-height: 30px;
+  padding: 4px 0;
+  color: var(--knowledge-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: 12px ui-monospace, monospace;
+}
+.knowledge-home-classification .knowledge-view-toggle button.is-active {
+  color: var(--knowledge-text);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+.knowledge-home-classification .knowledge-view-toggle > span { color: var(--knowledge-muted); }
+.knowledge-home-classification button:focus-visible {
+  outline: 2px solid var(--knowledge-primary);
+  outline-offset: 3px;
 }
 
 .knowledge-section-heading {
@@ -1528,7 +1578,6 @@ body.auth-elegant .knowledge-site {
     align-items: stretch;
     gap: 8px;
   }
-  .knowledge-home-search > h2 { margin-bottom: 0; }
   .knowledge-home-search .knowledge-side-search { width: 100%; }
 }
 

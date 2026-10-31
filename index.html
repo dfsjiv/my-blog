@@ -150,7 +150,7 @@
     }
   </style>
   <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20261101-compact-search-1" />
+  <link rel="stylesheet" href="knowledge-site-v2.css?v=20261101-archive-1" />
   <link rel="stylesheet" href="knowledge-post-card.css?v=20261021-featured-1" />
   <link rel="stylesheet" href="knowledge-grid-blocks.css?v=20261101-1" />
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
@@ -401,7 +401,10 @@
 
             <section class="knowledge-feed-section" aria-labelledby="knowledgeLatestTitle">
               <section class="knowledge-home-search" aria-labelledby="knowledgeHomeSearchTitle">
-                <h2 id="knowledgeHomeSearchTitle">站内搜索</h2>
+                <div class="knowledge-archive-heading">
+                  <p>INDEX &amp; ARCHIVE</p>
+                  <h2 id="knowledgeHomeSearchTitle">文章与笔记</h2>
+                </div>
                 <form class="knowledge-side-search" id="knowledgeSideSearch">
                   <input name="keyword" type="search" placeholder="输入关键词" aria-label="输入关键词" autocomplete="off" />
                   <button type="submit" aria-label="搜索" title="搜索">
@@ -410,37 +413,40 @@
                 </form>
               </section>
               <div class="knowledge-home-classification" aria-labelledby="knowledgeHomeClassificationTitle">
-                <div class="knowledge-home-classification-heading">
-                  <span>POST CATEGORIES</span>
-                  <h2 id="knowledgeHomeClassificationTitle">文章分类</h2>
-                </div>
-                <div class="knowledge-home-filter-row">
-                  <strong>时间</strong>
-                  <div class="knowledge-home-filter-options" aria-label="按时间排列文章">
-                    <button class="is-active" type="button" data-home-latest-sort="latest" aria-pressed="true">最新发布</button>
-                    <button type="button" data-home-latest-sort="updated" aria-pressed="false">最近更新</button>
-                    <button type="button" data-home-latest-sort="oldest" aria-pressed="false">最早发布</button>
-                  </div>
-                </div>
+                <h2 class="knowledge-archive-sr-only" id="knowledgeHomeClassificationTitle">文章分类</h2>
                 <div class="knowledge-home-filter-row">
                   <strong>类型</strong>
-                  <div class="knowledge-home-filter-options" aria-label="按类型筛选文章">
-                    <button class="is-active" type="button" data-home-latest-type="" aria-pressed="true">全部文章</button>
-                    <button type="button" data-home-latest-type="article" aria-pressed="false">技术文章</button>
-                    <button type="button" data-home-latest-type="solution" aria-pressed="false">算法题解</button>
-                    <button type="button" data-home-latest-type="note" aria-pressed="false">学习笔记</button>
-                    <button type="button" data-home-latest-type="project" aria-pressed="false">项目记录</button>
-                    <button type="button" data-home-latest-type="essay" aria-pressed="false">思考随笔</button>
+                  <div class="knowledge-home-filter-options knowledge-home-topics" aria-label="按类型筛选文章">
+                    <button class="is-active" type="button" data-home-latest-type="" aria-pressed="true"><span>全部文章</span><sup data-home-type-count="" hidden></sup></button>
+                    <span class="knowledge-topic-divider" aria-hidden="true">/</span>
+                    <button type="button" data-home-latest-type="article" aria-pressed="false"><span>技术文章</span><sup data-home-type-count="article" hidden></sup></button>
+                    <span class="knowledge-topic-divider" aria-hidden="true">/</span>
+                    <button type="button" data-home-latest-type="solution" aria-pressed="false"><span>算法题解</span><sup data-home-type-count="solution" hidden></sup></button>
+                    <span class="knowledge-topic-divider" aria-hidden="true">/</span>
+                    <button type="button" data-home-latest-type="note" aria-pressed="false"><span>学习笔记</span><sup data-home-type-count="note" hidden></sup></button>
+                    <span class="knowledge-topic-divider" aria-hidden="true">/</span>
+                    <button type="button" data-home-latest-type="project" aria-pressed="false"><span>项目记录</span><sup data-home-type-count="project" hidden></sup></button>
+                    <span class="knowledge-topic-divider" aria-hidden="true">/</span>
+                    <button type="button" data-home-latest-type="essay" aria-pressed="false"><span>思考随笔</span><sup data-home-type-count="essay" hidden></sup></button>
+                  </div>
+                </div>
+                <div class="knowledge-home-order-bar">
+                  <div class="knowledge-home-filter-row">
+                    <strong>排序</strong>
+                    <div class="knowledge-home-filter-options knowledge-home-order" aria-label="按时间排列文章">
+                      <button class="is-active" type="button" data-home-latest-sort="latest" aria-pressed="true">最新发布</button>
+                      <button type="button" data-home-latest-sort="updated" aria-pressed="false">最近更新</button>
+                      <button type="button" data-home-latest-sort="oldest" aria-pressed="false">最早发布</button>
+                    </div>
+                  </div>
+                  <div class="knowledge-view-toggle" aria-label="文章展示模式">
+                    <button class="is-active" id="knowledgeListView" type="button" data-view-mode="list">列表</button>
+                    <span aria-hidden="true">·</span>
+                    <button id="knowledgeGridView" type="button" data-view-mode="grid">网格</button>
                   </div>
                 </div>
               </div>
-              <div class="knowledge-section-heading">
-                <div><span>LATEST</span><h2 id="knowledgeLatestTitle">最新发布</h2></div>
-                <div class="knowledge-view-toggle" aria-label="文章展示模式">
-                  <button class="is-active" id="knowledgeListView" type="button" data-view-mode="list">列表</button>
-                  <button id="knowledgeGridView" type="button" data-view-mode="grid">网格</button>
-                </div>
-              </div>
+              <h2 class="knowledge-archive-sr-only" id="knowledgeLatestTitle">最新发布</h2>
               <div class="knowledge-post-list" id="knowledgeLatestList"></div>
               <button class="knowledge-load-more" id="knowledgeLoadMore" type="button" hidden>加载更多</button>
             </section>
@@ -878,7 +884,7 @@ Camera: --, --, --</pre>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="auth.js?v=20261027-request-timeout-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20261028-auth-text-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20261101-archive-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="knowledge-markdown.js?v=20261027-copy-fallback-1"></script>
@@ -922,7 +928,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=8197f3946cdd"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=91998687b4b6"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>
