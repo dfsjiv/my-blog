@@ -42,8 +42,9 @@ export function removeRows(board, cleared) {
   return [...makeBoard(board[0].length, cleared.length), ...remaining];
 }
 
-export function choosePlacement(board, shapeIndex) {
-  let best = null;
+export function choosePlacement(board, shapeIndex, random = Math.random) {
+  const candidates = [];
+  let bestScore = Infinity;
   for (const shape of rotations(SHAPES[shapeIndex])) {
     const width = Math.max(...shape.map(([x]) => x)) + 1;
     for (let x = 0; x <= board[0].length - width; x++) {
@@ -62,10 +63,21 @@ export function choosePlacement(board, shapeIndex) {
       }
       const roughness = heights.slice(1).reduce((sum, h, i) => sum + Math.abs(h - heights[i]), 0);
       const score = holes * 22 + heights.reduce((a, b) => a + b, 0) + roughness * 1.5 - lines * 30;
-      if (!best || score < best.score) best = { shape, x, y, score, color: shapeIndex + 1 };
+      bestScore = Math.min(bestScore, score);
+      candidates.push({ shape, x, y, score, color: shapeIndex + 1 });
     }
   }
-  return best;
+  // Pick among similarly safe landings instead of always taking the first
+  // minimum (which favors walls). Small score differences can vary visually;
+  // the much larger hole penalty and line-clear reward still protect the stack.
+  const choices = candidates.filter(candidate => candidate.score <= bestScore + 6);
+  if (!choices.length) return null;
+  const target = random() * (board[0].length - 1);
+  const distance = candidate => Math.abs(candidate.x +
+    Math.max(...candidate.shape.map(([x]) => x)) / 2 - target);
+  const nearest = Math.min(...choices.map(distance));
+  const nearby = choices.filter(candidate => distance(candidate) <= nearest + 0.5);
+  return nearby[Math.min(nearby.length - 1, Math.floor(random() * nearby.length))];
 }
 
 function initGridBlocks() {
