@@ -155,7 +155,16 @@
     }
     syncSave();
     const library = control(text('我的阅读', 'My reading'), () => navigate('reading'));
-    tools.append(save, library);
+    const exportMd = control(text('导出 Markdown', 'Export Markdown'), async () => {
+      exportMd.disabled = true;
+      try {
+        await window.KnowledgeFeatures.ensure('portable');
+        if (!signal.aborted) window.KnowledgePortable.exportPost(post);
+      } catch {
+        status.textContent = text('导出暂时不可用，请重试。', 'Export unavailable. Please retry.');
+      } finally { exportMd.disabled = false; }
+    });
+    tools.append(save, library, exportMd);
     if (previous && previous.progress >= 5 && previous.progress < 95) {
       const resume = control(text('继续上次阅读 · ', 'Resume · ') + previous.progress + '%', () => {
         const target = previous.heading && Array.from(body.querySelectorAll('[id]')).find(item => item.id === previous.heading);

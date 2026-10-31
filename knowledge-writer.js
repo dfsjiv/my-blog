@@ -1,5 +1,4 @@
 (function () {
-  const DRAFT_PREFIX = 'knowledge-writer-draft:v1:';
   const AUTO_SAVE_DELAY = 1500;
   const APPEARANCE_OPTIONS = [['default', '默认 · 斜切封面'], ['vinyl', '黑胶机舱'], ['collage', '街头贴纸'], ['mecha', '机甲切片'], ['island', '玻璃群岛'], ['holo', '3D 全息'], ['spider', '错位故障 · 三段切片'], ['armor', '爆甲展开 · 彩色残影'], ['hand', '四卡手牌 · 扇形展开']];
   const ADMIN_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -151,7 +150,7 @@
 
   async function render(container, options) {
     destroy();
-    if (!adapter || !repository || !markdownRenderer) {
+    if (!adapter || !repository || !markdownRenderer || !window.KnowledgePortable) {
       container.replaceChildren(element('p', 'knowledge-writer-error', '编辑器模块加载失败。'));
       return;
     }
@@ -164,6 +163,8 @@
 
   function createSession(container, options) {
     const tempId = crypto.randomUUID();
+    const ownerId = Number(window.authManager?.getCurrentUser?.().id);
+    const portable = window.KnowledgePortable;
     const state = {
       post: null,
       postId: Number(options.postId) || null,
@@ -213,7 +214,16 @@
     markdownImportButton.type = 'button';
     markdownImportButton.title = '导入 UTF-8 Markdown 文件；普通用户最大 256 KB，管理员最大 2 MB';
     viewModes.appendChild(markdownImportButton);
-    primaryBar.append(backButton, mode, topStatus, viewModes, author, panelToggle);
+    const backupMenu = element('details', 'knowledge-writer-backup-menu');
+    const backupToggle = element('summary', '', '备份与导出');
+    const backupActions = element('div');
+    const exportMarkdown = element('button', '', '导出 Markdown');
+    const exportBackup = element('button', '', '导出文章备份');
+    const importBackup = element('button', '', '导入文章备份');
+    [exportMarkdown, exportBackup, importBackup].forEach(button => { button.type = 'button'; backupActions.appendChild(button); });
+    const backupFile = document.createElement('input'); backupFile.type = 'file'; backupFile.accept = '.json,application/json'; backupFile.hidden = true;
+    backupActions.appendChild(backupFile); backupMenu.append(backupToggle, backupActions);
+    primaryBar.append(backButton, mode, topStatus, viewModes, backupMenu, author, panelToggle);
 
     const toolbar = element('div', 'knowledge-writer-toolbar');
     const toolbarMain = element('div', 'knowledge-writer-toolbar-scroll');
@@ -378,7 +388,7 @@
     let coverOriginal = null;
 
     function localKey() {
-      return DRAFT_PREFIX + (state.postId ? 'post:' + state.postId : 'new');
+      return portable.draftKey(ownerId, state.postId);
     }
 
     async function initialize() {
@@ -387,6 +397,7 @@
       if (state.postId) {
         try {
           state.post = await repository.getAdminPost(state.postId, { token: currentToken() });
+          if (state.destroyed || Number(window.authManager?.getCurrentUser?.().id) !== ownerId) return;
           state.version = state.post.version;
           initialMarkdown = state.post.contentMarkdown || '';
           titleInput.value = state.post.title || '';
@@ -616,6 +627,7 @@
       if (!state.editor || state.destroyed) return;
       const draft = {
         schemaVersion: 1,
+        ownerId,
         tempId: state.tempId,
         postId: state.postId,
         title: titleInput.value,
@@ -644,7 +656,7 @@
       } catch (error) {
         draft = null;
       }
-      if (!draft || (!draft.document && !draft.markdown) || !draft.lastEditedAt) return;
+      if (!draft || Number(draft.ownerId) !== ownerId || (!draft.document && !draft.markdown) || !draft.lastEditedAt) return;
       recovery.hidden = false;
       recovery.querySelector('[data-recovery-time]').textContent =
         '最后编辑：' + formatTime(new Date(draft.lastEditedAt));
@@ -659,7 +671,7 @@
         markDirty();
       };
       recovery.querySelector('[data-recovery-discard]').onclick = function () {
-        window.localStorage.removeItem(localKey());
+        try { window.localStorage.removeItem(localKey()); } catch {}
         recovery.hidden = true;
       };
     }
@@ -751,6 +763,10 @@
 
     async function saveToServer(status) {
       if (!state.editor) return;
+      if (Number(window.authManager?.getCurrentUser?.().id) !== ownerId) {
+        showNotice('账号已变化，请重新打开编辑器后保存。', true);
+        return;
+      }
       const publishing = status === 'published';
       const payload = collectPayload(status);
       if (!validatePayload(payload, publishing)) return;
@@ -774,8 +790,8 @@
         state.version = post.version;
         setField('slug', post.slug);
         setField('status', post.status);
-        window.localStorage.removeItem(oldKey);
-        window.localStorage.removeItem(localKey());
+        // A local-storage error must not turn a successful server save into a failure.
+        try { window.localStorage.removeItem(oldKey); window.localStorage.removeItem(localKey()); } catch {}
         state.dirty = false;
         state.localSaved = true;
         setSaveState(publishing ? '已发布' : '服务器已保存');
@@ -1299,6 +1315,43 @@
       event.returnValue = '';
     }
 
+    exportMarkdown.addEventListener('click', function () {
+      if (!state.editor || state.destroyed) return;
+      try { portable.exportPost(collectPayload(), 'markdown'); backupMenu.open = false; }
+      catch (error) { showNotice(error.message, true); }
+    });
+    exportBackup.addEventListener('click', function () {
+      if (!state.editor || state.destroyed) return;
+      try { portable.exportPost(collectPayload(), 'backup'); backupMenu.open = false; }
+      catch (error) { showNotice(error.message, true); }
+    });
+    importBackup.addEventListener('click', function () { if (state.editor && !state.destroyed) backupFile.click(); });
+    backupFile.addEventListener('change', async function () {
+      const file = backupFile.files?.[0]; backupFile.value = '';
+      if (!file || !state.editor || state.destroyed) return;
+      try {
+        const limit = isAdmin() ? 2 * 1024 * 1024 : USER_MAX_CONTENT_LENGTH;
+        if (file.size > limit * 6 + 65536) throw new Error('备份文件太大。');
+        const imported = portable.fromBackup(await file.text(), limit);
+        if (state.destroyed) return;
+        if ((state.dirty || currentMarkdown().trim()) && !window.confirm('导入会替换当前标题、正文与文章设置。已保存的服务器文章不会立即改变，是否继续？')) return;
+        // Preserve the current unsaved work as a file before replacing it.
+        if (state.dirty) portable.exportPost(collectPayload(), 'backup');
+        setEditorMode('markdown');
+        sourceInput.value = imported.contentMarkdown;
+        titleInput.value = imported.title;
+        titleCount.textContent = titleInput.value.length + ' / 100'; titleError.textContent = '';
+        const currentSettings = collectSettings();
+        applyDraftSettings({ ...imported, tags: imported.tags.join(', '), status: 'draft',
+          isPinned: state.postId ? currentSettings.isPinned : false, isFeatured: state.postId ? currentSettings.isFeatured : false,
+          solutionPlatform: imported.solutionMeta.platform, solutionProblemId: imported.solutionMeta.problemId,
+          solutionProblemTitle: imported.solutionMeta.problemTitle, solutionProblemUrl: imported.solutionMeta.problemUrl,
+          solutionLanguage: imported.solutionMeta.language });
+        handleSourceChange(); saveLocalDraft(); backupMenu.open = false;
+        showNotice('文章备份已导入，尚未保存到服务器或发布。图片保留原链接。');
+      } catch (error) { showNotice(error.message || '备份导入失败，原内容未改动。', true); }
+    });
+
     markdownImportButton.addEventListener('click', function () {
       if (state.editor && !state.destroyed) markdownFileInput.click();
     });
@@ -1315,6 +1368,7 @@
         setEditorMode('markdown');
         sourceInput.value = imported.markdown;
         if (!titleInput.value.trim()) titleInput.value = imported.title;
+        if (imported.settings) applyDraftSettings(imported.settings);
         titleCount.textContent = titleInput.value.length + ' / 100';
         titleError.textContent = '';
         handleSourceChange();

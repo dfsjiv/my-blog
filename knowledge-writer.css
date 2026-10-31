@@ -72,6 +72,14 @@
   border-radius: 5px;
 }
 
+.knowledge-writer-backup-menu { position: relative; flex: 0 0 auto; }
+.knowledge-writer-backup-menu summary { min-height: 32px; display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--knowledge-border); border-radius: 5px; font-size: 12px; cursor: pointer; list-style: none; }
+.knowledge-writer-backup-menu summary::-webkit-details-marker { display: none; }
+.knowledge-writer-backup-menu > div { position: absolute; top: calc(100% + 8px); right: 0; z-index: 50; width: 180px; padding: 6px; display: grid; gap: 4px; background: var(--knowledge-surface-solid); border: 1px solid var(--knowledge-border); border-radius: 6px; box-shadow: var(--knowledge-shadow); }
+.knowledge-writer-backup-menu button { min-height: 38px; text-align: left; padding: 0 10px; color: var(--knowledge-text); background: transparent; border: 0; font: 13px "Segoe UI", "Microsoft YaHei", sans-serif; }
+.knowledge-writer-backup-menu button:hover { background: var(--knowledge-primary-soft); }
+.knowledge-writer-backup-menu summary, .knowledge-writer-backup-menu button { white-space: nowrap; }
+
 .knowledge-writer-view-modes button {
   min-height: 28px;
   padding: 0 10px;
@@ -1272,6 +1280,17 @@
   .knowledge-writer-save-status {
     display: none;
   }
+
+  .knowledge-writing-mode { --knowledge-writer-bar-height: 144px; }
+  .knowledge-writer-primary-bar { flex-wrap: wrap; padding-block: 7px; gap: 7px; }
+  .knowledge-writer-primary-bar .knowledge-writer-view-modes { order: 1; flex: 0 0 100%; margin: 0; justify-content: center; }
+  .knowledge-writer-view-modes button { white-space: nowrap; min-height: 30px; }
+  .knowledge-writer-backup-menu { margin-left: auto; }
+  .knowledge-writer-bottom { display: grid; gap: 5px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .knowledge-writer-bottom > div:first-child { min-height: 28px; }
+  .knowledge-writer-bottom > div:last-child { display: grid; grid-template-columns: 1.4fr 1.1fr .8fr .8fr; width: 100%; }
+  .knowledge-writer-bottom button, .knowledge-writer-bottom span { white-space: nowrap; }
+  .knowledge-writer-bottom > div:last-child button { padding-inline: 5px; font-size: 12px; }
 
 }
 

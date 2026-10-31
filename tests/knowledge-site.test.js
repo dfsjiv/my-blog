@@ -283,7 +283,7 @@ assert.match(repository, /function getAdminPosts/);
 assert.match(repository, /function changePostState/);
 assert.match(repository, /function deletePost/);
 assert.match(repository, /function createEditableLegacyPost/);
-assert.match(writer, /knowledge-writer-draft:v1:/);
+assert.match(writer, /portable\.draftKey\(ownerId, state\.postId\)/);
 assert.match(writer, /AUTO_SAVE_DELAY = 1500/);
 assert.match(writer, /FORMULA_GROUPS/);
 assert.match(writer, /\\overrightarrow\{AB\}/);

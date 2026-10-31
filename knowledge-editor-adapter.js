@@ -345,6 +345,10 @@
     }
     if (markdown.includes('\0')) throw new Error('文件不是有效的 Markdown 文本。');
     if (!markdown.trim()) throw new Error('Markdown 文件内容为空。');
+    if (window.KnowledgePortable?.parseMarkdown) {
+      const imported = window.KnowledgePortable.parseMarkdown(markdown);
+      if (imported.title != null) return imported;
+    }
     const heading = markdown.trimStart().match(/^#\s+([^\r\n]+)/);
     const title = heading ? heading[1].replace(/\s+#+\s*$/, '').trim() : file.name.replace(/\.(md|markdown)$/i, '');
     return { markdown, title: title.slice(0, 100) };

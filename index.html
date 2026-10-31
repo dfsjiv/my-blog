@@ -907,15 +907,19 @@ Camera: --, --, --</pre>
         "ready": "renderMathInElement"
       },
       "writer": {
-        "depends": ["math"],
-        "styles": ["knowledge-writer.css?v=20261016-card-preview-2"],
-        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js", "knowledge-editor-adapter.js?v=20261012-md-import-1", "knowledge-writer.js?v=20261016-armor-hand-1"],
+        "depends": ["math", "portable"],
+        "styles": ["knowledge-writer.css?v=20261101-backup-1"],
+        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js", "knowledge-editor-adapter.js?v=20261101-roundtrip-1", "knowledge-writer.js?v=20261101-backup-1"],
         "ready": "KnowledgeWriter"
       },
       "reading": {
         "styles": ["knowledge-reading.css?v=20261101-1"],
-        "scripts": ["knowledge-reading.js?v=20261101-1"],
+        "scripts": ["knowledge-reading.js?v=20261101-export-1"],
         "ready": "KnowledgeReading"
+      },
+      "portable": {
+        "scripts": ["knowledge-portable.js?v=20261101-1"],
+        "ready": "KnowledgePortable"
       },
       "mover": {
         "styles": ["knowledge-article-mover.css"],
