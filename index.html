@@ -155,7 +155,7 @@
   <link rel="stylesheet" href="knowledge-grid-blocks.css?v=20261101-1" />
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
   <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
-  <link rel="stylesheet" href="knowledge-navigation.css?v=20261028-text-brand-1" />
+  <link rel="stylesheet" href="knowledge-navigation.css?v=20261101-search-1" />
   <script type="importmap">
     {
       "imports": {
@@ -234,6 +234,10 @@
               文章 <span aria-hidden="true">⌄</span>
             </button>
             <div class="knowledge-nav-submenu" id="knowledgeArticleMenu" role="menu" hidden>
+              <button type="button" data-quick-search-trigger role="menuitem">
+                <span class="knowledge-nav-menu-icon" data-icon-zh="搜" data-icon-en="S" aria-hidden="true"></span>
+                <span>搜索文章</span>
+              </button>
               <button type="button" data-knowledge-route="all" role="menuitem">
                 <span class="knowledge-nav-menu-icon" data-icon-zh="全" data-icon-en="A" aria-hidden="true"></span>
                 <span>全部文章</span>
@@ -348,6 +352,9 @@
             <button id="knowledgeSearchButton" type="button" tabindex="-1"></button>
             <button id="knowledgeLanguageButton" type="button" tabindex="-1"></button>
           </div>
+          <button class="knowledge-icon-button" id="knowledgeQuickSearchButton" type="button" data-quick-search-trigger aria-label="搜索文章" title="搜索文章 · Ctrl / ⌘ K">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="1.5" stroke-linecap="round" d="m21 21-5.2-5.2M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
+          </button>
           <button class="knowledge-icon-button" id="knowledgeThemeButton" type="button" aria-label="切换主题">◐</button>
           <details class="knowledge-author-tools" id="knowledgeAuthorTools" hidden>
             <summary>写文章</summary>
@@ -891,7 +898,7 @@ Camera: --, --, --</pre>
   <script src="login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="auth.js?v=20261027-request-timeout-1"></script>
   <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20261101-reading-1"></script>
+  <script src="knowledge-i18n-v3.js?v=20261101-search-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="knowledge-markdown.js?v=20261027-copy-fallback-1"></script>
@@ -921,6 +928,11 @@ Camera: --, --, --</pre>
         "scripts": ["knowledge-portable.js?v=20261101-1"],
         "ready": "KnowledgePortable"
       },
+      "quickSearch": {
+        "styles": ["knowledge-quick-search.css?v=20261101-1"],
+        "scripts": ["knowledge-quick-search.js?v=20261101-1"],
+        "ready": "KnowledgeQuickSearch"
+      },
       "mover": {
         "styles": ["knowledge-article-mover.css"],
         "scripts": ["knowledge-article-mover.js"],
@@ -944,7 +956,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=e6ed6578de5a"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=d5510cd8ff0c"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>

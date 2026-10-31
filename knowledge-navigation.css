@@ -184,6 +184,7 @@
   .knowledge-site .knowledge-nav-links > .knowledge-nav-menu > .knowledge-nav-menu-trigger { padding-left: 9px; padding-right: 9px; }
 }
 @media (max-width: 1040px) {
+  #knowledgeQuickSearchButton { display: none; }
   .knowledge-site .knowledge-header { padding: 8px 0; }
   .knowledge-site .knowledge-header .knowledge-nav {
     width: calc(100% - 20px);

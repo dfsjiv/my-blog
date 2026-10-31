@@ -212,7 +212,7 @@ assert.match(css, /M0 120C180 28 360 190 540 110S900 190 1080 100S1320 155 1440 
 assert.doesNotMatch(css, /1440 110V220H0Z/);
 assert.doesNotMatch(html, /knowledge-hero-scroll/);
 assert.doesNotMatch(css, /\.knowledge-hero-scroll/);
-assert.match(html, /knowledge-i18n-v3\.js\?v=20261101-reading-1/);
+assert.match(html, /knowledge-i18n-v3\.js\?v=20261101-search-1/);
 assert.match(i18n, /'背景管理': 'Backgrounds'/);
 assert.match(i18n, /'上传并加入队列': 'Upload and add to queue'/);
 assert.match(css, /\.knowledge-comment-form\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
@@ -253,7 +253,7 @@ assert.match(css, /simple-icons@v16\/icons\/bilibili\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/github\.svg/);
 assert.match(css, /simple-icons@v16\/icons\/zhihu\.svg/);
 assert.match(html, /site\.bundle\.js\?v=[a-f0-9]{12}/);
-assert.match(html, /knowledge-navigation\.css\?v=20261028-text-brand-1/);
+assert.match(html, /knowledge-navigation\.css\?v=20261101-search-1/);
 assert.match(html, /id="knowledgeMenuToggle"[^>]*aria-controls="knowledgeNavLinks"/);
 
 assert.match(markdown, /markedApi\.parse/);

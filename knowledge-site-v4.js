@@ -1150,6 +1150,7 @@
   }
 
   function abortRouteWork() {
+    window.KnowledgeQuickSearch?.close();
     if (state.routeController) state.routeController.abort();
     if (state.readingCleanup) { state.readingCleanup(); state.readingCleanup = null; }
     if (state.route !== 'home' && state.homeController) state.homeController.abort();
@@ -3442,6 +3443,32 @@
       });
     }));
   }
+  let quickSearchLoading = false;
+  async function openQuickSearch() {
+    if (quickSearchLoading || !document.body.classList.contains('auth-elegant') || shell.classList.contains('knowledge-writing-mode')) return;
+    if (shell.querySelector('dialog[open]:not(.knowledge-quick-search)')) return;
+    const requestedRoute = state.route;
+    quickSearchLoading = true;
+    closeNavigation();
+    try {
+      await window.KnowledgeFeatures.ensure('quickSearch');
+      if (!document.body.classList.contains('auth-elegant') || state.route !== requestedRoute || shell.classList.contains('knowledge-writing-mode')) return;
+      window.KnowledgeQuickSearch.open({ shell, repository, navigate, user: currentUser(), language: state.language, isAuthor: isAuthor(),
+        returnFocus: window.innerWidth <= 1040 ? menuToggle : document.getElementById('knowledgeQuickSearchButton') });
+    } catch {
+      navigate('all');
+    } finally { quickSearchLoading = false; }
+  }
+  shell.querySelectorAll('[data-quick-search-trigger]').forEach(control => control.addEventListener('click', openQuickSearch));
+  window.addEventListener('keydown', function (event) {
+    if (event.defaultPrevented || event.isComposing || shell.classList.contains('knowledge-writing-mode')) return;
+    const typing = event.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+    if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') || (!typing && !event.ctrlKey && !event.metaKey && !event.altKey && event.key === '/')) {
+      if (!document.body.classList.contains('auth-elegant')) return;
+      event.preventDefault(); void openQuickSearch();
+    }
+  });
+
   if (guestAuth) {
     guestAuth.addEventListener('click', function (event) {
       const target = event.target.closest('[data-auth-mode]');
