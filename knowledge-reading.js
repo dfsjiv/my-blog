@@ -4,6 +4,16 @@
   const MAX_IMPORT_BYTES = 512 * 1024;
   const TYPES = new Set(['article', 'solution', 'note', 'project', 'essay']);
   const stores = new Map();
+  const PREFS_KEY = 'knowledge-reading-preferences:v1';
+  function normalizePreferences(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+      size: Number.isFinite(source.size) ? Math.max(14, Math.min(24, Math.round(source.size))) : 16,
+      line: [1.6, 1.8, 2, 2.2].includes(source.line) ? source.line : 1.8,
+      width: ['default', 'narrow', 'wide'].includes(source.width) ? source.width : 'default',
+      font: source.font === 'serif' ? 'serif' : 'system',
+    };
+  }
   const clean = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, max) : '';
 
   function safeImage(value) {
@@ -165,6 +175,61 @@
       } finally { exportMd.disabled = false; }
     });
     tools.append(save, library, exportMd);
+    const view = node('details', 'knowledge-reader-settings');
+    const summary = node('summary', '', text('阅读设置', 'Reading settings'));
+    const settingsPanel = node('div', 'knowledge-reader-settings-panel');
+    const sizeLabel = node('label', '', text('字号', 'Font size'));
+    const size = node('input'); size.type = 'range'; size.min = '14'; size.max = '24'; size.step = '1';
+    const sizeValue = node('output'); sizeLabel.append(size, sizeValue);
+    function select(label, choices) {
+      const wrap = node('label', '', label), control = node('select');
+      for (const [value, caption] of choices) { const option = node('option', '', caption); option.value = value; control.appendChild(option); }
+      wrap.appendChild(control); settingsPanel.appendChild(wrap); return control;
+    }
+    settingsPanel.appendChild(sizeLabel);
+    const line = select(text('行距', 'Line spacing'), [['1.6', '1.6'], ['1.8', '1.8'], ['2', '2.0'], ['2.2', '2.2']]);
+    const width = select(text('正文宽度', 'Article width'), [['default', text('默认', 'Default')], ['narrow', text('紧凑', 'Narrow')], ['wide', text('宽屏', 'Wide')]]);
+    const font = select(text('正文字体', 'Body font'), [['system', text('系统字体', 'System')], ['serif', text('衬线字体', 'Serif')]]);
+    let preferences;
+    try { preferences = normalizePreferences(JSON.parse(window.localStorage.getItem(PREFS_KEY) || 'null')); }
+    catch { preferences = normalizePreferences(null); }
+    function applyPreferences() {
+      size.value = preferences.size; sizeValue.value = preferences.size + 'px';
+      line.value = preferences.line; width.value = preferences.width; font.value = preferences.font;
+      body.classList.add('knowledge-reader-body');
+      body.style.setProperty('--reader-font-size', preferences.size + 'px');
+      body.style.setProperty('--reader-line-height', preferences.line);
+      body.dataset.readerFont = preferences.font;
+      shell.dataset.readerWidth = preferences.width;
+    }
+    function changed() {
+      preferences = normalizePreferences({ size: Number(size.value), line: Number(line.value), width: width.value, font: font.value });
+      applyPreferences();
+      try { window.localStorage.setItem(PREFS_KEY, JSON.stringify(preferences)); } catch {}
+    }
+    size.addEventListener('input', changed);
+    [line, width, font].forEach(input => input.addEventListener('change', changed));
+    settingsPanel.appendChild(control(text('恢复默认', 'Reset defaults'), () => { preferences = normalizePreferences(null); applyPreferences(); changed(); }));
+    view.append(summary, settingsPanel); tools.appendChild(view); applyPreferences();
+    view.addEventListener('toggle', () => {
+      if (!view.open) return;
+      const panelWidth = Math.min(280, window.innerWidth - 60);
+      const left = view.getBoundingClientRect().left - tools.getBoundingClientRect().left;
+      settingsPanel.style.left = Math.max(0, Math.min(left, tools.clientWidth - panelWidth)) + 'px';
+    });
+    let focused = false;
+    const exitFocus = control(text('退出专注 · Esc', 'Exit focus · Esc'), () => focus(false), 'knowledge-route-button knowledge-reader-focus-exit');
+    exitFocus.hidden = true; shell.appendChild(exitFocus);
+    const focusToggle = control(text('专注阅读', 'Focus mode'), () => focus(!focused));
+    focusToggle.setAttribute('aria-pressed', 'false');
+    function focus(enabled) {
+      focused = enabled; shell.classList.toggle('knowledge-reader-focus', enabled);
+      exitFocus.hidden = !enabled; focusToggle.setAttribute('aria-pressed', String(enabled));
+      focusToggle.textContent = enabled ? text('退出专注', 'Exit focus') : text('专注阅读', 'Focus mode');
+      view.open = false;
+    }
+    const print = control(text('打印 / PDF', 'Print / PDF'), () => window.print());
+    tools.append(focusToggle, print);
     if (previous && previous.progress >= 5 && previous.progress < 95) {
       const resume = control(text('继续上次阅读 · ', 'Resume · ') + previous.progress + '%', () => {
         const target = previous.heading && Array.from(body.querySelectorAll('[id]')).find(item => item.id === previous.heading);
@@ -184,6 +249,35 @@
     const fill = node('span'); progress.appendChild(fill); shell.appendChild(progress);
     let timer = 0, pending = null, destroyed = false;
     const headings = Array.from(body.querySelectorAll('h2[id],h3[id],h4[id]'));
+    const imageDialog = node('dialog', 'knowledge-reader-image-dialog');
+    imageDialog.setAttribute('aria-label', text('图片查看器', 'Image viewer'));
+    const imageBar = node('header');
+    const imageCaption = node('span');
+    const imageViewport = node('div', 'knowledge-reader-image-viewport');
+    const expandedImage = node('img'); expandedImage.alt = '';
+    let sourceImage = null;
+    const actualSize = control(text('原始大小', 'Actual size'), () => {
+      const actual = imageViewport.classList.toggle('is-actual');
+      actualSize.textContent = actual ? text('适应窗口', 'Fit window') : text('原始大小', 'Actual size');
+    });
+    const imageClose = control(text('关闭', 'Close'), () => imageDialog.close());
+    imageBar.append(imageCaption, actualSize, imageClose); imageViewport.appendChild(expandedImage); imageDialog.append(imageBar, imageViewport); shell.appendChild(imageDialog);
+    const images = Array.from(body.querySelectorAll('img')).filter(image => !image.closest('a'));
+    images.forEach(image => { image.classList.add('knowledge-reader-zoomable'); image.tabIndex = 0; image.setAttribute('role', 'button'); image.setAttribute('aria-label', text('查看大图：', 'Enlarge image: ') + (image.alt || text('文章图片', 'Article image'))); });
+    function openImage(image) {
+      if (!image.naturalWidth || imageDialog.open) return;
+      sourceImage = image; expandedImage.src = image.currentSrc || image.src; expandedImage.alt = image.alt;
+      imageCaption.textContent = image.alt || text('文章图片', 'Article image');
+      imageViewport.classList.remove('is-actual'); actualSize.textContent = text('原始大小', 'Actual size');
+      imageDialog.showModal(); imageClose.focus();
+    }
+    function imageClick(event) { if (images.includes(event.target)) openImage(event.target); }
+    function imageKey(event) { if (images.includes(event.target) && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openImage(event.target); } }
+    body.addEventListener('click', imageClick); body.addEventListener('keydown', imageKey);
+    imageDialog.addEventListener('click', event => { if (event.target === imageDialog) imageDialog.close(); });
+    imageDialog.addEventListener('close', () => { if (!destroyed && sourceImage?.isConnected) sourceImage.focus({ preventScroll: true }); expandedImage.removeAttribute('src'); });
+    function escapeFocus(event) { if (event.key === 'Escape' && focused && !imageDialog.open) { focus(false); focusToggle.focus({ preventScroll: true }); } }
+    window.addEventListener('keydown', escapeFocus);
     function flush() {
       clearTimeout(timer); timer = 0;
       if (pending) { store.progress(post.slug, pending.percent, pending.heading); pending = null; }
@@ -213,6 +307,11 @@
       if (destroyed) return;
       flush(); destroyed = true; clearTimeout(startTimer);
       observer.disconnect(); tools.remove(); progress.remove();
+      focus(false); exitFocus.remove(); imageDialog.close(); imageDialog.remove();
+      body.removeEventListener('click', imageClick); body.removeEventListener('keydown', imageKey);
+      window.removeEventListener('keydown', escapeFocus);
+      body.classList.remove('knowledge-reader-body'); body.style.removeProperty('--reader-font-size'); body.style.removeProperty('--reader-line-height');
+      delete body.dataset.readerFont; delete shell.dataset.readerWidth;
       shell.removeEventListener('scroll', measure); window.removeEventListener('resize', measure);
       window.removeEventListener('pagehide', flush); window.removeEventListener('storage', storage);
       document.removeEventListener('visibilitychange', visibility);
@@ -317,5 +416,5 @@
     options.signal.addEventListener('abort', cleanup, { once: true });
     return cleanup;
   }
-  window.KnowledgeReading = { createStore, storeFor, mountDetail, mountLibrary };
+  window.KnowledgeReading = { createStore, storeFor, normalizePreferences, mountDetail, mountLibrary };
 })();

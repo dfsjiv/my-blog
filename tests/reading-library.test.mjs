@@ -65,3 +65,11 @@ test('bounded storage keeps saved entries ahead of old history and respects exte
   assert.equal(store.list().length, 200); assert.equal(store.get(post.slug).saved, true);
   values.delete(store.key); assert.equal(store.list().length, 0);
 });
+
+test('reading preferences clamp dimensions and reject unexpected CSS values', () => {
+  const { normalizePreferences } = setup();
+  const result = normalizePreferences({ size: 999, line: '100px;display:none', font: 'url(evil)', width: '__proto__' });
+  assert.equal(result.size, 24); assert.equal(result.line, 1.8); assert.equal(result.font, 'system'); assert.equal(result.width, 'default');
+  assert.equal(normalizePreferences({ size: -100 }).size, 14);
+  assert.equal(normalizePreferences(null).size, 16);
+});
