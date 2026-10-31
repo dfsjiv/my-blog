@@ -3131,9 +3131,11 @@
         user: currentUser(), language: state.language, signal: controller.signal });
     }).catch(function () { /* Reading tools can be retried from the Reading page. */ });
     if (detailAside) setupSectionObserver(renderedHeadings, detailAside);
-    loadDetailExtras(post, navigation, related, controller);
-    if (commentsModule && typeof commentsModule.render === 'function') {
-      commentsModule.render(comments, {
+    whenNearViewport(navigation, function () { return loadDetailExtras(post, navigation, related, controller); }, controller);
+    comments.append(element('h2', 'knowledge-comments-title', '评论'), element('p', 'knowledge-note', '接近文末时加载评论。'));
+    whenNearViewport(comments, function () {
+      if (commentsModule && typeof commentsModule.render === 'function') {
+        return commentsModule.render(comments, {
         post,
         repository,
         signal: controller.signal,
@@ -3141,10 +3143,11 @@
         getUser: currentUser,
         getToken: currentToken,
         getLanguage: function () { return state.language; },
-      });
-    } else {
-      comments.appendChild(makeEmptyState('评论暂时无法加载。', '评论模块未能正确加载。'));
-    }
+        });
+      } else {
+        comments.replaceChildren(makeEmptyState('评论暂时无法加载。', '评论模块未能正确加载。'));
+      }
+    }, controller);
   }
 
   function makeSolutionInfo(post) {
@@ -3271,6 +3274,26 @@
     back.dataset.knowledgeRoute = 'home';
     panel.append(top, back);
     return panel;
+  }
+
+  function whenNearViewport(target, task, controller) {
+    let started = false, observer = null;
+    function cleanup() { observer?.disconnect(); controller.signal.removeEventListener('abort', cleanup); }
+    function start() {
+      if (started || controller.signal.aborted) return;
+      started = true; cleanup();
+      Promise.resolve().then(function () { if (!controller.signal.aborted) return task(); }).catch(function () {
+        if (!controller.signal.aborted) target.replaceChildren(element('p', 'knowledge-note', '附加内容暂时无法加载。'));
+      });
+    }
+    if (controller.signal.aborted) return cleanup;
+    if (!('IntersectionObserver' in window)) { start(); return cleanup; }
+    observer = new IntersectionObserver(function (entries) {
+      if (entries.some(entry => entry.isIntersecting)) start();
+    }, { root: shell, rootMargin: '600px 0px', threshold: 0 });
+    controller.signal.addEventListener('abort', cleanup, { once: true });
+    observer.observe(target);
+    return cleanup;
   }
 
   async function loadDetailExtras(post, navigation, related, controller) {

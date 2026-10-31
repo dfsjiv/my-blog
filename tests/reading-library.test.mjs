@@ -73,3 +73,12 @@ test('reading preferences clamp dimensions and reject unexpected CSS values', ()
   assert.equal(normalizePreferences({ size: -100 }).size, 14);
   assert.equal(normalizePreferences(null).size, 16);
 });
+
+test('large metadata collections stay within their own backup import limit', () => {
+  const { createStore, storage } = setup();
+  const store = createStore(storage, 'guest');
+  for (let i = 0; i < 200; i++) store.save({ ...post, slug: 'long-' + i, title: '界'.repeat(200), summary: '界'.repeat(360), coverUrl: 'https://example.com/' + 'a'.repeat(1900) }, true);
+  const backup = store.export();
+  assert.ok(new TextEncoder().encode(backup).length <= 512 * 1024);
+  const fresh = createStore(storage, 'user-5'); assert.ok(fresh.import(backup) > 0);
+});

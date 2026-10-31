@@ -2,6 +2,7 @@
   'use strict';
   const LIMIT = 200;
   const MAX_IMPORT_BYTES = 512 * 1024;
+  const MAX_STORAGE_BYTES = 384 * 1024;
   const TYPES = new Set(['article', 'solution', 'note', 'project', 'essay']);
   const stores = new Map();
   const PREFS_KEY = 'knowledge-reading-preferences:v1';
@@ -69,7 +70,13 @@
     }
     function write(items) {
       memory = normalize(items);
-      try { storage.setItem(key, JSON.stringify({ version: 1, items: memory })); }
+      let serialized = JSON.stringify({ version: 1, items: memory });
+      // Leave room for pretty-printed export metadata so every backup fits the import limit.
+      const encoder = new TextEncoder();
+      while (memory.length > 1 && encoder.encode(serialized).length > MAX_STORAGE_BYTES) {
+        memory.pop(); serialized = JSON.stringify({ version: 1, items: memory });
+      }
+      try { storage.setItem(key, serialized); }
       catch { persistent = false; }
       return memory;
     }
@@ -314,7 +321,7 @@
       if (!timer) timer = setTimeout(flush, 800);
     }
     function visibility() { if (document.hidden) flush(); else measure(); }
-    function storage(event) { if (event.key === store.key) syncSave(); }
+    function storage(event) { if (event.key === store.key || event.key == null) syncSave(); }
     shell.addEventListener('scroll', measure, { passive: true });
     window.addEventListener('resize', measure, { passive: true });
     window.addEventListener('pagehide', flush);
@@ -429,7 +436,7 @@
     }
     input.addEventListener('input', render);
     toolbar.append(tabs, input); page.append(note, stats, toolbar, feedback, undo, list, backup); root.appendChild(page);
-    function storage(event) { if (event.key === store.key) render(); }
+    function storage(event) { if (event.key === store.key || event.key == null) render(); }
     window.addEventListener('storage', storage);
     render();
     const cleanup = () => window.removeEventListener('storage', storage);

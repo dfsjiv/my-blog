@@ -500,6 +500,8 @@
     '登录': 'Sign In',
     '注册': 'Sign Up',
     '我的阅读': 'My reading',
+    '接近文末时加载评论。': 'Comments load as you approach the end of the article.',
+    '附加内容暂时无法加载。': 'Additional content is temporarily unavailable.',
     '搜索文章': 'Search articles',
     '文章与笔记': 'Writing & Notes',
     '用户': 'User',
