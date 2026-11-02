@@ -8,6 +8,7 @@ import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
 import { BubbleMenu } from '@tiptap/extension-bubble-menu';
 import Paragraph from '@tiptap/extension-paragraph';
+import { KnowledgeMathInline, KnowledgeMathDisplay } from './knowledge-editor-math.mjs';
 
 const CENTER_MARKER = '{center} ';
 
@@ -61,4 +62,6 @@ export {
   Placeholder,
   BubbleMenu,
   AlignedParagraph,
+  KnowledgeMathInline,
+  KnowledgeMathDisplay,
 };

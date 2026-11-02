@@ -24,6 +24,7 @@
         'button', 'style', 'svg', 'math',
       ],
       FORBID_ATTR: ['style', 'class', 'id'],
+      ADD_ATTR: ['data-knowledge-math'],
       ALLOW_DATA_ATTR: false,
     });
   }
@@ -40,6 +41,8 @@
         },
       }),
       vendor.AlignedParagraph,
+      vendor.KnowledgeMathInline,
+      vendor.KnowledgeMathDisplay,
       vendor.Link.configure({
         openOnClick: false,
         autolink: true,

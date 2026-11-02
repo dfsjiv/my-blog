@@ -3,10 +3,21 @@
   const purifier = window.DOMPurify;
   if (!markedApi || !purifier) return;
 
+  function normalizeLegacyMath(source) {
+    // Old rich-text exports escaped TeX as Markdown text: \\frac, a\_i.
+    // Recover only known doubled commands, never genuine matrix row breaks.
+    const doubledCommand = /(^|[^\\])\\\\(?=(?:frac|dfrac|tfrac|sum|prod|sqrt|boxed|cdot|times|ge|geq|le|leq|ne|neq|approx|equiv|lfloor|rfloor|lceil|rceil|left|right|begin|end|text|mathrm|mathbf|operatorname|limits|infty|alpha|beta|gamma|delta|theta|lambda|sigma|omega)(?![A-Za-z]))/g;
+    if (!doubledCommand.test(source) || /(^|[^\\])\\begin\{/.test(source)) return source;
+    doubledCommand.lastIndex = 0;
+    return source.replace(doubledCommand, '$1\\')
+      .replace(/\\([_*])/g, '$1')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  }
+
   // Tokenize math before Markdown consumes backslash delimiters, underscores,
   // HTML-looking comparisons and table pipes. Code tokens keep their precedence.
   function mathHtml(token) {
-    return '<span class="knowledge-math-source">' + token.raw
+    return '<span class="knowledge-math-source">' + normalizeLegacyMath(token.raw)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>';
   }
   if (typeof markedApi.use === 'function') markedApi.use({ extensions: [
@@ -146,6 +157,14 @@
   }
 
   function enhanceMath(container) {
+    const walker = document.createTreeWalker(container, 4);
+    let text;
+    while ((text = walker.nextNode())) {
+      if (text.parentElement?.closest('pre, code, .katex, .knowledge-code-toolbar')) continue;
+      const source = text.nodeValue || '';
+      const normalized = source.replace(/\\\[[\s\S]*?\\\]|\\\([^\n]*?\\\)|\$\$[\s\S]*?\$\$|\$(?!\s)(?:\\[^\n]|[^$\n\\])+?\$/g, normalizeLegacyMath);
+      if (normalized !== source) text.nodeValue = normalized;
+    }
     if (typeof window.renderMathInElement !== 'function') {
       if (!window.KnowledgeFeatures || pendingMath.has(container) || !hasMath(container)) return;
       pendingMath.add(container);
@@ -348,6 +367,7 @@
     safeUrl,
     enhanceMath,
     hasMath,
+    normalizeLegacyMath,
     expandLegacyCenteredTextBlocks,
     expandLegacyIndentedVectorBlocks,
   };
