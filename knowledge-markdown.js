@@ -3,6 +3,33 @@
   const purifier = window.DOMPurify;
   if (!markedApi || !purifier) return;
 
+  // Tokenize math before Markdown consumes backslash delimiters, underscores,
+  // HTML-looking comparisons and table pipes. Code tokens keep their precedence.
+  function mathHtml(token) {
+    return '<span class="knowledge-math-source">' + token.raw
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>';
+  }
+  if (typeof markedApi.use === 'function') markedApi.use({ extensions: [
+    {
+      name: 'knowledgeDisplayMath', level: 'block',
+      start: function (src) { return src.search(/^(?: {0,3})(?:\\\[|\$\$)/m); },
+      tokenizer: function (src) {
+        const match = /^(?: {0,3})(?:\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$)(?=\s*(?:\n|$))/.exec(src);
+        if (match) return { type: 'knowledgeDisplayMath', raw: match[0] };
+      },
+      renderer: mathHtml,
+    },
+    {
+      name: 'knowledgeInlineMath', level: 'inline',
+      start: function (src) { return src.search(/\\[\[(]|\$/); },
+      tokenizer: function (src) {
+        const match = /^(?:\\\[[\s\S]*?\\\]|\\\([^\n]*?\\\)|\$\$[\s\S]*?\$\$|\$(?!\s)(?:\\[^\n]|[^$\n\\])+?\$)/.exec(src);
+        if (match) return { type: 'knowledgeInlineMath', raw: match[0] };
+      },
+      renderer: mathHtml,
+    },
+  ] });
+
   function safeUrl(value, allowHash) {
     const source = String(value || '').trim();
     if (!source) return null;
