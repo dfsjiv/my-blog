@@ -32,7 +32,6 @@
   const themeButton = document.getElementById('knowledgeThemeButton');
   const authorTools = document.getElementById('knowledgeAuthorTools');
   const guestAuth = document.getElementById('knowledgeGuestAuth');
-  const backToTopButton = document.getElementById('knowledgeBackToTop');
   const settingsMenu = document.getElementById('knowledgeSettingsMenu');
   const logoutButton = document.getElementById('knowledgeLogoutButton');
   const accountMenu = shell ? shell.querySelector('.knowledge-account-menu') : null;
@@ -517,14 +516,6 @@
       option.classList.toggle('is-active', isActive);
       option.setAttribute('aria-checked', String(isActive));
     });
-  }
-
-  function updateBackToTopVisibility() {
-    if (!backToTopButton) return;
-    const isVisible = shell.scrollTop > 160;
-    backToTopButton.classList.toggle('is-visible', isVisible);
-    backToTopButton.setAttribute('aria-hidden', String(!isVisible));
-    backToTopButton.tabIndex = isVisible ? 0 : -1;
   }
 
   function updateHeaderReadability() {
@@ -3528,7 +3519,6 @@
     if (window.innerWidth > 1040) setNavOpen(false);
   });
   shell.addEventListener('scroll', function () {
-    updateBackToTopVisibility();
     updateHeaderReadability();
   }, { passive: true });
   window.addEventListener('popstate', function () {
@@ -3549,7 +3539,6 @@
   applyTheme();
   setupHeroCarousel();
   refreshIdentity();
-  updateBackToTopVisibility();
   updateHeaderReadability();
   const initialRoute = routeFromUrl();
   state.route = initialRoute.route;

@@ -3,3 +3,4 @@ import '../knowledge-page-metadata.js';
 import '../knowledge-post-card.js';
 import '../knowledge-site-v4.js';
 import '../knowledge-grid-blocks.js';
+import '../knowledge-uptime.js';
