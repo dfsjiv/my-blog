@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const name = '阿臻的 Blog';
+  const name = '臻写代码';
   const origin = 'https://lilinzheng.top';
   const description = '阿臻的个人博客，记录算法题解、技术文章、学习笔记与项目实践。';
   const titles = { all: '全部文章', articles: '技术文章', solutions: '算法题解', notes: '学习笔记', projects: '项目记录', games: '小游戏', contests: '竞赛中心', algorithms: '算法中心', archives: '归档', categories: '分类', tags: '标签', about: '关于阿臻', reading: '我的阅读' };

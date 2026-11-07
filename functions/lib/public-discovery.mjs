@@ -1,7 +1,7 @@
 import { handleKnowledgeRequest } from './knowledge-api.mjs';
 
 export const SITE_ORIGIN = 'https://lilinzheng.top';
-export const SITE_NAME = '阿臻的 Blog';
+export const SITE_NAME = '臻写代码';
 export const SITE_DESCRIPTION = '阿臻的个人博客，记录算法题解、技术文章、学习笔记与项目实践。';
 const PAGE_SIZE = 50;
 

@@ -84,7 +84,7 @@ test('server-side sharing metadata uses only published posts and does not change
   try {
     const response = await render('post-0');
     const body = await response.text();
-    assert.match(body, /<title>&lt;script&gt;题目 &amp; 标题&lt;\/script&gt; \| 阿臻的 Blog<\/title>/);
+    assert.match(body, /<title>&lt;script&gt;题目 &amp; 标题&lt;\/script&gt; \| 臻写代码<\/title>/);
     assert.ok(body.includes(visible));
     assert.equal((body.match(/name="description"/g) || []).length, 1);
     assert.equal(response.headers.get('ETag'), null);
