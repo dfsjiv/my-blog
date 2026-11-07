@@ -17,7 +17,18 @@ test('extreme/custom colors retain readable accents and solid-button labels in b
   }
   for (const color of colors) for (const dark of [false, true]) {
     const palette = accentPalette(color, dark);
-    for (const key of ['--knowledge-primary', '--knowledge-secondary']) assert.ok(contrast(palette[key], dark ? '#17212c' : '#ffffff') >= 4.5, color + ' ' + key);
+    for (const bg of ['--knowledge-bg', '--knowledge-bg-deep', '--knowledge-surface-solid', '--knowledge-surface-hover']) {
+      for (const key of ['--knowledge-primary', '--knowledge-secondary', '--knowledge-text', '--knowledge-muted']) {
+        assert.ok(contrast(palette[key], palette[bg]) >= 4.5, color + ' ' + key + ' on ' + bg);
+      }
+    }
     assert.ok(contrast(palette['--knowledge-primary'], palette['--knowledge-on-primary']) >= 4.5);
+  }
+});
+test('the selected hue changes page, card and modal foundations in both modes', () => {
+  for (const dark of [true, false]) {
+    const amber = accentPalette('#e8b15b', dark), purple = accentPalette('#a78bfa', dark);
+    for (const key of ['--knowledge-bg', '--knowledge-bg-deep', '--knowledge-surface-solid', '--knowledge-surface-hover', '--knowledge-border', '--knowledge-code-bg']) assert.notEqual(amber[key], purple[key], key);
+    assert.notEqual(amber['--knowledge-bg'], amber['--knowledge-surface-solid']);
   }
 });

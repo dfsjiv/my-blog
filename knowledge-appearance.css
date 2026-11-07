@@ -41,6 +41,9 @@
 .knowledge-appearance footer button { flex-shrink: 0; background: transparent; padding: 7px 0; border: 0; color: var(--knowledge-primary); font-size: 13px; }
 .knowledge-appearance [data-accent-status] { margin: 0; font-size: 12px; }
 .knowledge-site[data-accent] { accent-color: var(--knowledge-primary); }
+.knowledge-site[data-accent] .knowledge-post-card[data-post-appearance="island"] { background-color: var(--knowledge-photo-bg); }
+.knowledge-site[data-accent] .knowledge-post-card[data-post-appearance="island"] > .knowledge-post-cover::after { background: linear-gradient(90deg, color-mix(in srgb,var(--knowledge-photo-bg) 92%,transparent), color-mix(in srgb,var(--knowledge-photo-bg) 60%,transparent) 65%, color-mix(in srgb,var(--knowledge-photo-bg) 20%,transparent)); }
+.knowledge-site[data-accent] .knowledge-post-card[data-post-appearance="island"] :is(.knowledge-post-title, .knowledge-post-summary-row, .knowledge-post-footer) { background: var(--knowledge-photo-surface); }
 .knowledge-site[data-route="home"][data-accent] > .knowledge-backdrop { background-image:
   radial-gradient(circle at 15% 20%,color-mix(in srgb,var(--knowledge-primary) 9%,transparent),transparent 40%),
   radial-gradient(circle at 85% 75%,color-mix(in srgb,var(--knowledge-secondary) 8%,transparent),transparent 40%),

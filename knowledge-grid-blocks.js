@@ -91,7 +91,7 @@ function initGridBlocks() {
 
   function palette() {
     const style = getComputedStyle(shell);
-    dark = style.getPropertyValue('--knowledge-bg').trim() === '#081018';
+    dark = style.colorScheme === 'dark';
     colors = [style.getPropertyValue('--knowledge-primary').trim(), style.getPropertyValue('--knowledge-secondary').trim(), '#9585d8'];
   }
 
