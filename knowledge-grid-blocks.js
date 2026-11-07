@@ -199,7 +199,7 @@ function initGridBlocks() {
   }
 
   const observer = new MutationObserver(update);
-  observer.observe(shell, { attributes: true, attributeFilter: ['data-route', 'data-theme'] });
+  observer.observe(shell, { attributes: true, attributeFilter: ['data-route', 'data-theme', 'data-accent'] });
   observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   document.addEventListener('visibilitychange', update);
   motion.addEventListener('change', update);

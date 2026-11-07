@@ -3552,6 +3552,12 @@
   }
 
   window.elegantShell = {
+    setTheme: function (theme) {
+      if (!['light', 'dark', 'system'].includes(theme)) return;
+      state.theme = theme;
+      writeStorage(THEME_KEY, theme);
+      applyTheme();
+    },
     closeNavigation,
     refreshIdentity,
     navigate,

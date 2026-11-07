@@ -159,6 +159,7 @@
   <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
   <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
   <link rel="stylesheet" href="knowledge-navigation.css?v=20261101-font-subset-1" />
+  <link rel="stylesheet" href="knowledge-appearance.css?v=20261107-1" />
   <script type="importmap">
     {
       "imports": {
@@ -359,6 +360,9 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="1.5" stroke-linecap="round" d="m21 21-5.2-5.2M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
           </button>
           <button class="knowledge-icon-button" id="knowledgeThemeButton" type="button" aria-label="切换主题">◐</button>
+          <button class="knowledge-icon-button" id="knowledgeAppearanceButton" type="button" aria-label="外观与色调" title="外观与色调" aria-haspopup="dialog" aria-controls="knowledgeAppearanceDialog" aria-expanded="false">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2.3 2.3 0 0 0 1.8-3.7 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3 9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="10" r="1"/><circle cx="11" cy="6.8" r="1"/><circle cx="15.5" cy="8" r="1"/><circle cx="6.8" cy="14.5" r="1"/></svg>
+          </button>
           <details class="knowledge-author-tools" id="knowledgeAuthorTools" hidden>
             <summary>写文章</summary>
             <div>
@@ -387,6 +391,21 @@
         </div>
       </nav>
     </header>
+
+    <dialog class="knowledge-appearance" id="knowledgeAppearanceDialog" aria-labelledby="knowledgeAppearanceTitle">
+      <header><h2 id="knowledgeAppearanceTitle" data-zh="外观与色调" data-en="Appearance & color">外观与色调</h2><button type="button" data-appearance-close aria-label="关闭 / Close">×</button></header>
+      <p data-zh="选一个今天喜欢的颜色。" data-en="A color to make this space yours.">选一个今天喜欢的颜色。</p>
+      <fieldset><legend data-zh="明暗模式" data-en="Theme">明暗模式</legend><div class="knowledge-appearance-modes">
+        <button type="button" data-appearance-theme="light" data-zh="浅色" data-en="Light">浅色</button><button type="button" data-appearance-theme="dark" data-zh="深色" data-en="Dark">深色</button><button type="button" data-appearance-theme="system" data-zh="跟随系统" data-en="System">跟随系统</button>
+      </div></fieldset>
+      <fieldset><legend data-zh="主题色" data-en="Accent color">主题色</legend><div class="knowledge-accent-presets" data-accent-presets></div></fieldset>
+      <fieldset><legend data-zh="自定义颜色" data-en="Custom color">自定义颜色</legend><div class="knowledge-accent-custom">
+        <input type="color" data-accent-color aria-label="自定义颜色 / Custom color" value="#69b7ff" />
+        <input type="text" data-accent-hex aria-label="十六进制色值 / Hex color" value="#69B7FF" maxlength="7" spellcheck="false" autocomplete="off" />
+      </div></fieldset>
+      <div class="knowledge-accent-preview" aria-label="预览 / Preview"><span data-zh="学习笔记" data-en="Study notes">学习笔记</span><p data-zh="记录思考，也写下新的可能。" data-en="A little space for ideas and possibilities.">记录思考，也写下新的可能。</p><small data-zh="阅读全文 →" data-en="Read more →">阅读全文 →</small></div>
+      <footer><button type="button" data-accent-reset data-zh="恢复默认色" data-en="Reset color">恢复默认色</button><p data-accent-status role="status"></p></footer>
+    </dialog>
 
     <main class="knowledge-main">
       <section class="knowledge-home-view" id="knowledgeHomeView">
@@ -957,7 +976,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=8ee6e937b290"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=e48dd99a4161"></script>
   <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>
