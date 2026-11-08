@@ -2047,7 +2047,7 @@
 
   async function renderAbout(controller) {
     const shellNode = showRouteShell(
-      'MEET ZHENG',
+      'MEET ZHEN',
       t('认识一下阿臻'),
       t('关于我的经历、兴趣和这个知识站。')
     );
@@ -2057,19 +2057,20 @@
     const portrait = document.createElement('img');
     portrait.className = 'knowledge-about-portrait';
     portrait.src = 'assets/knowledge/avatar.webp';
-    portrait.alt = 'Lee Ethan';
+    portrait.alt = '阿臻 / Ethan Lee';
     portrait.width = 512;
     portrait.height = 512;
 
     const introduction = element('div', 'knowledge-about-introduction');
     introduction.append(
       element('span', 'knowledge-about-eyebrow', t('你好，我是')),
-      element('h2', '', 'Lee Ethan'),
-      element('p', 'knowledge-about-lead', t('个人简介内容待正式补充。')),
+      element('h2', '', '阿臻'),
+      element('p', 'knowledge-about-english-name', 'Ethan Lee'),
+      element('p', 'knowledge-about-lead', t('大二在读，预计 2029 年毕业。')),
       element(
         'p',
         '',
-        t('这里是我的个人介绍页，之后会继续补充经历、兴趣与正在做的事情。')
+        t('熟悉 C++，正在学习算法、参加 ACM 竞赛，也在深入学习更进阶的数据结构。生活中叫我阿臻就好。')
       )
     );
 
@@ -2109,16 +2110,22 @@
     const aboutCard = element('article', 'knowledge-about-card');
     aboutCard.append(
       element('span', '', '01'),
-      element('h3', '', t('关于我')),
-      element('p', '', t('个人经历、兴趣方向和长期目标会在这里慢慢写下来。'))
+      element('h3', '', t('还在学习的路上')),
+      element('p', '', t('没有 OI 基础，比赛成绩暂时也还不理想，但我依然很喜欢算法。还有很多要学的东西，就继续一步一步往前走。'))
     );
     const siteCard = element('article', 'knowledge-about-card');
     siteCard.append(
       element('span', '', '02'),
-      element('h3', '', t('这个知识站')),
-      element('p', '', t('这里集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'))
+      element('h3', '', t('为什么有这个博客')),
+      element('p', '', t('想在互联网上留下自己来过的痕迹，也想认识更多喜欢计算机的朋友。这里会整理我学过的东西，希望你来时，也能学到一些关于计算机的知识。'))
     );
-    details.append(aboutCard, siteCard);
+    const interestsCard = element('article', 'knowledge-about-card');
+    interestsCard.append(element('span', '', '03'), element('h3', '', t('代码之外')),
+      element('p', '', t('喜欢看番剧，也喜欢玩游戏，不过不太玩激烈对抗的游戏。')));
+    const mottoCard = element('article', 'knowledge-about-card');
+    mottoCard.append(element('span', '', '04'), element('h3', '', t('给自己的一句话')),
+      element('blockquote', 'knowledge-about-motto', t('不要放弃，加油！')));
+    details.append(aboutCard, siteCard, interestsCard, mottoCard);
     const contacts = element('section', 'knowledge-about-contacts');
     contacts.setAttribute('aria-label', t('联系与共同开发'));
     contacts.appendChild(element('h2', '', t('联系与共同开发')));

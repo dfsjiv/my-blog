@@ -2121,6 +2121,9 @@ body.auth-elegant .knowledge-site {
   font-size: clamp(18px, 2vw, 24px);
 }
 
+.knowledge-about-introduction > .knowledge-about-english-name { margin: -2px 0 20px; color: var(--knowledge-primary); font-size: 16px; letter-spacing: .08em; }
+.knowledge-about-motto { margin: 24px 0 0; padding-left: 16px; border-left: 3px solid var(--knowledge-primary); color: var(--knowledge-text); font-size: 23px; line-height: 1.6; }
+
 .knowledge-about-stats {
   margin: 28px 0 22px;
   display: grid;
