@@ -10,8 +10,8 @@
 /assets/vendor/mikutap/*
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 
-/login-mikutap-bridge.js
+/static/js/login-mikutap-bridge.js
   Cache-Control: public, max-age=0, must-revalidate
 
-/home-desktop.css
+/static/css/home-desktop.css
   Cache-Control: public, max-age=0, must-revalidate

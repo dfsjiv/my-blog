@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../knowledge-feature-loader.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-feature-loader.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const manifest = JSON.parse(html.match(/id="knowledgeFeatureManifest">([\s\S]*?)<\/script>/)[1]);
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };

@@ -4,7 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
-const source = fs.readFileSync(path.join(root, 'knowledge-game-2048.js'), 'utf8');
+const source = fs.readFileSync(path.join(root, 'static', 'js', 'knowledge-game-2048.js'), 'utf8');
 const storage = new Map();
 const context = {
   window: {

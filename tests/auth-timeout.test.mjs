@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../auth.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/auth.js', import.meta.url), 'utf8');
 for (const stage of ['headers', 'body']) test('authentication times out during ' + stage + ' with actionable errors and no automatic retry', async () => {
   const timers = new Map(); let sequence = 0, requests = 0;
   const document = { readyState: 'loading', addEventListener() {} };

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../knowledge-portable.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-portable.js', import.meta.url), 'utf8');
 const window = { location: { origin: 'https://lilinzheng.top' } };
 vm.runInNewContext(source, { window, URL, TextEncoder, Date, Set, Number, JSON });
 const portable = window.KnowledgePortable;

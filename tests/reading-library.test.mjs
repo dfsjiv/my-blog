@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
-const source = fs.readFileSync(new URL('../knowledge-reading.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-reading.js', import.meta.url), 'utf8');
 function setup() {
   const values = new Map();
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };

@@ -210,8 +210,8 @@ const rootDir = path.resolve(__dirname, '..');
   assert.strictEqual(raicomContests[0].sourceConfidence, 'official-api');
 
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
-  const frontend = fs.readFileSync(path.join(rootDir, 'contest-center.js'), 'utf8');
-  const contestStyles = fs.readFileSync(path.join(rootDir, 'contest-center.css'), 'utf8');
+  const frontend = fs.readFileSync(path.join(rootDir, 'static', 'js', 'contest-center.js'), 'utf8');
+  const contestStyles = fs.readFileSync(path.join(rootDir, 'static', 'css', 'contest-center.css'), 'utf8');
   const apiRoute = fs.readFileSync(path.join(rootDir, 'functions/api/[[path]].js'), 'utf8');
   assert.match(indexHtml, /id="contestDesktopIcon"/);
   assert.match(indexHtml, /id="contestWindow"/);

@@ -8,7 +8,7 @@ function parser() {
   const context = vm.createContext({ window: { DOMPurify: {} }, document: { addEventListener() {} } });
   vm.runInContext(fs.readFileSync(new URL('../assets/vendor/knowledge/marked.umd.js', import.meta.url), 'utf8'), context);
   context.window.marked = context.marked;
-  vm.runInContext(fs.readFileSync(new URL('../knowledge-markdown.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(new URL('../static/js/knowledge-markdown.js', import.meta.url), 'utf8'), context);
   context.marked.normalizeLegacyMath = context.window.KnowledgeMarkdown.normalizeLegacyMath;
   return context.marked;
 }

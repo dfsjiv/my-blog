@@ -4,8 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const rootDir = path.resolve(__dirname, '..');
-const scriptPath = path.join(rootDir, 'home-desktop.js');
-const cssPath = path.join(rootDir, 'home-desktop.css');
+const scriptPath = path.join(rootDir, 'static', 'js', 'home-desktop.js');
+const cssPath = path.join(rootDir, 'static', 'css', 'home-desktop.css');
 const indexPath = path.join(rootDir, 'index.html');
 const blogIconPath = path.join(rootDir, 'assets', 'blog-icon.png');
 
@@ -221,7 +221,7 @@ controller.openBlogWindow();
 assert.strictEqual(elements.blogWindow.classList.contains('is-hidden'), false);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-running'), true);
 assert.strictEqual(elements.blogTaskbarButton.classList.contains('is-active'), true);
-assert.strictEqual(elements.blogFrame.src, 'blog.html');
+assert.strictEqual(elements.blogFrame.src, '/pages/blog.html');
 assert.strictEqual(elements.startBlogStatus.textContent, '正在运行');
 
 assert.strictEqual(typeof elements.resizeSE.listeners.pointerdown, 'function');
@@ -359,14 +359,14 @@ assert.strictEqual(elements.startBlogStatus.textContent, '文章、随笔与图�
   const homeDesktopCss = fs.readFileSync(cssPath, 'utf8');
   assert.match(indexHtml, /id="desktopShell"/);
   assert.match(indexHtml, /id="blogWindow"/);
-  assert.match(indexHtml, /id="blogFrame"[^>]+src="blog\.html"/);
+  assert.match(indexHtml, /id="blogFrame"[^>]+src="\/pages\/blog\.html"/);
   assert.strictEqual((indexHtml.match(/data-resize-edge="/g) || []).length, 8);
   assert.match(homeDesktopCss, /\.start-menu-apps\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.doesNotMatch(indexHtml, /class="home-entry"/);
   assert.doesNotMatch(indexHtml, /欢迎来到我的主页|进入我的博客/);
-  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="home-desktop\.css\?v=20260922-auth-lines-1"\s*\/>/);
-  assert.match(indexHtml, /"home-desktop\.js"/);
-  assert.doesNotMatch(indexHtml, /<script\s+src="home-desktop\.js"/);
+  assert.match(indexHtml, /<link\s+rel="stylesheet"\s+href="\/static\/css\/home-desktop\.css\?v=20260922-auth-lines-1"\s*\/>/);
+  assert.match(indexHtml, /"\/static\/js\/home-desktop\.js"/);
+  assert.doesNotMatch(indexHtml, /<script\s+src="\/static\/js\/home-desktop\.js"/);
   assert.strictEqual((indexHtml.match(/src="assets\/blog-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/src="assets\/chat-icon\.png"/g) || []).length, 4);
   assert.strictEqual((indexHtml.match(/draggable="false"/g) || []).length, 8);

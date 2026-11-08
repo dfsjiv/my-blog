@@ -3741,7 +3741,7 @@ body.auth-elegant .knowledge-site {
 
 /* Mizuki-inspired publishing layout. Existing data and route behavior remain unchanged. */
 .knowledge-site {
-  --knowledge-banner-image: url("131135880_p0_master1200.jpg");
+  --knowledge-banner-image: url("/assets/images/131135880_p0_master1200.jpg");
   --knowledge-bg: #eef3f8;
   --knowledge-bg-deep: #dfe8f1;
   --knowledge-surface: rgba(255, 255, 255, 0.9);
@@ -3975,7 +3975,7 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-hero-slide:nth-child(1) {
-  background-image: url("assets/knowledge/hero-01.webp");
+  background-image: url("/assets/knowledge/hero-01.webp");
 }
 
 .knowledge-hero-slide.is-active {

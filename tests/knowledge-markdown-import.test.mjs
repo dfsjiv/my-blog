@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const context = { TextDecoder, window: { KnowledgeEditorVendor: { Editor() {} } } };
-vm.runInNewContext(fs.readFileSync(new URL('../knowledge-editor-adapter.js', import.meta.url), 'utf8'), context);
+vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-editor-adapter.js', import.meta.url), 'utf8'), context);
 const read = context.window.KnowledgeEditorAdapter.readMarkdownFile;
 const file = (name, text) => {
   const bytes = new TextEncoder().encode(text);

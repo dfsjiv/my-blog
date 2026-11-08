@@ -1,7 +1,7 @@
 /* Spatial navigation, adapted to a compact reading site. No canvas or font CDN. */
 @font-face {
   font-family: "Zhen Handwriting";
-  src: url("assets/vendor/caveat/ZhenWordmark.woff2") format("woff2");
+  src: url("/assets/vendor/caveat/ZhenWordmark.woff2") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;

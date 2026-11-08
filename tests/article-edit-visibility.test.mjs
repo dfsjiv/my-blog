@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
 const fn = source.slice(source.indexOf('  function canEditPost('), source.indexOf('  function isAdmin('));
 test('only admins or the current non-legacy article owner get an edit affordance', () => {
   let user = null;

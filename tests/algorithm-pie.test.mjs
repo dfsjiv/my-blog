@@ -14,7 +14,7 @@ class Node {
 function walk(node){return [node,...node.children.flatMap(walk)];}
 function mount(topics){
   const window={},root=new Node('root');
-  vm.runInNewContext(fs.readFileSync(new URL('../algorithm-charts.js',import.meta.url),'utf8'),{
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/algorithm-charts.js',import.meta.url),'utf8'),{
     window,document:{createElement:tag=>new Node(tag),createElementNS:(_,tag)=>new Node(tag)},
     Option:function(label,value){const n=new Node('option');n.textContent=label;n.value=value;return n;}
   });

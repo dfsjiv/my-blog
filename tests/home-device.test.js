@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const rootDir = path.resolve(__dirname, '..');
-const scriptPath = path.join(rootDir, 'home-device.js');
+const scriptPath = path.join(rootDir, 'static', 'js', 'home-device.js');
 const indexPath = path.join(rootDir, 'index.html');
 
 assert.ok(fs.existsSync(scriptPath), 'home-device.js should exist');
@@ -98,7 +98,7 @@ function createBrowserContext(options = {}) {
 
 {
   const indexHtml = fs.readFileSync(indexPath, 'utf8');
-  assert.match(indexHtml, /<script\s+src="home-device\.js"><\/script>/);
+  assert.match(indexHtml, /<script\s+src="\/static\/js\/home-device\.js"><\/script>/);
 }
 
 console.log('home-device tests passed');

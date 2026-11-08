@@ -7,7 +7,7 @@ test('display positions are finite and bounded and preview uses exactly the hero
   const display = { x: 10, y: 80, zoom: 1.5 };
   assert.deepEqual(validateDisplay(display), display);
   for (const bad of [{ ...display, x: -1 }, { ...display, y: NaN }, { ...display, zoom: 4 }, { ...display, x: '10' }]) assert.throws(() => validateDisplay(bad));
-  const window = {}; vm.runInNewContext(fs.readFileSync(new URL('../knowledge-background-display.js', import.meta.url), 'utf8'), { window });
+  const window = {}; vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-background-display.js', import.meta.url), 'utf8'), { window });
   const preview = { style: {} }, hero = { style: {} };
   window.KnowledgeBackgroundDisplay.apply(preview, display, true);
   window.KnowledgeBackgroundDisplay.apply(hero, display);
