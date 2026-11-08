@@ -100,6 +100,8 @@
     '博客作者': 'Blog author',
     '共同开发者': 'Co-developer',
     '复制 QQ': 'Copy QQ',
+    '复制邮箱': 'Copy email',
+    '邮箱': 'Email',
     'B站': 'Bilibili',
     '知乎': 'Zhihu',
     '牛客': 'Nowcoder',

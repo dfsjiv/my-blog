@@ -2192,6 +2192,9 @@ body.auth-elegant .knowledge-site {
 .knowledge-about-qq { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 20px 0 14px; }
 .knowledge-about-qq > span { color: var(--knowledge-muted); font-size: 12px; }
 .knowledge-about-qq code { font: 20px/1.5 ui-monospace, Consolas, monospace; color: var(--knowledge-text); user-select: all; }
+.knowledge-about-qq .knowledge-about-email { color: var(--knowledge-primary); font: 16px/1.6 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; min-width: 0; user-select: all; text-decoration: none; }
+.knowledge-about-email:hover { text-decoration: underline; }
+.knowledge-about-email:focus-visible { outline: 2px solid var(--knowledge-primary); outline-offset: 3px; }
 .knowledge-about-qq button { padding: 6px 9px; border: 1px solid var(--knowledge-border); border-radius: 6px; background: transparent; color: var(--knowledge-primary); font-size: 12px; }
 .knowledge-about-qq button:focus-visible { outline: 2px solid var(--knowledge-primary); outline-offset: 3px; }
 .knowledge-about-contact > a { color: var(--knowledge-primary); font-size: 13px; text-decoration: none; }

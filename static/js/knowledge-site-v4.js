@@ -2132,18 +2132,21 @@
     const contactList = element('div', 'knowledge-about-contact-list');
     [
       { name: '阿臻', role: '博客作者', qq: '3248099011', github: 'https://github.com/dfsjiv' },
-      { name: 'woll-778', role: '共同开发者', qq: '964064393', github: 'https://github.com/woll-778' },
+      { name: 'woll-778', role: '共同开发者', email: 'old.fish@foxmail.com', github: 'https://github.com/woll-778' },
     ].forEach(function (person) {
       const card = element('article', 'knowledge-about-contact');
       const header = element('header');
       header.append(element('h3', '', person.name), element('span', '', t(person.role)));
       const account = element('div', 'knowledge-about-qq');
-      const number = element('code', '', person.qq);
-      const copy = button(t('复制 QQ'), 'knowledge-about-copy');
-      copy.setAttribute('aria-label', t('复制 QQ') + ' · ' + person.name);
+      const contactValue = person.email || person.qq;
+      const copyLabel = person.email ? '复制邮箱' : '复制 QQ';
+      const number = person.email ? element('a', 'knowledge-about-email', contactValue) : element('code', '', contactValue);
+      if (person.email) number.href = 'mailto:' + person.email;
+      const copy = button(t(copyLabel), 'knowledge-about-copy');
+      copy.setAttribute('aria-label', t(copyLabel) + ' · ' + person.name);
       copy.addEventListener('click', async function () {
         try {
-          await navigator.clipboard.writeText(person.qq);
+          await navigator.clipboard.writeText(contactValue);
           copy.textContent = t('已复制');
         } catch {
           const selection = window.getSelection();
@@ -2154,10 +2157,10 @@
           }
           copy.textContent = t('请手动复制');
         }
-        window.setTimeout(function () { if (copy.isConnected) copy.textContent = t('复制 QQ'); }, 1800);
+        window.setTimeout(function () { if (copy.isConnected) copy.textContent = t(copyLabel); }, 1800);
       });
-      account.append(element('span', '', 'QQ'), number, copy);
-      const link = element('a', '', 'GitHub ↗');
+      account.append(element('span', '', person.email ? t('邮箱') : 'QQ'), number, copy);
+      const link = element('a', '', 'GitHub · ' + new URL(person.github).pathname.slice(1) + ' ↗');
       link.href = person.github;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
       card.append(header, account, link);
