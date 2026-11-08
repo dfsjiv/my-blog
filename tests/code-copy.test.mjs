@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../knowledge-markdown.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-markdown.js', import.meta.url), 'utf8');
 for (const mode of ['success','denied','unsupported']) test('code copy handles clipboard ' + mode, async () => {
   let copied, selected, reset;
   const code = { textContent: '<script>literal code</script>\nreturn 0;' };

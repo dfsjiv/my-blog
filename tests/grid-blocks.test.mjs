@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const source = fs.readFileSync(new URL('../knowledge-grid-blocks.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-grid-blocks.js', import.meta.url), 'utf8');
 const { makeBoard, choosePlacement, fullRows, removeRows } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 
 function seededRandom(seed) {

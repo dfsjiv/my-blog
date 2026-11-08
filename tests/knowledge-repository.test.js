@@ -4,7 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = fs.readFileSync(
-  path.resolve(__dirname, '..', 'knowledge-repository.js'),
+  path.resolve(__dirname, '..', 'static', 'js', 'knowledge-repository.js'),
   'utf8'
 );
 const requests = [];

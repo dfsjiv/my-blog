@@ -23,8 +23,8 @@ test('evidence thresholds are explicit and difficulty scales remain separate acr
   assert.equal(d.review.length,3);assert.equal(d.periods.recent.solved,3);assert.equal(d.periods.previous.solved,0);
 });
 test('visualization scripts parse and use local theme-aware rendering without remote chart dependencies',()=>{
-  for(const file of ['algorithm-charts.js','algorithm-center.js','algorithm-cookie-sync.js'])assert.doesNotThrow(()=>new Script(fs.readFileSync(new URL('../'+file,import.meta.url),'utf8')));
-  const source=fs.readFileSync(new URL('../algorithm-charts.js',import.meta.url),'utf8');
+  for(const file of ['algorithm-charts.js','algorithm-center.js','algorithm-cookie-sync.js'])assert.doesNotThrow(()=>new Script(fs.readFileSync(new URL('../static/js/'+file,import.meta.url),'utf8')));
+  const source=fs.readFileSync(new URL('../static/js/algorithm-charts.js',import.meta.url),'utf8');
   assert.ok(!/innerHTML|fetch\(|localStorage|sessionStorage/.test(source));assert.match(source,/aria-label/);
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');assert.ok(index.indexOf('algorithm-charts.js')<index.indexOf('algorithm-center.js'));
 });

@@ -5,7 +5,7 @@
   const DEFAULT_ICON_WIDTH = 76;
   const DEFAULT_ICON_HEIGHT = 88;
   const ICON_DRAG_THRESHOLD = 3;
-  const BLOG_URL = 'blog.html';
+  const BLOG_URL = '/pages/blog.html';
   const STORAGE_KEY = 'myBlogDesktopState';
 
   function padTime(value) {

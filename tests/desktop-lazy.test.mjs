@@ -4,19 +4,19 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 test('desktop scripts and legacy iframe are not loaded by a blog visit', () => {
-  assert.doesNotMatch(html, /<iframe[^>]*\ssrc="blog\.html"/);
-  assert.match(html, /id="blogFrame"[^>]*data-src="blog\.html"/);
+  assert.doesNotMatch(html, /<iframe[^>]*\ssrc="(?:\/pages\/)?blog\.html"/);
+  assert.match(html, /id="blogFrame"[^>]*data-src="\/pages\/blog\.html"/);
   for (const file of ['home-desktop.js','particle-wallpaper.js','night-rain-city-3d.js','chat.js','ai-chat.js','city-world-app.js']) {
-    assert.ok(!html.includes('<script src="' + file));
+    assert.ok(!html.includes('<script src="/static/js/' + file));
   }
-  assert.match(fs.readFileSync(new URL('../auth.js', import.meta.url), 'utf8'), /await window\.KnowledgeFeatures\.ensure\('desktop'\)/);
+  assert.match(fs.readFileSync(new URL('../static/js/auth.js', import.meta.url), 'utf8'), /await window\.KnowledgeFeatures\.ensure\('desktop'\)/);
 });
 test('wallpaper animation only starts on the desktop and stops on blog/login or a hidden tab', () => {
   let desktop = false, requested = 0, cancelled = 0;
   const document = { readyState: 'loading', hidden: false, addEventListener() {},
     getElementById: () => ({}), body: { classList: { contains: () => desktop } } };
   const window = { requestAnimationFrame: () => ++requested, cancelAnimationFrame: () => cancelled++ };
-  vm.runInNewContext(fs.readFileSync(new URL('../particle-wallpaper.js', import.meta.url), 'utf8'), { window, document });
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/particle-wallpaper.js', import.meta.url), 'utf8'), { window, document });
   const wallpaper = Object.create(window.GpuParticleWallpaper.prototype);
   Object.assign(wallpaper, { initialized: true, destroyed: false, enabled: true, animationFrameId: null,
     canvas: { classList: { remove() {} } } });

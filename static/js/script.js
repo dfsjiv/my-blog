@@ -39,7 +39,7 @@ const pageInfo = {
   mystery: {
     title: '神秘图片',
     summary: '收集一些喜欢的图片。',
-    content: '<h2>神秘图片</h2><p>这里展示了一些神秘图片。点击标题可以进入完整图库。</p><div class="mystery-gallery"><div class="mystery-left"><img src="110944994_p0_master1200.jpg" alt="神秘图片 1" class="mystery-img" /><img src="125625696_p0_master1200.jpg" alt="神秘图片 2" class="mystery-img" /></div><div class="mystery-right"><img src="131135880_p0_master1200.jpg" alt="神秘图片 3" class="mystery-img tall" /></div></div>',
+    content: '<h2>神秘图片</h2><p>这里展示了一些神秘图片。点击标题可以进入完整图库。</p><div class="mystery-gallery"><div class="mystery-left"><img src="/assets/images/110944994_p0_master1200.jpg" alt="神秘图片 1" class="mystery-img" /><img src="/assets/images/125625696_p0_master1200.jpg" alt="神秘图片 2" class="mystery-img" /></div><div class="mystery-right"><img src="/assets/images/131135880_p0_master1200.jpg" alt="神秘图片 3" class="mystery-img tall" /></div></div>',
   },
 };
 

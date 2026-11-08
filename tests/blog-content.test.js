@@ -4,8 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const rootDir = path.resolve(__dirname, '..');
-const scriptPath = path.join(rootDir, 'script.js');
-const stylePath = path.join(rootDir, 'style.css');
+const scriptPath = path.join(rootDir, 'static', 'js', 'script.js');
+const stylePath = path.join(rootDir, 'static', 'css', 'style.css');
 const source = fs.readFileSync(scriptPath, 'utf8');
 
 class FakeClassList {

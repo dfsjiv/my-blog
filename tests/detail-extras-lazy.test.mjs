@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
-const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
 const fn = source.slice(source.indexOf('  function whenNearViewport('), source.indexOf('  async function loadDetailExtras('));
 function setup(supported = true) {
   const observations = [];

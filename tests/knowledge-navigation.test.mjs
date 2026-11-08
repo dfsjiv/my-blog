@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { test } from 'node:test';
 
-const source = readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
 const functions = source.slice(source.indexOf('  function setNavOpen('), source.indexOf('  function configureNavigationLinks('))
   + source.slice(source.indexOf('  function setupNavigationMenus('), source.indexOf('  function closeNavigation('));
 

@@ -179,13 +179,13 @@ test('missing new migration does not break original algorithm dashboard', async 
   assert.equal((await f.request('dashboard')).status, 200);
 });
 test('frontend never uses browser storage for cookies and integrates cleanup into route/auth teardown', () => {
-  const source = fs.readFileSync(new URL('../algorithm-cookie-sync.js', import.meta.url), 'utf8');
+  const source = fs.readFileSync(new URL('../static/js/algorithm-cookie-sync.js', import.meta.url), 'utf8');
   assert.doesNotThrow(() => new Script(source));
   assert.ok(!/localStorage|sessionStorage|document\.cookie|console\./.test(source));
   assert.match(source, /input\.type = 'password'/); assert.match(source, /input\.autocomplete = 'off'/);
   assert.match(source, /event\.preventDefault\(\);[\s\S]*?clear\(\);/);
   assert.match(source, /finally \{ clear\(\)/); assert.match(source, /function cleanup\(\) \{ clear\(\); controller\.abort\(\)/);
-  const integration = fs.readFileSync(new URL('../algorithm-center.js', import.meta.url), 'utf8');
+  const integration = fs.readFileSync(new URL('../static/js/algorithm-center.js', import.meta.url), 'utf8');
   assert.match(integration, /identityChanged = true;\s*extraCleanup\(\)/);
   const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.ok(index.indexOf('algorithm-cookie-sync.js') < index.indexOf('algorithm-center.js'));

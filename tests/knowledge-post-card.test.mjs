@@ -10,12 +10,12 @@ class Node {
 }
 const walk = n => [n, ...n.children.flatMap(walk)];
 test('featured posts use the shared renderer and retain every saved appearance, cover and metadata', () => {
-  const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+  const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
   const factories = source.slice(source.indexOf('  function makeContentCard(post)'), source.indexOf('  function makeSolutionCard(post)'));
   const context = { window: {}, document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
     t: x => x, typeLabel: () => '文章', formatDate: x => x || '', coverNode: () => new Node('cover'), appendTags() {} };
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8') + '\n' + factories, context);
+  vm.runInContext(fs.readFileSync(new URL('../static/js/knowledge-post-card.js', import.meta.url), 'utf8') + '\n' + factories, context);
   for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand']) {
     const card = context.makeFeaturedCard({ slug: 'featured', title: '精选文章', author: '作者', appearance,
       isFeatured: true, tags: [], publishedAt: '2026-10-21', wordCount: 1234, readingTimeMinutes: 4 });
@@ -31,7 +31,7 @@ test('featured posts use the shared renderer and retain every saved appearance, 
 });
 test('all optional card styles keep safe real post content and unknown styles fall back', () => {
   const window = {};
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-post-card.js', import.meta.url), 'utf8'), {
     window, document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
   });
   for (const appearance of ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand', '<script>unknown</script>']) {
@@ -55,7 +55,7 @@ test('all optional card styles keep safe real post content and unknown styles fa
 });
 test('optional author identity failure does not revert the reference layout', () => {
   const window = {};
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-post-card.js', import.meta.url), 'utf8'), {
     window, console: { warn() {} },
     document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) },
   });
@@ -74,12 +74,12 @@ test('deployed entry includes the card renderer before its homepage consumer', (
   assert.ok(bundle.indexOf('KnowledgePostCard={render:') < bundle.indexOf('KnowledgePostCard.render('));
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.ok(html.includes('assets/vendor/knowledge/site.bundle.js?v='));
-  assert.ok(!html.includes('<script src="knowledge-post-card.js'));
-  assert.ok(!html.includes('<script src="knowledge-site-v4.js'));
+  assert.ok(!html.includes('<script src="/static/js/knowledge-post-card.js'));
+  assert.ok(!html.includes('<script src="/static/js/knowledge-site-v4.js'));
 });
 test('reference article card separates date, title, summary/tags and author/read footer without duplicating title as category', () => {
   const window = {};
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-post-card.js', import.meta.url), 'utf8'), { window,
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-post-card.js', import.meta.url), 'utf8'), { window,
     document: { createElement: t => new Node(t), createElementNS: (_, t) => new Node(t) } });
   const title = '暑假集训内部赛29(个人赛)10.13';
   const card = window.KnowledgePostCard.render({ title, slug: 'contest-29', type: 'solution', category: title,
@@ -98,7 +98,7 @@ test('reference article card separates date, title, summary/tags and author/read
 });
 
 test('real homepage card factory keeps article data visible if the cosmetic module is missing or throws', () => {
-  const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+  const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
   const factory = source.slice(source.indexOf('  function makeContentCard(post)'), source.indexOf('  function makeFeaturedCard(post)'));
   const element = (tag, cls, text) => { const n = new Node(tag); n.className = cls; n.textContent = text || ''; return n; };
   const options = { console: { error() {} }, element, contentElement: element, t: x => x,

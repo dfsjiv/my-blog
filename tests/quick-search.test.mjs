@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../knowledge-quick-search.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-quick-search.js', import.meta.url), 'utf8');
 const window = {};
 vm.runInNewContext(source, { window, Date, Set, Number, JSON });
 

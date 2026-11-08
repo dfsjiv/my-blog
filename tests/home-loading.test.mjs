@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
 test('latest posts render without waiting for slow featured content', async () => {
   const fn = source.slice(source.indexOf('  async function loadHome('), source.indexOf('  function renderHomeFailure('));
   let resolveFeatured;
@@ -34,7 +34,7 @@ test('latest posts render without waiting for slow featured content', async () =
 });
 
 test('the entry loader reveals the page even if a readiness task never settles', async () => {
-  const loaderSource = fs.readFileSync(new URL('../site-entry-loader.js', import.meta.url), 'utf8');
+  const loaderSource = fs.readFileSync(new URL('../static/js/site-entry-loader.js', import.meta.url), 'utf8');
   const timers = [], frames = [];
   const node = { hidden: false, classList: { add() {}, remove() {} } };
   const progress = { textContent: '', style: {} };

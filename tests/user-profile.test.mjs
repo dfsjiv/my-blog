@@ -38,7 +38,7 @@ test('profile saves only own nickname and public batches expose no account secre
 
 test('rectangular cover crop stays bounded and preserves avatar crop geometry', () => {
   const window = {};
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-user-profile.js', import.meta.url), 'utf8'), { window });
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-user-profile.js', import.meta.url), 'utf8'), { window });
   for (const [w, h] of [[1000, 500], [500, 1000], [400, 400], [10, 5000]]) {
     for (const zoom of [1, 1.5, 3]) for (const x of [-10000, 0, 10000]) for (const y of [-10000, 0, 10000]) {
       const r = window.KnowledgeUserProfile.cropRegion(w, h, 480, 320, zoom, x, y);
@@ -55,7 +55,7 @@ test('rectangular cover crop stays bounded and preserves avatar crop geometry', 
 
 test('square crop stays inside portrait/landscape images at every zoom and drag extreme', () => {
   const window = {};
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-user-profile.js', import.meta.url), 'utf8'), { window });
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-user-profile.js', import.meta.url), 'utf8'), { window });
   for (const [w, h] of [[1000, 500], [500, 1000], [400, 400]]) for (const zoom of [1, 1.5, 3]) {
     for (const x of [-10000, 0, 10000]) for (const y of [-10000, 0, 10000]) {
       const r = window.KnowledgeUserProfile.cropRect(w, h, 320, zoom, x, y);
@@ -69,7 +69,7 @@ test('square crop stays inside portrait/landscape images at every zoom and drag 
 test('profile lookups batch authors, reuse in-flight results and cache them', async () => {
   const window = {}, calls = [];
   let resolveFetch;
-  vm.runInNewContext(fs.readFileSync(new URL('../knowledge-user-profile.js', import.meta.url), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(new URL('../static/js/knowledge-user-profile.js', import.meta.url), 'utf8'), {
     window, queueMicrotask, AbortController, setTimeout, clearTimeout,
     fetch: url => { calls.push(url); return new Promise(resolve => { resolveFetch = resolve; }); }
   });

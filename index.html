@@ -152,14 +152,14 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="home-desktop.css?v=20260922-auth-lines-1" />
-  <link rel="stylesheet" href="knowledge-site-v2.css?v=20261103-uptime-1" />
-  <link rel="stylesheet" href="knowledge-post-card.css?v=20261021-featured-1" />
-  <link rel="stylesheet" href="knowledge-grid-blocks.css?v=20261101-1" />
-  <link rel="stylesheet" href="knowledge-post-appearances.css?v=20261016-spider-style-2" />
-  <link rel="stylesheet" href="knowledge-post-experimental.css?v=20261016-armor-hand-1" />
-  <link rel="stylesheet" href="knowledge-navigation.css?v=20261101-font-subset-1" />
-  <link rel="stylesheet" href="knowledge-appearance.css?v=20261107-full-palette-2" />
+  <link rel="stylesheet" href="/static/css/home-desktop.css?v=20260922-auth-lines-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-site-v2.css?v=20261103-uptime-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-post-card.css?v=20261021-featured-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-grid-blocks.css?v=20261101-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-post-appearances.css?v=20261016-spider-style-2" />
+  <link rel="stylesheet" href="/static/css/knowledge-post-experimental.css?v=20261016-armor-hand-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-navigation.css?v=20261101-font-subset-1" />
+  <link rel="stylesheet" href="/static/css/knowledge-appearance.css?v=20261107-full-palette-2" />
   <script type="importmap">
     {
       "imports": {
@@ -562,7 +562,7 @@
             <button class="window-control close" id="windowClose" type="button" aria-label="关闭">×</button>
           </div>
         </header>
-        <iframe class="blog-frame" id="blogFrame" data-src="blog.html" title="博客内容"></iframe>
+        <iframe class="blog-frame" id="blogFrame" data-src="/pages/blog.html" title="博客内容"></iframe>
         <span class="window-resize-handle resize-n" id="resizeN" data-resize-edge="n" aria-hidden="true"></span>
         <span class="window-resize-handle resize-e" id="resizeE" data-resize-edge="e" aria-hidden="true"></span>
         <span class="window-resize-handle resize-s" id="resizeS" data-resize-edge="s" aria-hidden="true"></span>
@@ -913,19 +913,19 @@ Camera: --, --, --</pre>
     </div>
   </section>
 
-  <script src="site-entry-loader.js?v=20261028-horizon-1"></script>
-  <script src="home-device.js"></script>
-  <script src="login-mikutap-bridge.js?v=20260814-1"></script>
-  <script src="auth.js?v=20261027-request-timeout-1"></script>
-  <script src="knowledge-data.js"></script>
-  <script src="knowledge-i18n-v3.js?v=20261101-detail-defer-1"></script>
+  <script src="/static/js/site-entry-loader.js?v=20261028-horizon-1"></script>
+  <script src="/static/js/home-device.js"></script>
+  <script src="/static/js/login-mikutap-bridge.js?v=20260814-1"></script>
+  <script src="/static/js/auth.js?v=20261027-request-timeout-1"></script>
+  <script src="/static/js/knowledge-data.js"></script>
+  <script src="/static/js/knowledge-i18n-v3.js?v=20261101-detail-defer-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
-  <script src="knowledge-markdown.js?v=20261102-math-roundtrip-2"></script>
-  <script src="knowledge-repository.js?v=20261027-body-timeout-1"></script>
-  <script src="knowledge-favorites.js"></script>
-  <script src="knowledge-user-profile.js?v=20261016-cover-crop-1"></script>
-  <script src="knowledge-background-display.js?v=20261014-background-display-1"></script>
+  <script src="/static/js/knowledge-markdown.js?v=20261102-math-roundtrip-2"></script>
+  <script src="/static/js/knowledge-repository.js?v=20261027-body-timeout-1"></script>
+  <script src="/static/js/knowledge-favorites.js"></script>
+  <script src="/static/js/knowledge-user-profile.js?v=20261016-cover-crop-1"></script>
+  <script src="/static/js/knowledge-background-display.js?v=20261014-background-display-1"></script>
   <script type="application/json" id="knowledgeFeatureManifest">
     {
       "math": {
@@ -935,48 +935,48 @@ Camera: --, --, --</pre>
       },
       "writer": {
         "depends": ["math", "portable"],
-        "styles": ["knowledge-writer.css?v=20261101-backup-1"],
-        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js?v=20261102-math-nodes-1", "knowledge-editor-adapter.js?v=20261102-math-nodes-1", "knowledge-writer.js?v=20261101-backup-1"],
+        "styles": ["/static/css/knowledge-writer.css?v=20261101-backup-1"],
+        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js?v=20261102-math-nodes-1", "/static/js/knowledge-editor-adapter.js?v=20261102-math-nodes-1", "/static/js/knowledge-writer.js?v=20261101-backup-1"],
         "ready": "KnowledgeWriter"
       },
       "reading": {
-        "styles": ["knowledge-reading.css?v=20261101-anchors-1", "knowledge-reading-print.css?v=20261101-anchors-1"],
-        "scripts": ["knowledge-reading.js?v=20261101-storage-bound-1"],
+        "styles": ["/static/css/knowledge-reading.css?v=20261101-anchors-1", "/static/css/knowledge-reading-print.css?v=20261101-anchors-1"],
+        "scripts": ["/static/js/knowledge-reading.js?v=20261101-storage-bound-1"],
         "ready": "KnowledgeReading"
       },
       "portable": {
-        "scripts": ["knowledge-portable.js?v=20261101-1"],
+        "scripts": ["/static/js/knowledge-portable.js?v=20261101-1"],
         "ready": "KnowledgePortable"
       },
       "quickSearch": {
-        "styles": ["knowledge-quick-search.css?v=20261101-1"],
-        "scripts": ["knowledge-quick-search.js?v=20261101-1"],
+        "styles": ["/static/css/knowledge-quick-search.css?v=20261101-1"],
+        "scripts": ["/static/js/knowledge-quick-search.js?v=20261101-1"],
         "ready": "KnowledgeQuickSearch"
       },
       "mover": {
-        "styles": ["knowledge-article-mover.css"],
-        "scripts": ["knowledge-article-mover.js"],
+        "styles": ["/static/css/knowledge-article-mover.css"],
+        "scripts": ["/static/js/knowledge-article-mover.js"],
         "ready": "KnowledgeArticleMover"
       },
       "games": {
-        "scripts": ["knowledge-game-2048.js?v=20260812-2"],
+        "scripts": ["/static/js/knowledge-game-2048.js?v=20260812-2"],
         "ready": "KnowledgeGame2048"
       },
       "algorithms": {
-        "styles": ["algorithm-center.css?v=20261011-5"],
-        "scripts": ["algorithm-cookie-sync.js?v=20261011-4", "algorithm-charts.js?v=20261011-5", "algorithm-center.js?v=20261011-4"],
+        "styles": ["/static/css/algorithm-center.css?v=20261011-5"],
+        "scripts": ["/static/js/algorithm-cookie-sync.js?v=20261011-4", "/static/js/algorithm-charts.js?v=20261011-5", "/static/js/algorithm-center.js?v=20261011-4"],
         "ready": "KnowledgeAlgorithmCenter"
       },
       "desktop": {
-        "styles": ["contest-center.css", "particle-wallpaper.css"],
-        "scripts": ["night-rain-city-3d.js", "particle-wallpaper.js?v=20261027-visible-only-1", "home-desktop.js", "chat.js", "ai-chat.js", "contest-center.js?v=20261010-1", "city-world-app.js"],
+        "styles": ["/static/css/contest-center.css", "/static/css/particle-wallpaper.css"],
+        "scripts": ["/static/js/night-rain-city-3d.js", "/static/js/particle-wallpaper.js?v=20261027-visible-only-1", "/static/js/home-desktop.js", "/static/js/chat.js", "/static/js/ai-chat.js", "/static/js/contest-center.js?v=20261010-1", "/static/js/city-world-app.js"],
         "ready": "homeDesktop"
       }
     }
   </script>
-  <script src="knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
-  <script src="knowledge-comments.js?v=20261014-nickname-crop-1"></script>
+  <script src="/static/js/knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
+  <script src="/static/js/knowledge-comments.js?v=20261014-nickname-crop-1"></script>
   <script src="assets/vendor/knowledge/site.bundle.js?v=d6505fef00b1"></script>
-  <script src="knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
+  <script src="/static/js/knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>

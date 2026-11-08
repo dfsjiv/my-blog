@@ -4,8 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const rootDir = path.resolve(__dirname, '..');
-const authPath = path.join(rootDir, 'auth.js');
-const bridgePath = path.join(rootDir, 'login-mikutap-bridge.js');
+const authPath = path.join(rootDir, 'static', 'js', 'auth.js');
+const bridgePath = path.join(rootDir, 'static', 'js', 'login-mikutap-bridge.js');
 const indexPath = path.join(rootDir, 'index.html');
 const source = fs.readFileSync(authPath, 'utf8');
 const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
@@ -272,7 +272,7 @@ function response(status, data, jsonError) {
   assert.doesNotMatch(indexHtml, /id="elegantVersionSwitch"/);
   assert.match(indexHtml, /id="logoutButton"/);
   assert.match(indexHtml, /body\.auth-pending > \.login-screen,[\s\S]*body\.auth-pending > \.login-mikutap-frame[\s\S]*display:\s*none/);
-  assert.match(indexHtml, /<script src="auth\.js\?v=20261027-request-timeout-1"><\/script>/);
+  assert.match(indexHtml, /<script src="\/static\/js\/auth\.js\?v=20261027-request-timeout-1"><\/script>/);
   assert.match(indexHtml, /<h1>SIGN IN<\/h1>/);
   assert.match(indexHtml, /placeholder="USERNAME"/);
   assert.match(indexHtml, /placeholder="PASSWORD"/);
@@ -281,7 +281,7 @@ function response(status, data, jsonError) {
   assert.match(indexHtml, /data-src="assets\/vendor\/mikutap\/background\?auto=1&amp;v=20260807-17"/);
   assert.doesNotMatch(indexHtml, /\ssrc="assets\/vendor\/mikutap\/background\?auto=1/);
   assert.match(indexHtml, /id="loginScreen"[^>]*aria-hidden="true"/);
-  assert.match(indexHtml, /<script src="login-mikutap-bridge\.js\?v=20260814-1"><\/script>/);
+  assert.match(indexHtml, /<script src="\/static\/js\/login-mikutap-bridge\.js\?v=20260814-1"><\/script>/);
   assert.match(bridgeSource, /function ensureFrameLoaded/);
   assert.match(bridgeSource, /frame\.setAttribute\('src', frameSource\)/);
   assert.match(indexHtml, /Mikutap by daniwell/);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeAccent, accentPalette, contrast } from '../knowledge-appearance.js';
+import { normalizeAccent, accentPalette, contrast } from '../static/js/knowledge-appearance.js';
 
 test('custom colors accept only normalized hex, rejecting CSS injection and corrupt stored values', () => {
   assert.equal(normalizeAccent(' #AbC '), '#aabbcc');

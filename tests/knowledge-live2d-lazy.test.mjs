@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../knowledge-live2d-mana-position-20260809.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-live2d-mana-position-20260809.js', import.meta.url), 'utf8');
 const flush = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
 function setup() {
   class Element {

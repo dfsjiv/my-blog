@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source = fs.readFileSync(new URL('../knowledge-site-v4.js', import.meta.url), 'utf8');
+const source = fs.readFileSync(new URL('../static/js/knowledge-site-v4.js', import.meta.url), 'utf8');
 const setup = source.slice(source.indexOf('  function setupHeroCarousel('), source.indexOf('  function t('));
 const flush = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
 function fixture({ reduced = false, route = 'home' } = {}) {
