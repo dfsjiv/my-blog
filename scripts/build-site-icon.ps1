@@ -47,7 +47,8 @@ function New-IconPng([int]$Size) {
 }
 
 [System.IO.File]::WriteAllBytes((Join-Path $brandDirectory 'zhen-180.png'), (New-IconPng 180))
-$sizes = @(16,32,48)
+[System.IO.File]::WriteAllBytes((Join-Path $brandDirectory 'zhen-96.png'), (New-IconPng 96))
+$sizes = @(16,32,48,96)
 $images = foreach ($size in $sizes) { ,(New-IconPng $size) }
 $icoStream = [System.IO.MemoryStream]::new()
 $writer = [System.IO.BinaryWriter]::new($icoStream)
@@ -63,4 +64,4 @@ foreach ($bytes in $images) { $writer.Write([byte[]]$bytes) }
 $writer.Flush()
 [System.IO.File]::WriteAllBytes((Join-Path $projectRoot 'favicon.ico'), $icoStream.ToArray())
 $writer.Dispose(); $icoStream.Dispose()
-Write-Output 'Built Zhen SVG, 16/32/48px ICO and 180px touch icon.'
+Write-Output 'Built Zhen SVG, 16/32/48/96px ICO, 96px search icon and 180px touch icon.'
