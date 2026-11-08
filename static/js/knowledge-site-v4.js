@@ -2119,7 +2119,45 @@
       element('p', '', t('这里集中整理技术文章、算法题解、学习笔记、项目记录与个人思考。'))
     );
     details.append(aboutCard, siteCard);
-    shellNode.append(profile, details);
+    const contacts = element('section', 'knowledge-about-contacts');
+    contacts.setAttribute('aria-label', t('联系与共同开发'));
+    contacts.appendChild(element('h2', '', t('联系与共同开发')));
+    const contactList = element('div', 'knowledge-about-contact-list');
+    [
+      { name: '阿臻', role: '博客作者', qq: '3248099011', github: 'https://github.com/dfsjiv' },
+      { name: 'woll-778', role: '共同开发者', qq: '964064393', github: 'https://github.com/woll-778' },
+    ].forEach(function (person) {
+      const card = element('article', 'knowledge-about-contact');
+      const header = element('header');
+      header.append(element('h3', '', person.name), element('span', '', t(person.role)));
+      const account = element('div', 'knowledge-about-qq');
+      const number = element('code', '', person.qq);
+      const copy = button(t('复制 QQ'), 'knowledge-about-copy');
+      copy.setAttribute('aria-label', t('复制 QQ') + ' · ' + person.name);
+      copy.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(person.qq);
+          copy.textContent = t('已复制');
+        } catch {
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.selectNodeContents(number);
+            selection.removeAllRanges(); selection.addRange(range);
+          }
+          copy.textContent = t('请手动复制');
+        }
+        window.setTimeout(function () { if (copy.isConnected) copy.textContent = t('复制 QQ'); }, 1800);
+      });
+      account.append(element('span', '', 'QQ'), number, copy);
+      const link = element('a', '', 'GitHub ↗');
+      link.href = person.github;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      card.append(header, account, link);
+      contactList.appendChild(card);
+    });
+    contacts.appendChild(contactList);
+    shellNode.append(profile, details, contacts);
 
     try {
       const facets = state.facets || await repository.getFacets({ signal: controller.signal });

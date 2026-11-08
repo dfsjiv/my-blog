@@ -2179,6 +2179,22 @@ body.auth-elegant .knowledge-site {
   gap: 16px;
 }
 
+.knowledge-about-contacts { margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--knowledge-border); }
+.knowledge-about-contacts > h2 { margin: 0 0 18px; font-size: 22px; font-weight: 500; }
+.knowledge-about-contact-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.knowledge-about-contact { padding: 22px; border: 1px solid var(--knowledge-border); border-radius: 10px; background: var(--knowledge-bg); min-width: 0; }
+.knowledge-about-contact header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+.knowledge-about-contact h3 { margin: 0; font-size: 18px; font-weight: 500; }
+.knowledge-about-contact header > span { color: var(--knowledge-muted); font-size: 12px; }
+.knowledge-about-qq { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 20px 0 14px; }
+.knowledge-about-qq > span { color: var(--knowledge-muted); font-size: 12px; }
+.knowledge-about-qq code { font: 20px/1.5 ui-monospace, Consolas, monospace; color: var(--knowledge-text); user-select: all; }
+.knowledge-about-qq button { padding: 6px 9px; border: 1px solid var(--knowledge-border); border-radius: 6px; background: transparent; color: var(--knowledge-primary); font-size: 12px; }
+.knowledge-about-qq button:focus-visible { outline: 2px solid var(--knowledge-primary); outline-offset: 3px; }
+.knowledge-about-contact > a { color: var(--knowledge-primary); font-size: 13px; text-decoration: none; }
+.knowledge-about-contact > a:hover { text-decoration: underline; }
+@media (max-width: 680px) { .knowledge-about-contact-list { grid-template-columns: 1fr; } }
+
 .knowledge-about-card {
   min-height: 190px;
   padding: 24px;
