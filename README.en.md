@@ -20,7 +20,7 @@ Some features require an account, administrator access, or configured backend se
 
 ## Roadmap
 
-Last updated **2026-11-10**. All items below are planned work, organized into phases. Update their status and link the relevant PR or commit when completed. Scope may change after validation; no release dates are committed yet.
+Last updated **2026-11-11**. All items below are planned work, organized into phases. Update their status and link the relevant PR or commit when completed. Scope may change after validation; no release dates are committed yet.
 
 Preserve the established homepage, opening animation, grid background, and post styles. Explain proposed visual changes before implementation. Assess capacity, retention, and backups before adding stored data.
 
@@ -30,12 +30,13 @@ Preserve the established homepage, opening animation, grid background, and post 
 | Phase 1 | Planned | Automated browser checks | Add CI browser checks for the homepage, article reading, writing previews, mobile layouts, and light/dark themes, using local fixtures without production writes. | No new tables. |
 | Phase 2 | Planned | Import Markdown with local images | Accept Markdown with accompanying images or a ZIP archive; resolve relative paths, preview uploads, report missing images, and respect existing account upload limits. | Reuse existing upload APIs; additional images count toward R2 storage. |
 | Phase 2 | Planned | Article revision history | Extend existing draft backups, edit conflict detection, and deleted-post recovery with revision lists, diffs, and restoration; bound revision counts and total storage. | Revision storage expected; assess D1 capacity before implementation. |
+| Phase 2 | Planned | Post design | Extend existing post styles while retaining their individual character; improve animated editor previews and cover positioning/scaling, and verify consistent presentation across homepage lists, grids, featured posts, mobile layouts, and light/dark themes. | Prefer existing appearance and cover settings; assess compatibility and storage impact before adding fields. |
 | Phase 3 | Planned | Algorithm progress history | Compare weekly and monthly progress with explicit platform coverage, metric definitions, and update times; distinguish snapshot changes from submission-based trends and avoid ability claims from insufficient data. | Bounded historical snapshots expected; Cookies remain transient and VJudge stays excluded. |
 | Phase 3 | Planned | Article series and learning paths | Group and manually order articles into series, with a series index and previous/next navigation, retaining existing post styles. | Series and article association data expected. |
 | Maintenance | Planned | Complete installation and recovery documentation | Document fresh database initialization, configuration examples, D1/image backups, and recovery; verify fresh installation and recovery in an isolated test environment. | Provide foundational schemas for new sites; do not rebuild the existing production database in place. |
 | Optional | Planned | Cross-device reading synchronization | Let signed-in users opt into syncing reading lists and progress, with conflict handling and an option to disable sync; retain local-only guest records. | User-scoped records and database reads/writes expected; do not upload local history by default. |
 
-Suggested order: finish Phase 1, then Markdown/image import and revision history, followed by algorithm progress history and article series. Installation and backup documentation can proceed between phases. Decide on cross-device synchronization after assessing demand and capacity.
+Suggested order: finish Phase 1, then Markdown/image import, revision history, and post design, followed by algorithm progress history and article series. Installation and backup documentation can proceed between phases. Decide on cross-device synchronization after assessing demand and capacity.
 
 Status convention: **Planned → In progress → Completed**; optional work may also be marked **Deferred**. These statuses describe future work; existing features are listed above.
 
