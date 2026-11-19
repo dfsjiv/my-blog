@@ -9,6 +9,7 @@ A personal blog and knowledge site for code, notes, algorithm write-ups, and sma
 ## Features
 
 - **Reading and discovery:** categories, tags, archives, site search, featured articles, RSS, and article permalinks.
+- **Updates:** a chronological announcement page with release notes, usage guides, search, type filters, and permalinks. See the [maintenance guide](docs/announcements.md).
 - **Writing:** Markdown and rich-text editing, `.md` imports, LaTeX math, code copying, drafts, and portable article backups and exports.
 - **Post presentation:** animated card styles, cover cropping, and appearance previews.
 - **Custom pages:** HTML/CSS design, three starter templates, article bindings, inline Markdown imports, live previews, separate draft/published snapshots, and an optional administrator-configured homepage. See the [guide](docs/custom-pages.md).

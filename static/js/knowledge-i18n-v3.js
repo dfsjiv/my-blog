@@ -224,7 +224,7 @@
     '标签云': 'Tag Cloud',
     '最新归档': 'Recent Archives',
     '站点统计': 'Site Statistics',
-    '公告': 'Notice',
+    '公告': 'Updates',
     '公告内容尚未接入，当前仅展示前端框架。': 'The notice content is not connected yet; this is the front-end framework.',
     '内容持续整理中。': 'New material is added over time.',
     '最后更新：--': 'Last updated: --',

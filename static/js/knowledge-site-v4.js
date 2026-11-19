@@ -1104,7 +1104,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'contests', 'algorithms', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
-      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading', 'pages', 'page', 'page-designer'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading', 'pages', 'page', 'page-designer', 'announcements'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1360,7 +1360,7 @@
       if (loadingError && !customLoaded && !controller.signal.aborted) throw loadingError;
       return;
     }
-    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading', pages: 'customPages', page: 'customPages', 'page-designer': 'customPages' })[route];
+    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading', pages: 'customPages', page: 'customPages', 'page-designer': 'customPages', announcements: 'announcements' })[route];
     // A bookmarked studio URL can initialize before the existing login restore finishes.
     if (route === 'page-designer' && (!window.authManager || window.authManager.state.isRestoring)) {
       showRouteShell('LOADING', '正在验证登录状态…', '');
@@ -1396,6 +1396,10 @@
     if (route === 'archives') return renderFacetIndex('archives', controller);
     if (route === 'about') return renderAbout(controller);
     if (route === 'profile') return renderProfile();
+    if (route === 'announcements') {
+      const host = showRouteShell('UPDATES & GUIDES', '公告', state.language === 'zh' ? '网站更新与使用说明' : 'Website updates and usage guides');
+      return window.KnowledgeAnnouncements.mount(host, { signal: controller.signal, language: state.language });
+    }
     if (route === 'pages' || route === 'page' || route === 'page-designer') {
       const host = showRouteShell('CUSTOM PAGES', route === 'page-designer' ? '页面设计' : route === 'pages' ? '自定义页面' : '', '');
       const context = { signal: controller.signal, user: currentUser(), token: currentToken, theme: shell.dataset.theme, slug: details.slug };

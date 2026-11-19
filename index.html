@@ -233,6 +233,7 @@
 
         <div class="knowledge-nav-links" id="knowledgeNavLinks">
           <button class="is-active" type="button" data-knowledge-route="home">首页</button>
+          <button type="button" data-knowledge-route="announcements">公告</button>
           <div class="knowledge-nav-menu" data-knowledge-nav-menu="articles">
             <button class="knowledge-nav-menu-trigger" type="button"
               aria-haspopup="menu" aria-expanded="false" aria-controls="knowledgeArticleMenu">
@@ -924,7 +925,7 @@ Camera: --, --, --</pre>
   <script src="/static/js/login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="/static/js/auth.js?v=20261027-request-timeout-1"></script>
   <script src="/static/js/knowledge-data.js"></script>
-  <script src="/static/js/knowledge-i18n-v3.js?v=20261120-pages-1"></script>
+  <script src="/static/js/knowledge-i18n-v3.js?v=20261120-announcements-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="/static/js/knowledge-markdown.js?v=20261102-math-roundtrip-2"></script>
@@ -949,6 +950,11 @@ Camera: --, --, --</pre>
         "styles": ["/static/css/knowledge-reading.css?v=20261101-anchors-1", "/static/css/knowledge-reading-print.css?v=20261101-anchors-1"],
         "scripts": ["/static/js/knowledge-reading.js?v=20261101-storage-bound-1"],
         "ready": "KnowledgeReading"
+      },
+      "announcements": {
+        "styles": ["/static/css/knowledge-announcements.css?v=20261120-1"],
+        "scripts": ["/static/js/knowledge-announcements.js?v=20261120-2"],
+        "ready": "KnowledgeAnnouncements"
       },
       "customPages": {
         "depends": ["portable"],
@@ -988,7 +994,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="/static/js/knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="/static/js/knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=1daf097c95ac"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=fe0ba2f37240"></script>
   <script src="/static/js/knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>
