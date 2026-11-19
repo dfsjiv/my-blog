@@ -3,6 +3,8 @@
     'Lee Ethan 个人知识站': 'Lee Ethan Personal Knowledge Site',
     '知识站主导航': 'Knowledge site navigation',
     '首页': 'Home',
+    '页面设计': 'Page studio',
+    '自定义页面': 'Custom pages',
     '小游戏': 'Mini Games',
     '竞赛中心': 'Contest Center',
     '查询竞赛': 'Find Contests',

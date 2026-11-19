@@ -5,7 +5,7 @@
   const PAGE_SIZE = 10;
   const URL_KEYS = [
     'knowledge', 'slug', 'q', 'type', 'category', 'tag', 'sort',
-    'featured', 'pinned', 'page', 'archive', 'channel', 'postId', 'status',
+    'featured', 'pinned', 'page', 'archive', 'channel', 'postId', 'status', 'pageId', 'default',
   ];
   const navigationLinks = Object.freeze({
     socialLinks: Object.freeze({
@@ -525,6 +525,7 @@
 
   async function setLanguage(language) {
     if (language !== 'en' && language !== 'zh') return;
+    if (state.route === 'page-designer' && window.KnowledgeCustomPages && !window.KnowledgeCustomPages.canLeave()) return;
     state.language = language;
     writeStorage(LANGUAGE_KEY, state.language);
     shell.dataset.language = state.language;
@@ -1103,7 +1104,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'contests', 'algorithms', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
-      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading', 'pages', 'page', 'page-designer'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1119,6 +1120,8 @@
         channel: params.get('channel') || '',
         postId: parseOptionalId(params.get('postId')),
         status: params.get('status') || '',
+        slug: params.get('slug') || '',
+        default: params.get('default') === '1' ? '1' : '',
       },
     };
   }
@@ -1130,8 +1133,11 @@
     if (route === 'detail') {
       url.searchParams.set('knowledge', 'post');
       url.searchParams.set('slug', payload.slug);
+    } else if (route === 'home' && payload.default) {
+      url.searchParams.set('default', '1');
     } else if (route !== 'home') {
       url.searchParams.set('knowledge', route);
+      if (route === 'page' && payload.slug) url.searchParams.set('slug', payload.slug);
       if (route === 'writer' && payload.postId) {
         url.searchParams.set('postId', String(payload.postId));
       } else if (route !== 'writer') {
@@ -1273,6 +1279,10 @@
   }
 
   async function performNavigation(route, details, settings) {
+    if (state.route === 'page-designer' && window.KnowledgeCustomPages && !window.KnowledgeCustomPages.canLeave()) {
+      if (settings.fromHistory) writeRouteUrl(state.route, state.routePayload, true);
+      return;
+    }
     const shouldTransition = routeNeedsTransition(route, details, settings);
     closeNavigation();
 
@@ -1326,11 +1336,43 @@
     if (route === 'home') {
       homeView.hidden = false;
       routeView.hidden = true;
-      await loadHome(options);
+      // Ordinary content starts immediately; page customization never gates its request.
+      const loading = loadHome(options).then(() => null, error => error);
+      let customLoaded = false;
+      const homeCheck = new AbortController();
+      const abortHomeCheck = () => homeCheck.abort();
+      controller.signal.addEventListener('abort', abortHomeCheck, { once: true });
+      const deadline = setTimeout(abortHomeCheck, 1500);
+      try {
+        const response = details.default ? null : await fetch('/api/knowledge/pages/home', { signal: homeCheck.signal });
+        const payload = response?.ok ? await response.json() : null;
+        if (payload?.data?.page && !controller.signal.aborted) {
+          await window.KnowledgeFeatures.ensure('customPages');
+          if (controller.signal.aborted) return;
+          homeView.hidden = true; routeView.hidden = false; routeView.replaceChildren();
+          const host = element('div', 'knowledge-route-shell'); routeView.append(host);
+          customLoaded = true;
+          await window.KnowledgeCustomPages.mountPublic(host, { slug: payload.data.page.slug, signal: controller.signal, theme: shell.dataset.theme });
+        }
+      } catch { /* Default home stays available when customization is absent or unavailable. */ }
+      finally { clearTimeout(deadline); controller.signal.removeEventListener('abort', abortHomeCheck); }
+      const loadingError = await loading;
+      if (loadingError && !customLoaded && !controller.signal.aborted) throw loadingError;
       return;
     }
-    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading' })[route];
-    if (route === 'writer' && !isAuthor() || route === 'mover' && !isAdmin()) {
+    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading', pages: 'customPages', page: 'customPages', 'page-designer': 'customPages' })[route];
+    // A bookmarked studio URL can initialize before the existing login restore finishes.
+    if (route === 'page-designer' && (!window.authManager || window.authManager.state.isRestoring)) {
+      showRouteShell('LOADING', '正在验证登录状态…', '');
+      await new Promise(resolve => {
+        const finish = () => { clearTimeout(timer); window.removeEventListener('knowledge-auth-changed', finish); controller.signal.removeEventListener('abort', finish); resolve(); };
+        const timer = setTimeout(finish, 18000);
+        window.addEventListener('knowledge-auth-changed', finish, { once: true });
+        controller.signal.addEventListener('abort', finish, { once: true });
+      });
+      if (controller.signal.aborted) return;
+    }
+    if ((route === 'writer' || route === 'page-designer') && !isAuthor() || route === 'mover' && !isAdmin()) {
       return navigate('home', {}, { replace: true });
     }
     if (feature && window.KnowledgeFeatures) {
@@ -1354,6 +1396,13 @@
     if (route === 'archives') return renderFacetIndex('archives', controller);
     if (route === 'about') return renderAbout(controller);
     if (route === 'profile') return renderProfile();
+    if (route === 'pages' || route === 'page' || route === 'page-designer') {
+      const host = showRouteShell('CUSTOM PAGES', route === 'page-designer' ? '页面设计' : route === 'pages' ? '自定义页面' : '', '');
+      const context = { signal: controller.signal, user: currentUser(), token: currentToken, theme: shell.dataset.theme, slug: details.slug };
+      if (route === 'page-designer') return window.KnowledgeCustomPages.mountEditor(host, context);
+      if (route === 'pages') return window.KnowledgeCustomPages.mountGallery(host, context);
+      return window.KnowledgeCustomPages.mountPublic(host, context);
+    }
     if (route === 'reading') {
       const root = showRouteShell('READING', state.language === 'zh' ? '我的阅读' : 'My reading', state.language === 'zh' ? '稍后读、阅读历史与上次进度。' : 'Saved articles, reading history and your place.');
       state.readingCleanup = window.KnowledgeReading.mountLibrary(root, { user: currentUser(), language: state.language, navigate, signal: controller.signal });

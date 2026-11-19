@@ -271,6 +271,10 @@
                 <span class="knowledge-nav-menu-icon" data-icon-zh="读" data-icon-en="R" aria-hidden="true"></span>
                 <span>我的阅读</span>
               </button>
+              <button type="button" data-knowledge-route="pages" role="menuitem">
+                <span class="knowledge-nav-menu-icon" data-icon-zh="页" data-icon-en="PG" aria-hidden="true"></span>
+                <span>自定义页面</span>
+              </button>
             </div>
           </div>
           <button type="button" data-knowledge-route="games">小游戏</button>
@@ -370,6 +374,7 @@
               <button type="button" data-knowledge-route="writer">写文章</button>
               <button type="button" data-knowledge-route="drafts">草稿箱</button>
               <button type="button" data-knowledge-route="manage">文章管理</button>
+              <button type="button" data-knowledge-route="page-designer">页面设计</button>
               <button type="button" data-knowledge-route="mover">文章搬家</button>
             </div>
           </details>
@@ -919,7 +924,7 @@ Camera: --, --, --</pre>
   <script src="/static/js/login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="/static/js/auth.js?v=20261027-request-timeout-1"></script>
   <script src="/static/js/knowledge-data.js"></script>
-  <script src="/static/js/knowledge-i18n-v3.js?v=20261109-contact-1"></script>
+  <script src="/static/js/knowledge-i18n-v3.js?v=20261120-pages-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="/static/js/knowledge-markdown.js?v=20261102-math-roundtrip-2"></script>
@@ -944,6 +949,12 @@ Camera: --, --, --</pre>
         "styles": ["/static/css/knowledge-reading.css?v=20261101-anchors-1", "/static/css/knowledge-reading-print.css?v=20261101-anchors-1"],
         "scripts": ["/static/js/knowledge-reading.js?v=20261101-storage-bound-1"],
         "ready": "KnowledgeReading"
+      },
+      "customPages": {
+        "depends": ["portable"],
+        "styles": ["/static/css/knowledge-custom-pages.css?v=20261120-1"],
+        "scripts": ["/static/js/knowledge-custom-pages.js?v=20261120-1"],
+        "ready": "KnowledgeCustomPages"
       },
       "portable": {
         "scripts": ["/static/js/knowledge-portable.js?v=20261101-1"],
@@ -977,7 +988,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="/static/js/knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="/static/js/knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=9098440217bd"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=1daf097c95ac"></script>
   <script src="/static/js/knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>

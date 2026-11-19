@@ -30,6 +30,7 @@ import {
 } from "./knowledge-backgrounds.mjs";
 
 import { POST_APPEARANCES, ensureAppearanceStorage, readAppearances, appearanceCreate, appearanceUpdate } from './post-appearances.mjs';
+import { isCustomPagePath, handleCustomPageRequest } from './custom-pages.mjs';
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -60,6 +61,7 @@ export async function handleKnowledgeRequest(context) {
     const { request, env, url, jsonResponse } = context;
 
     try {
+        if (isCustomPagePath(url.pathname)) return await handleCustomPageRequest(context, requireAuthor);
         if (isKnowledgeBackgroundPath(url.pathname)) {
             return await handleKnowledgeBackgroundRequest(context, requireAdmin);
         }
