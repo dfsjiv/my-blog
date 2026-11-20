@@ -15,3 +15,7 @@
 
 /static/css/home-desktop.css
   Cache-Control: public, max-age=0, must-revalidate
+
+# Public fonts used by opaque-origin article preview frames.
+/assets/vendor/katex/fonts/*
+  Access-Control-Allow-Origin: *

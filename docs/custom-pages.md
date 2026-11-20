@@ -1,86 +1,54 @@
-# 自定义页面 / Custom pages
+# 每篇文章的页面设计 / Per-article page design
 
-第一版提供代码式页面设计器。入口为 **写文章 → 页面设计**，公开目录为 **文章 → 自定义页面**。默认博客不变；发布独立页面不会自动替换首页。
+一篇文章对应一套详情页设计。设计只作用于该文章打开后的页面；首页、搜索、分类、导航和文章卡片仍使用原来的设计。没有选择自定义的文章继续使用默认排版。
 
-The first version is a code-based page studio. Open **Write → Page studio** to edit, or **Posts → Custom pages** to browse published pages. Publishing a standalone page does not replace the default homepage.
+## 使用
 
-第一版页面目录和独立页面暂设为 `noindex`，分享链接可正常访问；尚未提供独立页面的搜索引擎收录与服务端正文渲染。
+1. 登录后新建或编辑文章，填写标题、分类及正文。原有 Markdown 导入继续可用。
+2. 点击编辑器底部 **文章页面设计**，选择 **使用本篇自定义设计**。
+3. 编辑 HTML、CSS、JS 三个区域，也可导入 HTML 文件：内联 style/script 分别进入 CSS/JS 编辑区，导入时不执行。外部脚本不支持。
+4. HTML 必须保留 `{{content}}`，自动插入当前文章正文。另支持 `{{title}}`、`{{author}}`、`{{date}}`、`{{category}}`、`{{cover}}`，以及 `<section data-article-slot="content"></section>`。
+5. 点击 **检测并预览**，用实际未保存的正文检查悬停、点击、动画及手机布局。图片使用本站上传链接或 PNG/JPEG/WebP/GIF data URL；外部资源被阻止。
+6. **应用到当前文章** 只更新编辑器状态；随后用原有 **保存草稿 / 发布** 按钮提交。原有 **预览** 也显示本篇设计。文章 JSON 备份携带设计；普通 `.md` 导出只包含文章与常用元数据。
+7. 详情页可 **关闭 JS 效果** 或 **默认排版阅读**，只影响本次阅读。作者可用外层 **编辑本篇页面** 返回编辑器。
 
-The gallery and standalone page routes use `noindex` in this version. Share links work normally; search indexing and server-rendered custom-page bodies are not included yet.
+**帖子外观预览** 继续设置首页文章卡片，和本文的详情页设计是两个独立功能。
 
-## 使用流程 / Workflow
+## JavaScript 范围与限制
 
-1. 选择三个起始模板之一，或导入 HTML、CSS。支持完整 HTML 文件中的内联样式以及 HTTPS 样式表；本地相对资源需上传或替换为有效地址。
-2. 编辑页面名称和访问标识。访问标识全站唯一，只允许小写英文、数字和连字符，首次保存后固定。
-3. 关联最多 12 篇已发布文章，或导入页内 Markdown。关联保留原文章数据；页内 Markdown 保存在页面配置中，不会自动创建或修改文章。
-4. 在桌面／390px 手机宽度和深浅色预览中检查。CSS 动画、悬停和响应式布局可直接预览。
-5. 保存草稿，再发布。后续保存只修改草稿，访客继续看到上次发布的设计；再次发布才更新设计快照。
-6. 页面发布后可分享 `/?knowledge=page&slug=你的访问标识`。管理员可明确选择将已发布版本设为全站首页。
-7. “撤下页面 / 恢复默认”会撤下该页面；如果它是当前首页，同时恢复默认首页。`/?default=1` 可临时查看原首页，不改变全站设置。
+JS 是受限的 DOM 交互子集，支持明确选择元素、修改样式/文本、classList、点击/指针事件、计时器和动画回调。可以使用 `forEach` / `map` 遍历。
 
-Start from a template or import HTML/CSS; bind published articles or import inline Markdown; preview, save a draft, then publish. Draft changes are isolated from the last published design snapshot. Only administrators may explicitly set a published page as the site-wide homepage. Unpublishing the active homepage restores the original homepage; `/?default=1` temporarily bypasses customization without changing the site setting.
-
-## 内容区域 / Content slots
-
-| 标记 / Token | 内容 / Content |
-| --- | --- |
-| `{{title}}` | 页面名称 / Page title |
-| `{{author}}` | 作者名称 / Author name |
-| `{{articles}}` | 关联文章卡片 / Linked article cards |
-| `{{article-bodies}}` | 关联文章全文 / Linked article bodies |
-| `{{content}}` | 页内 Markdown / Inline page Markdown |
-
-也可使用 `<section data-page-slot="articles"></section>` 等区域。未放置内容标记时，已导入的 Markdown 和文章卡片追加在页面底部，避免内容被静默丢弃。关联文章按当前公开内容读取；文章撤下或读取失败时略过并显示提示，不公开原文章的草稿。
-
-Named `data-page-slot` elements also work. Inline Markdown and article cards are appended when their slots are absent. Linked articles use their current public content; unavailable articles are omitted with a notice, never replaced with private drafts.
-
-可使用 `--page-bg`、`--page-surface`、`--page-text`、`--page-muted`、`--page-accent`、`--page-line` 编写适配深浅色的 CSS。主题改变不会改写你的代码。
-
-Use the CSS variables above for theme-aware designs. Theme changes do not rewrite saved code.
-
-## 图片与文件 / Assets and files
-
-“上传并插入图片”复用现有图片上传服务和 R2，普通用户单张上限 2 MiB，管理员 8 MiB。第一版不自动打包或上传 HTML／Markdown 引用的本地文件夹，不执行 Tailwind CDN 等外部脚本；使用这类脚本生成的样式需先导出为 CSS。
-
-Image uploads reuse the existing service and R2, with the existing 2 MiB member / 8 MiB administrator limits. Local folders are not uploaded automatically. External scripts, including runtime CSS generators such as Tailwind CDN scripts, are not executed; export their CSS before importing.
-
-页面备份导出为 JSON，包含布局、CSS、页内 Markdown 和文章 slug 引用，不打包图片或文章正文。导入备份创建一个未保存的新设计，不接受账号 ID、权限、发布状态或首页设置；发布前需重新检查访问标识。离开有修改的设计器时会提示，尚无本机自动恢复功能，请主动保存或导出。
-
-JSON backups contain the design, inline Markdown and article slug references, not image files or linked article bodies. Imports open as unsaved designs and never import permissions or publication/homepage state. Save or export before leaving; local automatic recovery is not part of this version.
-
-## 数据与容量 / Data and capacity
-
-迁移：`migrations/0014_add_custom_pages.sql`，在现有 `DB` 上新增 **一张 `custom_pages` 表**和两个显式索引；复用 `users` 外键及文章 API，不修改原表数据。迁移可重复执行。尚未迁移时，公开首页接口返回无自定义页面，管理接口返回 `MIGRATION_REQUIRED`。
-
-The additive migration creates one table and two explicit indexes on the existing D1 binding. Existing users and articles are unchanged. Without the migration, the public homepage falls back normally and management reports `MIGRATION_REQUIRED`.
-
-| 账号 / Account | 页面数（含回收站） / Pages including trash | 每个设计版本的 UTF-8 上限 / UTF-8 bytes per design version |
-| --- | --- | --- |
-| 普通用户 / Member | 8 | 256 KiB |
-| 管理员 / Administrator | 30 | 1 MiB |
-
-每个页面最多同时保存一份草稿和一份发布快照。因此正文配置理论上限约为普通账号 4 MiB、管理员账号 60 MiB，另有元数据和数据库开销；不是新建空表就会占用这些容量。图片另计 R2。回收站保留设计并计入配额，可恢复为未发布草稿。
-
-Each page keeps at most one draft and one published snapshot. Maximum design payloads are approximately 4 MiB per member account or 60 MiB per administrator account, plus metadata/database overhead. Empty pages do not reserve this capacity. Images count toward R2; trash remains recoverable and counts toward the page quota.
-
-管理接口按账号隔离，包括管理员也只编辑自己的页面；全站首页设置额外要求管理员权限。保存、发布和状态操作使用版本条件避免旧窗口覆盖。公开接口只读取发布快照。预览与展示放在隔离 iframe 中，使用 HTML 清理和 CSP；第一版支持 HTML／CSS 动态设计，不执行自定义 JavaScript、表单或嵌入 iframe，也不接触父页面账号信息。站点外层导航保留，页面内容区由设计控制，可全屏查看。
-
-Management is scoped to each owner, including administrators; site-wide homepage changes additionally require administrator status. Version checks reject stale writes. Public reads expose only published snapshots. Sanitized designs render inside sandboxed iframes with CSP; custom JavaScript, forms and embedded iframes do not run. The outer site navigation remains available, and designs control the content area with an optional fullscreen view.
-
-## 验证 / Validation
-
-```bash
-npm run check:knowledge-build
-npm test
+```js
+const button = document.querySelector('.back-top');
+button.addEventListener('click', () => {
+  document.querySelector('.my-article').scrollIntoView({behavior: 'smooth'});
+});
 ```
 
-本地端到端验证可分别启动已有模拟站点和真实页面 API 的内存数据库服务：
+- 客户端和服务端使用同一 Acorn AST 能力策略，拒绝账号存储、Cookie、网络接口、外层窗口、动态代码、原型/构造器、动态属性访问、接口提取、循环和非受限全局变量。错误定位到源代码行。
+- HTML 另经 DOMPurify 清理，脚本只能写在单独的 JS 区。CSS 的 `@import` 被拒绝，页面 CSP 阻止外部脚本、网络连接和表单。
+- 预览及正式展示使用相同的 `sandbox="allow-scripts"` iframe，**不授予 allow-same-origin**。脚本无法获得博客的令牌、存储或外层 DOM。框架只接收来自该 iframe、匹配随机通道的高度消息，不接受脚本发来的操作命令。
+- 每个用户函数注入运行预算检查，限制高频回调、递归与过量计时器。运行失败时可切回原生正文。
+- **检测不是任意代码安全的数学证明，也不是独立进程级 CPU/内存限额。** 不支持任意 npm 库、第三方脚本、`eval`、`fetch` 或完整 JavaScript 环境；需要新能力时应扩展并测试白名单，不能关闭隔离。
+- iframe 中只允许锚点链接。正常外链、评论、文章导航和分享功能可在默认排版或外层原有区域使用。
 
-```bash
-node tests/fixtures/knowledge-browser-server.mjs 8766
-node tests/fixtures/custom-pages-browser-server.mjs
-```
+## 数据与部署
 
-访问 `http://127.0.0.1:8767`。两个服务只使用模拟账号和本地内存数据，不连接生产数据库；停止服务即清除页面测试数据。
+迁移：`migrations/0015_add_article_layouts.sql`。
 
-Both browser fixtures use synthetic accounts and local in-memory page data; they never connect to production. Stopping the servers discards test pages.
+`knowledge_article_layouts` 以 `post_id` 为主键和外键，每篇文章最多一行，包含 `draft_json`、`published_json` 与更新时间。正文仍在 `knowledge_posts`，图片复用原上传服务。设计和正文通过同一数据库 batch 保存，沿用文章所有权、版本冲突及发布权限；列表不读取设计源码。
+
+- 用户设计最大 **96 KiB**，管理员 **256 KiB**（JSON UTF-8 字节）；JS 分别最大 **16 Ki / 64 Ki 字符**。
+- 最多保留草稿和发布两份设计快照，存储估算按约两倍配置大小，再加 SQLite 开销。未启用的普通文章不新增设计行。
+- 未执行迁移时普通文章读写保持可用；保存自定义设计会提示需要迁移。
+- 保存为草稿遵循原文章状态逻辑，已发布文章改存草稿会撤下文章；再次发布时提升当前设计快照。不能将它当成独立的公开文章版本管理。
+- 原错误范围的 `custom_pages` 数据保留，不删除、不迁移到任意文章。其公共页面入口、首页替换逻辑和 API 已撤回（API 返回 410）。
+- `npm run build:knowledge-site` 生成主包及按需加载的 `article-layout.bundle.js`；`npm run check:knowledge-build` 检查两者一致性。公开 KaTeX 字体允许跨源读取，以便不透明来源 iframe 排版公式；不涉及 API 或账号数据。
+
+## English
+
+Each article owns one independent detail-page HTML/CSS/restricted-JS design. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
+
+Source is checked on both client and server and rendered through DOMPurify, an opaque-origin script sandbox, and restrictive CSP. Network/storage access, parent-page access, dynamic execution, prototype/constructor operations, dynamic properties, extracted capability methods, and loop syntax are rejected. Static analysis and callback budgets are not a guarantee against all resource-exhaustion cases. External resources and arbitrary third-party scripts are unsupported. Preview and publication use the same restrictions.
+
+Apply migration 0015. `knowledge_article_layouts` has one row per article and draft/published JSON snapshots; saving is atomic with article updates and retains ownership/version rules. Member/admin design limits are 96/256 KiB, with 16/64 Ki-character JS limits. JSON article backups retain designs; plain Markdown exports do not embed page code. Old incorrectly scoped `custom_pages` data is preserved while its UI, homepage override and API are retired.

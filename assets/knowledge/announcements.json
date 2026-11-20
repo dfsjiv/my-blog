@@ -6,24 +6,73 @@
       "date": "2026-11-20",
       "type": "feature",
       "historical": false,
-      "title": { "zh": "自定义页面设计器上线", "en": "The custom page studio is live" },
-      "summary": { "zh": "现在可以设计自己的博客页面，再放入文章和 Markdown。没有启用自定义首页时，博客仍保持原样。", "en": "Design a blog page and fill it with articles and Markdown. The original homepage stays in place unless a custom homepage is explicitly enabled." },
+      "title": {
+        "zh": "每篇文章可以设计自己的详情页",
+        "en": "An independent design for every article"
+      },
+      "summary": {
+        "zh": "在写作时为当前文章编辑 HTML、CSS 和受限 JS，正文自动填入。没有自定义的文章保持原样，首页等公共页面不受影响。",
+        "en": "Edit HTML, CSS and restricted JavaScript for the current article. Its content is inserted automatically; default articles and common pages keep their existing layout."
+      },
       "changes": {
-        "zh": ["提供三个起始模板，也可以导入自己的 HTML 和 CSS。", "支持关联已发布文章、导入页内 Markdown，以及上传并插入图片。", "支持动态预览、手机尺寸预览和深浅色检查。", "草稿与发布版本分开保存，保存草稿不会直接改动访客看到的设计。", "顶部新增公告入口，在这里查看更新内容和使用方法。"],
-        "en": ["Start with one of three templates or import HTML and CSS.", "Bind published articles, import inline Markdown, and upload images.", "Preview motion, mobile layouts, and light/dark colors.", "Drafts and published designs are separate: saving a draft does not change the live design.", "The new top navigation entry collects updates and usage guides here."]
+        "zh": [
+          "文章 ID 与页面设计一对一关联，随当前文章保存或发布。",
+          "新增 HTML／CSS／JS 编辑、HTML 导入、动态预览与手机尺寸检查。",
+          "正文使用当前文章或导入的 Markdown，不需要绑定其他文章。",
+          "JS 经过前后端语法能力检测，并在禁用网络连接及外层页面访问的沙箱中运行。",
+          "保留顶部公告栏目；撤回此前范围错误的公共页面设计与自定义首页入口，旧数据保留。"
+        ],
+        "en": [
+          "One design per article ID, saved and published with that article.",
+          "HTML/CSS/JS editing, HTML import, interactive previews and a mobile viewport.",
+          "Content comes from the current article or imported Markdown, without linking another article.",
+          "Client/server capability checks and a sandbox restrict script execution, connections and access to the outer page.",
+          "The announcements section remains. The incorrectly scoped common-page studio and custom-home controls are retired; old data is retained."
+        ]
       },
       "steps": {
-        "zh": ["登录后，打开顶部“写文章 → 页面设计”。", "新建页面，填写页面名称和访问标识，选择模板或导入 HTML／CSS。", "在左侧关联文章；需要导入正文时，点击“导入 Markdown”。正文加入当前页面，不会自动创建或修改原文章。", "使用预览检查布局和动态效果；本地图片可用“上传并插入图片”处理。", "点击“保存草稿”，确认后点击“发布当前版本”，再通过“查看已发布页面”访问和分享。"],
-        "en": ["Sign in, then open Write → Page studio in the top navigation.", "Create a page, enter its name and URL identifier, and choose a template or import HTML/CSS.", "Link articles on the left or import Markdown as inline page content. This does not automatically create or edit an article.", "Check the layout and motion in the preview. Upload local images using the image insertion button.", "Save a draft, publish the current version when ready, then open the published page to view or share it."]
+        "zh": [
+          "登录后新建或编辑一篇文章，填写标题、分类和正文。",
+          "点击底部“文章页面设计”，选择“使用本篇自定义设计”。",
+          "调整 HTML／CSS／JS，HTML 保留 {{content}} 正文区域。",
+          "点击“检测并预览”，测试交互和手机布局；点击“应用到当前文章”。",
+          "使用文章原有“保存草稿”或“发布”按钮提交。详情页可切回默认排版阅读。"
+        ],
+        "en": [
+          "Sign in and create/edit an article with a title, category and content.",
+          "Open Article page design at the bottom and select the custom mode.",
+          "Edit HTML/CSS/JS, keeping the {{content}} slot.",
+          "Use Check and preview to test motion and mobile layouts, then apply to the current article.",
+          "Save the article draft or publish it using the normal controls. Readers can switch to the native layout."
+        ]
       },
       "notes": {
-        "zh": ["第一版采用 HTML／CSS 代码编辑，支持 CSS 动画，暂不执行自定义 JavaScript。站点外层导航保留。", "只有管理员可以将已发布页面设为全站首页；撤下当前自定义首页即可恢复默认首页。", "页面导出备份保留设计和内容引用，不打包图片文件。"],
-        "en": ["This version uses HTML/CSS code editing and supports CSS animation. Custom JavaScript does not run, and the outer site navigation remains available.", "Only administrators can choose a site-wide custom homepage. Unpublishing it restores the default homepage.", "Page backups contain the design and content references, not packaged image files."]
+        "zh": [
+          "JS 是受限的 DOM 交互子集；禁止网络、存储、动态执行、访问外层页面以及循环语法。检测不能证明任意代码绝对安全，运行时仍有沙箱、CSP 和回调预算。",
+          "正文、设计和图片分开存放：正文沿用原表，设计使用 knowledge_article_layouts，图片复用原上传服务。",
+          "普通用户仅能修改自己的文章设计；管理员保持原有管理权限。JS 上限为用户 16 Ki 字符／管理员 64 Ki 字符。"
+        ],
+        "en": [
+          "JavaScript is a restricted DOM-interaction subset. Network/storage access, dynamic execution, outer-page access and loop syntax are blocked. Checks are not a proof of arbitrary-code safety; sandbox, CSP and callback budgets still apply.",
+          "Article content stays in the existing table, designs use knowledge_article_layouts, and images reuse the upload service.",
+          "Members may only change their own articles. JS is limited to 16 Ki characters for members and 64 Ki characters for administrators."
+        ]
       },
       "links": [
-        { "label": { "zh": "打开页面设计器", "en": "Open page studio" }, "url": "/?knowledge=page-designer" },
-        { "label": { "zh": "浏览自定义页面", "en": "Browse custom pages" }, "url": "/?knowledge=pages" },
-        { "label": { "zh": "完整使用说明", "en": "Full guide" }, "url": "https://github.com/dfsjiv/my-blog/blob/main/docs/custom-pages.md" }
+        {
+          "label": {
+            "zh": "写文章",
+            "en": "Write an article"
+          },
+          "url": "/?knowledge=writer"
+        },
+        {
+          "label": {
+            "zh": "完整使用说明",
+            "en": "Full guide"
+          },
+          "url": "https://github.com/dfsjiv/my-blog/blob/main/docs/custom-pages.md"
+        }
       ]
     },
     {
@@ -31,42 +80,112 @@
       "date": "2026-11-02",
       "type": "fix",
       "historical": true,
-      "title": { "zh": "修复 Markdown 与编辑器中的公式显示", "en": "Math rendering fixes for Markdown and the editor" },
-      "summary": { "zh": "修复公式分隔符和反斜杠被处理后，分式、求和与不等式显示成普通字母的问题。", "en": "Fixed delimiter and backslash handling that could turn fractions, sums, and inequalities into plain letters." },
+      "title": {
+        "zh": "修复 Markdown 与编辑器中的公式显示",
+        "en": "Math rendering fixes for Markdown and the editor"
+      },
+      "summary": {
+        "zh": "修复公式分隔符和反斜杠被处理后，分式、求和与不等式显示成普通字母的问题。",
+        "en": "Fixed delimiter and backslash handling that could turn fractions, sums, and inequalities into plain letters."
+      },
       "changes": {
-        "zh": ["Markdown 解析时保留公式内容，兼容已有内容中的部分转义格式。", "编辑器保存和重新打开时保留公式源码。", "普通正文先显示，需要公式时再加载公式渲染资源。"],
-        "en": ["Preserve formulas during Markdown parsing and handle supported legacy escaping.", "Keep formula source through editor saves and reopening.", "Show ordinary content first and load math resources only when needed."]
+        "zh": [
+          "Markdown 解析时保留公式内容，兼容已有内容中的部分转义格式。",
+          "编辑器保存和重新打开时保留公式源码。",
+          "普通正文先显示，需要公式时再加载公式渲染资源。"
+        ],
+        "en": [
+          "Preserve formulas during Markdown parsing and handle supported legacy escaping.",
+          "Keep formula source through editor saves and reopening.",
+          "Show ordinary content first and load math resources only when needed."
+        ]
       },
       "steps": {
-        "zh": ["写文章时可直接输入公式，也可以通过“导入 Markdown”导入原文件。", "行内公式使用 $...$，独立公式可使用 $$...$$ 或 \\[...\\]。", "发布前打开预览，确认分式、求和符号及上下标显示正确。"],
-        "en": ["Enter formulas in the editor or import the original Markdown file.", "Use $...$ for inline math and $$...$$ or \\[...\\] for display math.", "Preview before publishing and check fractions, sums, and subscripts."]
+        "zh": [
+          "写文章时可直接输入公式，也可以通过“导入 Markdown”导入原文件。",
+          "行内公式使用 $...$，独立公式可使用 $$...$$ 或 \\[...\\]。",
+          "发布前打开预览，确认分式、求和符号及上下标显示正确。"
+        ],
+        "en": [
+          "Enter formulas in the editor or import the original Markdown file.",
+          "Use $...$ for inline math and $$...$$ or \\[...\\] for display math.",
+          "Preview before publishing and check fractions, sums, and subscripts."
+        ]
       },
       "notes": {
-        "zh": ["如果旧文章保存的源码本身已经缺失，需要从原文件重新导入。代码块内的公式示例仍按代码显示。"],
-        "en": ["If the stored source is already missing, reimport it from the original file. Formula examples inside code blocks remain code."]
+        "zh": [
+          "如果旧文章保存的源码本身已经缺失，需要从原文件重新导入。代码块内的公式示例仍按代码显示。"
+        ],
+        "en": [
+          "If the stored source is already missing, reimport it from the original file. Formula examples inside code blocks remain code."
+        ]
       },
-      "links": [{ "label": { "zh": "进入写作页面", "en": "Open the editor" }, "url": "/?knowledge=writer" }]
+      "links": [
+        {
+          "label": {
+            "zh": "进入写作页面",
+            "en": "Open the editor"
+          },
+          "url": "/?knowledge=writer"
+        }
+      ]
     },
     {
       "id": "2026-11-01-reading-tools",
       "date": "2026-11-01",
       "type": "feature",
       "historical": true,
-      "title": { "zh": "阅读记录、文章备份与长文阅读工具", "en": "Reading history, article backups, and long-form reading tools" },
-      "summary": { "zh": "增加稍后读、继续阅读、文章导出，以及字号、专注模式和图片放大等工具。", "en": "Added saved articles, reading progress, article exports, typography settings, focus mode, and image zoom." },
+      "title": {
+        "zh": "阅读记录、文章备份与长文阅读工具",
+        "en": "Reading history, article backups, and long-form reading tools"
+      },
+      "summary": {
+        "zh": "增加稍后读、继续阅读、文章导出，以及字号、专注模式和图片放大等工具。",
+        "en": "Added saved articles, reading progress, article exports, typography settings, focus mode, and image zoom."
+      },
       "changes": {
-        "zh": ["“我的阅读”集中展示稍后读、阅读历史与上次进度，游客也可以使用。", "写作页面支持 Markdown 导出和文章 JSON 备份。", "文章页支持字号与行距调整、专注阅读、查看原图和打印。", "桌面端可用 Ctrl／⌘K 打开快捷搜索，手机端从文章菜单进入。"],
-        "en": ["My reading collects saved articles, reading history, and progress, including for guests.", "The editor supports Markdown exports and JSON article backups.", "Articles offer typography controls, focus mode, full-size images, and print layouts.", "Use Ctrl/⌘K for quick search on desktop, or the article menu on mobile."]
+        "zh": [
+          "“我的阅读”集中展示稍后读、阅读历史与上次进度，游客也可以使用。",
+          "写作页面支持 Markdown 导出和文章 JSON 备份。",
+          "文章页支持字号与行距调整、专注阅读、查看原图和打印。",
+          "桌面端可用 Ctrl／⌘K 打开快捷搜索，手机端从文章菜单进入。"
+        ],
+        "en": [
+          "My reading collects saved articles, reading history, and progress, including for guests.",
+          "The editor supports Markdown exports and JSON article backups.",
+          "Articles offer typography controls, focus mode, full-size images, and print layouts.",
+          "Use Ctrl/⌘K for quick search on desktop, or the article menu on mobile."
+        ]
       },
       "steps": {
-        "zh": ["阅读文章时点击“稍后读”，之后从“文章 → 我的阅读”继续查看。", "长文章可打开“阅读设置”调整字号、行距和正文宽度，按 Esc 退出专注模式。", "写作时打开“备份与导出”，下载 Markdown 或文章备份；需要恢复时再导入。"],
-        "en": ["Save an article for later, then return through Posts → My reading.", "Adjust size, spacing, and width in reading settings; press Esc to leave focus mode.", "Use Backup & export while writing to download Markdown or an article backup, and import it when needed."]
+        "zh": [
+          "阅读文章时点击“稍后读”，之后从“文章 → 我的阅读”继续查看。",
+          "长文章可打开“阅读设置”调整字号、行距和正文宽度，按 Esc 退出专注模式。",
+          "写作时打开“备份与导出”，下载 Markdown 或文章备份；需要恢复时再导入。"
+        ],
+        "en": [
+          "Save an article for later, then return through Posts → My reading.",
+          "Adjust size, spacing, and width in reading settings; press Esc to leave focus mode.",
+          "Use Backup & export while writing to download Markdown or an article backup, and import it when needed."
+        ]
       },
       "notes": {
-        "zh": ["阅读记录保存在当前浏览器，不会自动跨设备同步。清除浏览器数据前请先导出备份。文章备份中的图片保留链接，不打包图片文件。"],
-        "en": ["Reading records stay in the current browser and do not sync across devices automatically. Export a backup before clearing browser data. Article backups retain image links rather than packaging images."]
+        "zh": [
+          "阅读记录保存在当前浏览器，不会自动跨设备同步。清除浏览器数据前请先导出备份。文章备份中的图片保留链接，不打包图片文件。"
+        ],
+        "en": [
+          "Reading records stay in the current browser and do not sync across devices automatically. Export a backup before clearing browser data. Article backups retain image links rather than packaging images."
+        ]
       },
-      "links": [{ "label": { "zh": "打开我的阅读", "en": "Open my reading" }, "url": "/?knowledge=reading" }]
+      "links": [
+        {
+          "label": {
+            "zh": "打开我的阅读",
+            "en": "Open my reading"
+          },
+          "url": "/?knowledge=reading"
+        }
+      ]
     }
   ]
 }

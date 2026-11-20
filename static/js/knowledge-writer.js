@@ -183,6 +183,10 @@
       editorMode: 'rich',
       sourceSyncing: false,
       sourcePreviewTimer: null,
+      articleLayout: undefined,
+      designController: new AbortController(),
+      previewCleanup: null,
+      designClose: null,
     };
 
     const page = element('section', 'knowledge-writer-page');
@@ -362,11 +366,13 @@
     saveDraftButton.type = 'button';
     const previewButton = element('button', 'knowledge-writer-secondary', '预览');
     previewButton.type = 'button';
+    const designButton = element('button', 'knowledge-writer-secondary', '文章页面设计');
+    designButton.type = 'button';
     const appearanceButton = element('button', 'knowledge-writer-secondary', '帖子外观预览');
     appearanceButton.type = 'button';
     const publishButton = element('button', 'knowledge-writer-publish', '发布');
     publishButton.type = 'button';
-    bottomRight.append(saveStatus, savedAt, appearanceButton, saveDraftButton, previewButton, publishButton);
+    bottomRight.append(saveStatus, savedAt, designButton, appearanceButton, saveDraftButton, previewButton, publishButton);
     bottom.append(bottomLeft, bottomRight);
 
     const previewOverlay = buildPreviewOverlay();
@@ -430,6 +436,7 @@
     }
 
     function applyPostSettings(post) {
+      state.articleLayout = post.articleLayout;
       setField('type', post.type || 'article');
       setField('appearance', post.appearance || 'default');
       setField('category', post.category || '');
@@ -677,6 +684,7 @@
     }
 
     function applyDraftSettings(values) {
+      if (Object.hasOwn(values, 'articleLayout')) state.articleLayout = values.articleLayout;
       Object.keys(values || {}).forEach(function (key) { setField(key, values[key]); });
       updateSolutionFields();
     }
@@ -685,6 +693,7 @@
       return {
         type: fieldValue('type') || 'article',
         appearance: fieldValue('appearance') || 'default',
+        articleLayout: state.articleLayout,
         category: fieldValue('category'),
         tags: fieldValue('tags'),
         summary: fieldValue('summary'),
@@ -712,6 +721,7 @@
         type,
         title: titleInput.value.trim(),
         appearance: values.appearance,
+        articleLayout: values.articleLayout,
         slug: values.slug,
         summary: values.summary,
         contentMarkdown: currentMarkdown(),
@@ -812,6 +822,7 @@
       publishButton.disabled = busy;
       previewButton.disabled = busy;
       appearanceButton.disabled = busy;
+      designButton.disabled = busy;
     }
 
     function setSaveState(label, error) {
@@ -1246,9 +1257,33 @@
       appearanceDialog.showModal();
     }
 
-    function openPreview() {
+    function designPost() {
+      return { ...collectPayload(), author: state.post?.author || window.authManager?.getCurrentUser?.().nickname || window.authManager?.getCurrentUser?.().username || '', publishedAt: state.post?.publishedAt, ...(state.editorMode === 'rich' ? {contentFormat: 'html', content: state.editor.getHTML()} : {}) };
+    }
+    async function openArticleDesign() {
+      try {
+        await window.KnowledgeFeatures.ensure('articleLayout');
+        if (state.destroyed) return;
+        state.designClose?.();
+        state.designClose = window.KnowledgeArticleLayout.openEditor({ design: state.articleLayout, getPost: designPost, role: isAdmin() ? 'admin' : 'user', signal: state.designController.signal,
+          onApply: function (value) { state.articleLayout = value; markDirty(); showNotice('本篇页面设计已应用，保存草稿或发布后生效。'); } });
+      } catch (error) { showNotice(error.message, true); }
+    }
+    async function openPreview() {
       const payload = collectPayload();
       if (!validatePayload(payload, false)) return;
+      state.previewCleanup?.(); state.previewCleanup = null;
+      [previewOverlay.title, previewOverlay.summary, previewOverlay.meta].forEach(n => n.hidden = false);
+      if (state.articleLayout?.mode === 'custom') {
+        try {
+          await window.KnowledgeFeatures.ensure('articleLayout');
+          if (state.destroyed) return;
+          state.previewCleanup = await window.KnowledgeArticleLayout.mount(previewOverlay.body, {design: state.articleLayout, post: designPost(), signal: state.designController.signal});
+          if (state.destroyed) { state.previewCleanup(); return; }
+          [previewOverlay.title, previewOverlay.summary, previewOverlay.meta, previewOverlay.solution].forEach(n => n.hidden = true);
+          previewOverlay.root.hidden = false; previewOverlay.close.focus(); return;
+        } catch (error) { showNotice('自定义页面预览失败：' + error.message, true); return; }
+      }
       previewOverlay.title.textContent = payload.title;
       previewOverlay.summary.textContent = payload.summary || '';
       previewOverlay.meta.textContent = [
@@ -1282,6 +1317,7 @@
     }
 
     function closePreview() {
+      state.previewCleanup?.(); state.previewCleanup = null;
       previewOverlay.root.hidden = true;
       previewButton.focus();
     }
@@ -1331,7 +1367,7 @@
       if (!file || !state.editor || state.destroyed) return;
       try {
         const limit = isAdmin() ? 2 * 1024 * 1024 : USER_MAX_CONTENT_LENGTH;
-        if (file.size > limit * 6 + 65536) throw new Error('备份文件太大。');
+        if (file.size > limit * 6 + 384 * 1024) throw new Error('备份文件太大。');
         const imported = portable.fromBackup(await file.text(), limit);
         if (state.destroyed) return;
         if ((state.dirty || currentMarkdown().trim()) && !window.confirm('导入会替换当前标题、正文与文章设置。已保存的服务器文章不会立即改变，是否继续？')) return;
@@ -1534,6 +1570,7 @@
     publishButton.addEventListener('click', function () { saveToServer('published'); });
     previewButton.addEventListener('click', openPreview);
     appearanceButton.addEventListener('click', openAppearancePreview);
+    designButton.addEventListener('click', openArticleDesign);
     appearanceClose.addEventListener('click', () => appearanceDialog.close());
     appearanceDialog.addEventListener('click', event => { if (event.target === appearanceDialog) appearanceDialog.close(); });
     appearanceDialog.addEventListener('close', () => appearanceButton.focus());
@@ -1548,6 +1585,7 @@
       if (state.destroyed) return;
       if (state.dirty && state.editor) saveLocalDraft();
       state.destroyed = true;
+      state.designController.abort(); state.designClose?.(); state.previewCleanup?.();
       window.clearTimeout(state.saveTimer);
       window.clearTimeout(state.sourcePreviewTimer);
       window.clearTimeout(noticeTimer);

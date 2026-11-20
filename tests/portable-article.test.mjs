@@ -61,3 +61,12 @@ test('local drafts use distinct account/new/existing-post keys and filenames rem
   assert.equal(portable.filename('CON', '.md'), 'article-CON.md');
   assert.doesNotMatch(portable.filename('../foo:bar?*', '.article.json'), /[/:?*]/);
 });
+
+test('article JSON backups carry design source as inert text without article IDs or authority',()=>{
+  const articleLayout={mode:'custom',html:'<article>{{content}}</article>',css:'body{color:teal}',js:'document.body.classList.add("ready")',postId:999,token:'PRIVATE'};
+  const text=portable.toBackup({...post,articleLayout});
+  assert.doesNotMatch(text,/PRIVATE|postId/);
+  const restored=portable.fromBackup(text);
+  for(const key of ['mode','html','css','js']) assert.equal(restored.articleLayout[key],articleLayout[key]);
+  assert.doesNotMatch(portable.toMarkdown({...post,articleLayout}),/classList|articleLayout/);
+});

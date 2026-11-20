@@ -18,6 +18,7 @@
     "@tiptap/extensions": "^3.31.3",
     "@tiptap/markdown": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
+    "acorn": "8.19.0",
     "katex": "0.18.2"
   },
   "devDependencies": {

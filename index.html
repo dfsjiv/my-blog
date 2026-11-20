@@ -272,10 +272,6 @@
                 <span class="knowledge-nav-menu-icon" data-icon-zh="读" data-icon-en="R" aria-hidden="true"></span>
                 <span>我的阅读</span>
               </button>
-              <button type="button" data-knowledge-route="pages" role="menuitem">
-                <span class="knowledge-nav-menu-icon" data-icon-zh="页" data-icon-en="PG" aria-hidden="true"></span>
-                <span>自定义页面</span>
-              </button>
             </div>
           </div>
           <button type="button" data-knowledge-route="games">小游戏</button>
@@ -375,7 +371,6 @@
               <button type="button" data-knowledge-route="writer">写文章</button>
               <button type="button" data-knowledge-route="drafts">草稿箱</button>
               <button type="button" data-knowledge-route="manage">文章管理</button>
-              <button type="button" data-knowledge-route="page-designer">页面设计</button>
               <button type="button" data-knowledge-route="mover">文章搬家</button>
             </div>
           </details>
@@ -925,11 +920,11 @@ Camera: --, --, --</pre>
   <script src="/static/js/login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="/static/js/auth.js?v=20261027-request-timeout-1"></script>
   <script src="/static/js/knowledge-data.js"></script>
-  <script src="/static/js/knowledge-i18n-v3.js?v=20261120-announcements-1"></script>
+  <script src="/static/js/knowledge-i18n-v3.js?v=20261120-article-1"></script>
   <script src="assets/vendor/knowledge/marked.umd.js"></script>
   <script src="assets/vendor/knowledge/purify.min.js"></script>
   <script src="/static/js/knowledge-markdown.js?v=20261102-math-roundtrip-2"></script>
-  <script src="/static/js/knowledge-repository.js?v=20261027-body-timeout-1"></script>
+  <script src="/static/js/knowledge-repository.js?v=article-20261027-body-timeout-1"></script>
   <script src="/static/js/knowledge-favorites.js"></script>
   <script src="/static/js/knowledge-user-profile.js?v=20261016-cover-crop-1"></script>
   <script src="/static/js/knowledge-background-display.js?v=20261014-background-display-1"></script>
@@ -943,7 +938,7 @@ Camera: --, --, --</pre>
       "writer": {
         "depends": ["math", "portable"],
         "styles": ["/static/css/knowledge-writer.css?v=20261101-backup-1"],
-        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js?v=20261102-math-nodes-1", "/static/js/knowledge-editor-adapter.js?v=20261102-math-nodes-1", "/static/js/knowledge-writer.js?v=20261101-backup-1"],
+        "scripts": ["assets/vendor/knowledge-editor/tiptap.bundle.js?v=20261102-math-nodes-1", "/static/js/knowledge-editor-adapter.js?v=20261102-math-nodes-1", "/static/js/knowledge-writer.js?v=20261120-article-2"],
         "ready": "KnowledgeWriter"
       },
       "reading": {
@@ -953,17 +948,16 @@ Camera: --, --, --</pre>
       },
       "announcements": {
         "styles": ["/static/css/knowledge-announcements.css?v=20261120-1"],
-        "scripts": ["/static/js/knowledge-announcements.js?v=20261120-2"],
+        "scripts": ["/static/js/knowledge-announcements.js?v=20261120-article-3"],
         "ready": "KnowledgeAnnouncements"
       },
-      "customPages": {
-        "depends": ["portable"],
-        "styles": ["/static/css/knowledge-custom-pages.css?v=20261120-1"],
-        "scripts": ["/static/js/knowledge-custom-pages.js?v=20261120-1"],
-        "ready": "KnowledgeCustomPages"
+      "articleLayout": {
+        "styles": ["/static/css/knowledge-article-layout.css?v=20261120-article-2"],
+        "scripts": ["/assets/vendor/knowledge/article-layout.bundle.js?v=43c0249777e0"],
+        "ready": "KnowledgeArticleLayout"
       },
       "portable": {
-        "scripts": ["/static/js/knowledge-portable.js?v=20261101-1"],
+        "scripts": ["/static/js/knowledge-portable.js?v=20261120-article-1"],
         "ready": "KnowledgePortable"
       },
       "quickSearch": {
@@ -994,7 +988,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="/static/js/knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="/static/js/knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=fe0ba2f37240"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=99a35fdad98e"></script>
   <script src="/static/js/knowledge-live2d-mana-position-20260809.js?v=20261012-live2d-lazy-1"></script>
 </body>
 </html>

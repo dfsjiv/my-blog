@@ -525,7 +525,6 @@
 
   async function setLanguage(language) {
     if (language !== 'en' && language !== 'zh') return;
-    if (state.route === 'page-designer' && window.KnowledgeCustomPages && !window.KnowledgeCustomPages.canLeave()) return;
     state.language = language;
     writeStorage(LANGUAGE_KEY, state.language);
     shell.dataset.language = state.language;
@@ -1104,7 +1103,7 @@
       return { route: 'detail', payload: { slug: params.get('slug') || '' } };
     }
     const route = ['home', 'games', 'contests', 'algorithms', 'all', 'categories', 'tags', 'archives', 'about', 'profile',
-      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading', 'pages', 'page', 'page-designer', 'announcements'].includes(routeName) ? routeName : 'home';
+      'writer', 'drafts', 'manage', 'mover', 'invitations', 'backgrounds', 'reading', 'announcements'].includes(routeName) ? routeName : 'home';
     return {
       route,
       payload: {
@@ -1279,10 +1278,6 @@
   }
 
   async function performNavigation(route, details, settings) {
-    if (state.route === 'page-designer' && window.KnowledgeCustomPages && !window.KnowledgeCustomPages.canLeave()) {
-      if (settings.fromHistory) writeRouteUrl(state.route, state.routePayload, true);
-      return;
-    }
     const shouldTransition = routeNeedsTransition(route, details, settings);
     closeNavigation();
 
@@ -1336,33 +1331,12 @@
     if (route === 'home') {
       homeView.hidden = false;
       routeView.hidden = true;
-      // Ordinary content starts immediately; page customization never gates its request.
-      const loading = loadHome(options).then(() => null, error => error);
-      let customLoaded = false;
-      const homeCheck = new AbortController();
-      const abortHomeCheck = () => homeCheck.abort();
-      controller.signal.addEventListener('abort', abortHomeCheck, { once: true });
-      const deadline = setTimeout(abortHomeCheck, 1500);
-      try {
-        const response = details.default ? null : await fetch('/api/knowledge/pages/home', { signal: homeCheck.signal });
-        const payload = response?.ok ? await response.json() : null;
-        if (payload?.data?.page && !controller.signal.aborted) {
-          await window.KnowledgeFeatures.ensure('customPages');
-          if (controller.signal.aborted) return;
-          homeView.hidden = true; routeView.hidden = false; routeView.replaceChildren();
-          const host = element('div', 'knowledge-route-shell'); routeView.append(host);
-          customLoaded = true;
-          await window.KnowledgeCustomPages.mountPublic(host, { slug: payload.data.page.slug, signal: controller.signal, theme: shell.dataset.theme });
-        }
-      } catch { /* Default home stays available when customization is absent or unavailable. */ }
-      finally { clearTimeout(deadline); controller.signal.removeEventListener('abort', abortHomeCheck); }
-      const loadingError = await loading;
-      if (loadingError && !customLoaded && !controller.signal.aborted) throw loadingError;
+      await loadHome(options);
       return;
     }
-    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading', pages: 'customPages', page: 'customPages', 'page-designer': 'customPages', announcements: 'announcements' })[route];
+    const feature = ({ writer: 'writer', mover: 'mover', games: 'games', algorithms: 'algorithms', reading: 'reading', announcements: 'announcements' })[route];
     // A bookmarked studio URL can initialize before the existing login restore finishes.
-    if (route === 'page-designer' && (!window.authManager || window.authManager.state.isRestoring)) {
+    if (route === 'writer' && (!window.authManager || window.authManager.state.isRestoring)) {
       showRouteShell('LOADING', '正在验证登录状态…', '');
       await new Promise(resolve => {
         const finish = () => { clearTimeout(timer); window.removeEventListener('knowledge-auth-changed', finish); controller.signal.removeEventListener('abort', finish); resolve(); };
@@ -1372,7 +1346,7 @@
       });
       if (controller.signal.aborted) return;
     }
-    if ((route === 'writer' || route === 'page-designer') && !isAuthor() || route === 'mover' && !isAdmin()) {
+    if (route === 'writer' && !isAuthor() || route === 'mover' && !isAdmin()) {
       return navigate('home', {}, { replace: true });
     }
     if (feature && window.KnowledgeFeatures) {
@@ -1400,13 +1374,7 @@
       const host = showRouteShell('UPDATES & GUIDES', '公告', state.language === 'zh' ? '网站更新与使用说明' : 'Website updates and usage guides');
       return window.KnowledgeAnnouncements.mount(host, { signal: controller.signal, language: state.language });
     }
-    if (route === 'pages' || route === 'page' || route === 'page-designer') {
-      const host = showRouteShell('CUSTOM PAGES', route === 'page-designer' ? '页面设计' : route === 'pages' ? '自定义页面' : '', '');
-      const context = { signal: controller.signal, user: currentUser(), token: currentToken, theme: shell.dataset.theme, slug: details.slug };
-      if (route === 'page-designer') return window.KnowledgeCustomPages.mountEditor(host, context);
-      if (route === 'pages') return window.KnowledgeCustomPages.mountGallery(host, context);
-      return window.KnowledgeCustomPages.mountPublic(host, context);
-    }
+
     if (route === 'reading') {
       const root = showRouteShell('READING', state.language === 'zh' ? '我的阅读' : 'My reading', state.language === 'zh' ? '稍后读、阅读历史与上次进度。' : 'Saved articles, reading history and your place.');
       state.readingCleanup = window.KnowledgeReading.mountLibrary(root, { user: currentUser(), language: state.language, navigate, signal: controller.signal });
@@ -3215,6 +3183,26 @@
     const comments = element('section', 'knowledge-comments');
     main.appendChild(comments);
     routeView.appendChild(layout);
+    if (post.articleLayout?.mode === 'custom') {
+      window.KnowledgeFeatures.ensure('articleLayout').then(async function () {
+        if (controller.signal.aborted) return;
+        const custom = element('section', 'article-layout-live');
+        const tools = element('div', 'article-layout-live-tools');
+        const stage = element('div');
+        const restore = button('默认排版阅读', 'knowledge-route-button');
+        const stop = button('关闭 JS 效果', 'knowledge-route-button');
+        const edit = canEditPost(post) ? button('编辑本篇页面', 'knowledge-route-button') : null;
+        if (edit) { edit.onclick = () => openPostEditor(post, 'detail', edit); tools.append(edit); }
+        tools.append(restore, stop); custom.append(tools, stage);
+        let cleanup = await window.KnowledgeArticleLayout.mount(stage, { design: post.articleLayout, post, signal: controller.signal });
+        if (controller.signal.aborted) { cleanup(); return; }
+        const native = [header, detailCover, body, ...main.querySelectorAll('.knowledge-solution-info'), ...layout.querySelectorAll(':scope > aside, :scope > .knowledge-back-top')].filter(Boolean);
+        native.forEach(n => n.hidden = true);
+        layout.classList.add('is-custom-article'); main.prepend(custom);
+        restore.onclick = () => { cleanup(); custom.remove(); native.forEach(n => n.hidden = false); layout.classList.remove('is-custom-article'); };
+        stop.onclick = async () => { stop.disabled = true; cleanup(); try { cleanup = await window.KnowledgeArticleLayout.mount(stage, {design: post.articleLayout, post, signal: controller.signal, scripts: false}); stop.textContent = 'JS 效果已关闭'; } catch { restore.click(); } };
+      }).catch(function () { /* Invalid or unavailable designs retain native article reading. */ });
+    }
     window.requestAnimationFrame(function () { if (!controller.signal.aborted) restoreArticleHash(); });
     // Personal reading tools are optional and must never delay article content.
     window.KnowledgeFeatures?.ensure('reading').then(function () {

@@ -25,6 +25,7 @@
       summary: string(post.summary, 500), slug: string(post.slug, 200),
       tags: (Array.isArray(post.tags) ? post.tags : []).slice(0, 30).map(tag => string(typeof tag === 'string' ? tag : tag?.name, 80)).filter(Boolean),
       appearance: APPEARANCES.has(post.appearance) ? post.appearance : 'default',
+      articleLayout: post.articleLayout && typeof post.articleLayout === 'object' ? { mode: post.articleLayout.mode === 'custom' ? 'custom' : 'default', html: string(post.articleLayout.html, 262144), css: string(post.articleLayout.css, 262144), js: string(post.articleLayout.js, 65536) } : undefined,
       coverUrl: safeUrl(post.coverUrl), sourceUrl: safeUrl(post.sourceUrl),
       solutionMeta: { platform: string(solution.platform, 80), problemId: string(solution.problemId, 100), problemTitle: string(solution.problemTitle, 200), problemUrl: safeUrl(solution.problemUrl), language: string(solution.language, 40) },
     };
@@ -45,7 +46,7 @@
     return JSON.stringify({ format: FORMAT, version: 1, exportedAt: new Date().toISOString(), post: snapshot(post) }, null, 2);
   }
   function fromBackup(text, maxContent = 2 * 1024 * 1024) {
-    if (typeof text !== 'string' || new TextEncoder().encode(text).length > Math.min(16 * 1024 * 1024, maxContent * 6 + 65536)) throw new Error('备份文件太大。');
+    if (typeof text !== 'string' || new TextEncoder().encode(text).length > Math.min(16 * 1024 * 1024, maxContent * 6 + 384 * 1024)) throw new Error('备份文件太大。');
     let value;
     try { value = JSON.parse(text); } catch { throw new Error('备份文件不是有效的 JSON。'); }
     if (value?.format !== FORMAT || value.version !== 1 || !value.post || typeof value.post !== 'object' || typeof value.post.contentMarkdown !== 'string') throw new Error('请选择本博客导出的文章备份。');

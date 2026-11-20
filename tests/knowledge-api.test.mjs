@@ -1092,3 +1092,64 @@ test("public knowledge API works before knowledge tables are deployed", async ()
     assert.equal(facets.body.data.stats.posts, 1);
     sqlite.close();
 });
+
+const designA = { mode: 'custom', html: '<main class="layout-a"><h1>{{title}}</h1>{{content}}</main>', css: '.layout-a{color:teal}', js: 'document.body.classList.add("ready");' };
+function migrateArticleLayouts(env) { env.sqlite.exec(fs.readFileSync(path.join(rootDir, 'migrations/0015_add_article_layouts.sql'), 'utf8')); }
+
+test('each article owns one design; draft and public snapshots, owner checks and publication stay isolated', async () => {
+    const env=createDatabase(),api=createApi(env);migrateArticleLayouts(env);migrateArticleLayouts(env);
+    const make=async(title,layout)=>await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({title,status:'published',articleLayout:layout})});
+    const a=(await make('Layout A',designA)).body.data.post;
+    const b=(await make('Layout B',{...designA,css:'body{color:purple}'})).body.data.post;
+    const plain=(await make('Plain',{mode:'default',html:'',css:'',js:''})).body.data.post;
+    assert.deepEqual((await api('/api/knowledge/posts/'+a.slug)).body.data.post.articleLayout,designA);
+    assert.equal((await api('/api/knowledge/posts/'+b.slug)).body.data.post.articleLayout.css,'body{color:purple}');
+    assert.equal((await api('/api/knowledge/posts/'+plain.slug)).body.data.post.articleLayout,undefined);
+    const updated=await api('/api/knowledge/admin/posts/'+a.id,{method:'PATCH',token:'user-token',body:{version:a.version,status:'draft',articleLayout:{...designA,css:'.draft-only{}'}}});
+    assert.equal(updated.status,200);assert.equal(updated.body.data.post.articleLayout.css,'.draft-only{}');
+    assert.equal(env.sqlite.prepare('SELECT published_json FROM knowledge_article_layouts WHERE post_id=?').get(a.id).published_json,JSON.stringify(designA));
+    assert.equal((await api('/api/knowledge/posts/'+a.slug)).status,404);
+    const published=await api('/api/knowledge/admin/posts/'+a.id+'/publish',{method:'POST',token:'user-token'});
+    assert.equal(published.status,200);assert.equal((await api('/api/knowledge/posts/'+a.slug)).body.data.post.articleLayout.css,'.draft-only{}');
+    const before=env.sqlite.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id=?').get(b.id).draft_json;
+    const stale=await api('/api/knowledge/admin/posts/'+b.id,{method:'PATCH',token:'user-token',body:{version:999,articleLayout:designA}});
+    assert.equal(stale.status,409);assert.equal(env.sqlite.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id=?').get(b.id).draft_json,before);
+    const adminArticle=(await api('/api/knowledge/admin/posts',{method:'POST',token:'admin-token',body:articleInput({title:'Admin design',articleLayout:designA})})).body.data.post;
+    assert.equal((await api('/api/knowledge/admin/posts/'+adminArticle.id,{method:'PATCH',token:'user-token',body:{version:1,articleLayout:designA}})).status,403);
+    const list=await api('/api/knowledge/posts');assert.ok(list.body.data.items.every(p=>!Object.hasOwn(p,'articleLayout')));
+    assert.equal(env.sqlite.prepare('SELECT count(*) AS n FROM knowledge_article_layouts WHERE post_id=?').get(a.id).n,1);
+    env.sqlite.close();
+});
+
+test('malicious article designs and missing migration fail before article writes; default articles remain available',async()=>{
+    const env=createDatabase(),api=createApi(env);
+    const missing=await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({articleLayout:designA})});
+    assert.equal(missing.status,400);assert.match(missing.body.error.fields.articleLayout,/0015/);
+    assert.equal(env.sqlite.prepare('SELECT count(*) AS n FROM knowledge_posts').get().n,0);
+    const normal=await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({status:'published'})});assert.equal(normal.status,201);
+    migrateArticleLayouts(env);
+    const id=normal.body.data.post.id;
+    const attack=await api('/api/knowledge/admin/posts/'+id,{method:'PATCH',token:'user-token',body:{version:1,title:'Not saved',articleLayout:{...designA,js:'window.parent.location="https://example.com"'}}});
+    assert.equal(attack.status,400);assert.equal(env.sqlite.prepare('SELECT version FROM knowledge_posts WHERE id=?').get(id).version,1);
+    const dead=await api('/api/knowledge/admin/pages',{method:'POST',token:'admin-token',body:{}});assert.equal(dead.status,410);
+    env.sqlite.close();
+});
+
+test('a lost update cannot replace article design even when competing timestamps are identical',async()=>{
+ const env=createDatabase(),api=createApi(env);migrateArticleLayouts(env);
+ const created=await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({articleLayout:designA})});
+ const post=created.body.data.post;
+ const originalBatch=env.DB.batch.bind(env.DB);
+ env.DB.batch=statements=>{
+  const sql=statements[0].sql;
+  if(sql.includes('UPDATE knowledge_posts') && sql.includes('slug = ?')){
+   const timestamp=statements[0].bindings[14];
+   env.sqlite.prepare('UPDATE knowledge_posts SET version=version+1,updated_at=? WHERE id=?').run(timestamp,post.id);
+  }
+  return originalBatch(statements);
+ };
+ const result=await api('/api/knowledge/admin/posts/'+post.id,{method:'PATCH',token:'user-token',body:{version:post.version,articleLayout:{...designA,css:'body{color:red}'}}});
+ assert.equal(result.status,409);
+ assert.equal(JSON.parse(env.sqlite.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id=?').get(post.id).draft_json).css,designA.css);
+ env.sqlite.close();
+});

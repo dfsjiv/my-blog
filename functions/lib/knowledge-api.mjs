@@ -30,7 +30,8 @@ import {
 } from "./knowledge-backgrounds.mjs";
 
 import { POST_APPEARANCES, ensureAppearanceStorage, readAppearances, appearanceCreate, appearanceUpdate } from './post-appearances.mjs';
-import { isCustomPagePath, handleCustomPageRequest } from './custom-pages.mjs';
+import { isCustomPagePath } from './custom-pages.mjs';
+import { readArticleLayout, prepareArticleLayout, layoutCreate, layoutUpdate, layoutPublish } from './article-layouts.mjs';
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -43,7 +44,7 @@ const MAX_TAGS = 15;
 const MAX_TAG_LENGTH = 40;
 const ADMIN_MAX_CONTENT_LENGTH = 2 * 1024 * 1024;
 const USER_MAX_CONTENT_LENGTH = 256 * 1024;
-const MAX_REQUEST_BYTES = ADMIN_MAX_CONTENT_LENGTH + 64 * 1024;
+const MAX_REQUEST_BYTES = ADMIN_MAX_CONTENT_LENGTH + 384 * 1024;
 
 const SORT_ORDERS = {
     latest: "p.is_pinned DESC, p.published_at DESC, p.id DESC",
@@ -61,7 +62,7 @@ export async function handleKnowledgeRequest(context) {
     const { request, env, url, jsonResponse } = context;
 
     try {
-        if (isCustomPagePath(url.pathname)) return await handleCustomPageRequest(context, requireAuthor);
+        if (isCustomPagePath(url.pathname)) return errorResponse(jsonResponse, 410, "ARTICLE_DESIGN_MOVED", "请在文章编辑器中使用文章页面设计；公共页面保持原样");
         if (isKnowledgeBackgroundPath(url.pathname)) {
             return await handleKnowledgeBackgroundRequest(context, requireAdmin);
         }
@@ -332,7 +333,7 @@ async function getPublicPost(slug, env, jsonResponse) {
     }
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(resolved, false) }
+        data: { post: await detailPost(resolved, false, env) }
     });
 }
 
@@ -478,7 +479,7 @@ async function createEditableLegacyPost(legacyId, env, user, jsonResponse) {
         if (existingPost) {
             return jsonResponse({
                 success: true,
-                data: { post: toDetailPost(existingPost, true) }
+                data: { post: await detailPost(existingPost, true, env) }
             });
         }
     }
@@ -547,7 +548,7 @@ async function createEditableLegacyPost(legacyId, env, user, jsonResponse) {
     }
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(created, true) }
+        data: { post: await detailPost(created, true, env) }
     }, 201);
 }
 
@@ -560,7 +561,7 @@ async function getAdminPost(id, env, user, jsonResponse) {
     if (ownershipError) return ownershipError;
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(post, true) }
+        data: { post: await detailPost(post, true, env) }
     });
 }
 
@@ -571,6 +572,9 @@ async function createPost(request, env, user, jsonResponse) {
     const validation = validatePost(bodyResult.body, null, user);
     if (validation.error) return validationResponse(jsonResponse, validation.error);
     const post = validation.value;
+    let layoutJson;
+    try { layoutJson = await prepareArticleLayout(env, bodyResult.body, user); }
+    catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
 
     const requestedSlug = typeof bodyResult.body.slug === "string"
         && bodyResult.body.slug.trim() !== "";
@@ -627,6 +631,7 @@ async function createPost(request, env, user, jsonResponse) {
 
     await ensureAppearanceStorage(env);
     statements.push(appearanceCreate(env, post.slug, post.appearance));
+    if (layoutJson !== undefined) statements.push(layoutCreate(env, post.slug, layoutJson, post.status === 'published', now));
     let batchResults;
     try {
         batchResults = await env.DB.batch(statements);
@@ -644,7 +649,7 @@ async function createPost(request, env, user, jsonResponse) {
         : await getPostBySlug(env, post.slug, false);
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(created, true) }
+        data: { post: await detailPost(created, true, env) }
     }, 201);
 }
 
@@ -671,6 +676,9 @@ async function updatePost(request, id, env, user, jsonResponse) {
     const validation = validatePost(bodyResult.body, existing, user);
     if (validation.error) return validationResponse(jsonResponse, validation.error);
     const post = validation.value;
+    let layoutJson;
+    try { layoutJson = await prepareArticleLayout(env, bodyResult.body, user); }
+    catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
 
     if (Object.prototype.hasOwnProperty.call(bodyResult.body, "slug")) {
         const normalized = normalizeSlug(post.slug);
@@ -779,6 +787,17 @@ async function updatePost(request, id, env, user, jsonResponse) {
 
     await ensureAppearanceStorage(env);
     statements.push(appearanceUpdate(env, id, nextVersion, now, post.appearance));
+    // Immediately follow the optimistic UPDATE so changes() rejects a lost race,
+    // including requests whose timestamps happen to be in the same millisecond.
+    if (layoutJson !== undefined) statements.splice(1, 0, layoutUpdate(env, id, nextVersion, now, layoutJson, post.status === 'published'));
+    else if (post.status === 'published' && await tableExists(env, 'knowledge_article_layouts')) {
+        const row = await env.DB.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id = ?').bind(id).first();
+        if (row) {
+            try { await prepareArticleLayout(env, { articleLayout: JSON.parse(row.draft_json) }, user); }
+            catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
+        }
+        statements.splice(1, 0, layoutPublish(env, id, nextVersion, now));
+    }
     const results = await env.DB.batch(statements);
     if (!Number(results[0]?.meta?.changes)) {
         return errorResponse(jsonResponse, 409, "VERSION_CONFLICT", "文章已被其他页面修改");
@@ -786,7 +805,7 @@ async function updatePost(request, id, env, user, jsonResponse) {
     const updated = await getPostById(env, id);
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(updated, true) }
+        data: { post: await detailPost(updated, true, env) }
     });
 }
 
@@ -835,17 +854,28 @@ async function changePostState(id, action, env, user, jsonResponse) {
         return validationResponse(jsonResponse, { action: "未知状态操作" });
     }
 
-    await env.DB.prepare(`
+    const statements = [env.DB.prepare(`
         UPDATE knowledge_posts
         SET status = ?, published_at = ?, deleted_at = ?,
             updated_at = ?, version = version + 1
-        WHERE id = ?
-    `).bind(status, publishedAt, deletedAt, now, id).run();
+        WHERE id = ? AND version = ?
+    `).bind(status, publishedAt, deletedAt, now, id, post.version)];
+    if (action === 'publish' && await tableExists(env, 'knowledge_article_layouts')) {
+        // Re-audit a saved draft before promoting it to a public design.
+        const row = await env.DB.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id = ?').bind(id).first();
+        if (row) {
+            try { await prepareArticleLayout(env, { articleLayout: JSON.parse(row.draft_json) }, user); }
+            catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
+        }
+        statements.push(layoutPublish(env, id, post.version + 1, now));
+    }
+    const results = await env.DB.batch(statements);
+    if (!Number(results[0]?.meta?.changes)) return errorResponse(jsonResponse, 409, 'VERSION_CONFLICT', '文章已被其他页面修改');
 
     const updated = await getPostById(env, id);
     return jsonResponse({
         success: true,
-        data: { post: toDetailPost(updated, true) }
+        data: { post: await detailPost(updated, true, env) }
     });
 }
 
@@ -1492,6 +1522,10 @@ function toListPost(post, admin = false) {
         result.authorUserId = post.authorUserId;
     }
     return result;
+}
+
+async function detailPost(post, admin, env) {
+    return { ...toDetailPost(post, admin), articleLayout: await readArticleLayout(env, post, admin) };
 }
 
 function toDetailPost(post, admin) {
