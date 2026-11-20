@@ -8,6 +8,23 @@ const check = process.argv.includes('--check');
 const normalize = text => text.replace(/\r\n/g, '\n');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const stale = [];
+// Cloudflare's zero-build deployment does not install npm dependencies.
+// Commit the official parser with Functions and keep it tied to package-lock.
+for (const [source, target] of [
+  ['node_modules/acorn/dist/acorn.mjs', 'functions/lib/vendor/acorn.mjs'],
+  ['node_modules/acorn/LICENSE', 'functions/lib/vendor/acorn.LICENSE'],
+  ['node_modules/acorn/LICENSE', 'assets/vendor/knowledge/acorn.LICENSE']
+]) {
+  const content = await readFile(path.join(root, source), 'utf8');
+  if (check) {
+    const committed = await readFile(path.join(root, target), 'utf8').catch(() => '');
+    if (normalize(content) !== normalize(committed)) stale.push(target);
+  } else {
+    await mkdir(path.dirname(path.join(root, target)), { recursive: true });
+    await writeFile(path.join(root, target), content);
+  }
+}
+
 const indexPath = path.join(root, 'index.html');
 const original = await readFile(indexPath, 'utf8');
 let updated = original;

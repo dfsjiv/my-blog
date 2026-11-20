@@ -1,4 +1,4 @@
-import { parse } from 'acorn';
+import { parse } from './vendor/acorn.mjs';
 
 export const DEFAULT_ARTICLE_LAYOUT = Object.freeze({ mode: 'default', html: '', css: '', js: '' });
 const globals = new Set(['document', 'window', 'Math', 'Number', 'String', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'undefined', 'NaN', 'Infinity', 'performance', 'console', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout', 'getComputedStyle']);

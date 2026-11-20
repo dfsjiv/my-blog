@@ -43,7 +43,7 @@ button.addEventListener('click', () => {
 - 未执行迁移时普通文章读写保持可用；保存自定义设计会提示需要迁移。
 - 保存为草稿遵循原文章状态逻辑，已发布文章改存草稿会撤下文章；再次发布时提升当前设计快照。不能将它当成独立的公开文章版本管理。
 - 原错误范围的 `custom_pages` 数据保留，不删除、不迁移到任意文章。其公共页面入口、首页替换逻辑和 API 已撤回（API 返回 410）。
-- `npm run build:knowledge-site` 生成主包及按需加载的 `article-layout.bundle.js`；`npm run check:knowledge-build` 检查两者一致性。公开 KaTeX 字体允许跨源读取，以便不透明来源 iframe 排版公式；不涉及 API 或账号数据。
+- `npm run build:knowledge-site` 同步固定版本 Acorn 解析器到 Functions（适配线上无构建命令、不安装 npm 依赖的部署环境），并生成主包及按需加载的 `article-layout.bundle.js`；`npm run check:knowledge-build` 检查两者一致性。公开 KaTeX 字体允许跨源读取，以便不透明来源 iframe 排版公式；不涉及 API 或账号数据。
 
 ## English
 
