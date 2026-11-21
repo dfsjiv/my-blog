@@ -3150,25 +3150,23 @@ body.auth-elegant .knowledge-site {
 }
 
 .knowledge-social-icon-link {
-  width: 58px;
-  height: 58px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   color: var(--knowledge-primary);
-  background: color-mix(in srgb, var(--knowledge-surface-solid) 66%, transparent);
-  border: 1px solid var(--knowledge-border);
-  border-radius: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   text-decoration: none;
-  transition: transform 160ms ease, color 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, color 160ms ease;
 }
 
 .knowledge-social-icon-link:hover,
 .knowledge-social-icon-link:focus-visible {
-  color: #ffffff;
-  background: var(--social-color, var(--knowledge-primary));
-  border-color: var(--social-color, var(--knowledge-primary));
+  color: var(--social-color, var(--knowledge-primary));
   outline: none;
-  transform: translateY(-3px);
+  transform: translateY(-2px) scale(1.08);
 }
 
 .knowledge-social-icon {
