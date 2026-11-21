@@ -19,7 +19,7 @@
   padding: 0 22px;
   background: color-mix(in srgb, var(--knowledge-surface-solid) 91%, transparent);
   border: 1px solid var(--knowledge-border);
-  border-radius: 18px 5px 18px 5px;
+  border-radius: 0;
   box-shadow: 0 12px 36px #00000018;
   backdrop-filter: blur(18px);
 }
@@ -142,7 +142,7 @@
   width: 300px;
   padding: 14px;
   gap: 5px;
-  border-radius: 4px 4px 16px 4px;
+  border-radius: 0;
   border-top: 2px solid var(--knowledge-primary);
   transform-origin: top left;
 }
