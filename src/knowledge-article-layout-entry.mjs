@@ -128,7 +128,7 @@ function openEditor({design, getPost, role, onApply, signal, initialMode}) {
   options.append(mode,width,baseStyles,expand);
   const tabs=el('div','article-layout-tools'), codes=el('div','article-layout-codes'), inputs={};
   for(const key of ['html','css','js']) {const button=el('button','knowledge-route-button',key.toUpperCase());button.type='button';const input=el('textarea');input.spellcheck=false;input.setAttribute('aria-label','文章设计 '+key.toUpperCase());input.value=design?.[key] ?? (mode.value==='free'?freeTemplate:template)[key];input.hidden=key!=='html';inputs[key]=input;button.onclick=()=>{Object.entries(inputs).forEach(([name,n])=>n.hidden=name!==key);tabs.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n===button)));};button.setAttribute('aria-pressed',String(key==='html'));input.oninput=()=>{revision++;status.textContent='有修改，点击“检测并预览”查看动态效果。'};tabs.append(button);codes.append(input);}
-  const hint=el('p','knowledge-note','自定义布局需保留 {{content}}；完全自由 HTML 模式无需占位符，HTML 就是本篇正文。可自由使用 Grid / Flex、静态 SVG、CSS 动画、DOM 创建及受运行限额保护的 JS 循环。全宽画布可铺满视口；空白样式不套用博客正文排版。网络、账号存储和外层页面仍隔离。');
+  const hint=el('p','knowledge-note','自定义布局需保留 {{content}}；完全自由 HTML 模式无需占位符，HTML 就是本篇正文。HTML 引用本地 style.css / script.js 时，可直接将代码填入 CSS / JS 编辑区，无需重复上传。可自由使用 Grid / Flex、静态 SVG、CSS 动画、DOM 创建及受运行限额保护的 JS 循环。全宽画布可铺满视口；空白样式不套用博客正文排版。网络、账号存储和外层页面仍隔离。');
   const tools=el('div','article-layout-tools'), status=el('p','article-layout-status');status.setAttribute('role','status');
   const stage=el('div','article-layout-stage');
   const preview=el('button','knowledge-route-button','检测并预览'), apply=el('button','knowledge-route-button is-primary','应用到当前文章');preview.type=apply.type='button';

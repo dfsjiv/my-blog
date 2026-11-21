@@ -102,3 +102,18 @@ test('HTML dependencies resolve companion files and replace only recognized libr
  assert.throws(()=>splitArticleDocument('<script src="../script.js"></script>'),/未支持/);
  assert.equal(inspectArticleScript(splitArticleDocument('<script type="module">const x=1;</script>').js).ok,true);
 });
+
+test('separate CSS/JS editor fields satisfy local HTML references once, without relaxing checks',()=>{
+ const html='<!DOCTYPE html><html><head><link rel="stylesheet" href="style.css"></head><body><h1>文章</h1><script src="script.js"></script></body></html>';
+ const css='body { color: teal; }',js='document.body.classList.add("ready");';
+ const layout=normalizeArticleLayout({mode:'free',html,css,js});
+ assert.equal(layout.css,css);assert.equal(layout.js,js);
+ assert.doesNotMatch(layout.html,/<script|<link/i);
+ assert.deepEqual(normalizeArticleLayout(layout),layout);
+ for(const missing of [{css:'',js},{css,js:' \n'}])assert.throws(()=>normalizeArticleLayout({mode:'free',html,...missing}),/缺少配套文件/);
+ assert.throws(()=>normalizeArticleLayout({mode:'free',html,css,js:'fetch("https://example.com")'}),/fetch/);
+ assert.throws(()=>normalizeArticleLayout({mode:'free',html:html.replace('script.js','https://example.com/script.js'),css,js}),/未支持的外部资源/);
+ assert.throws(()=>normalizeArticleLayout({mode:'free',html:html.replace('script.js','../script.js'),css,js}),/未支持的外部资源/);
+ const withInline=normalizeArticleLayout({mode:'free',html:html.replace('</body>','<script>document.body.classList.add("inline");</script></body>'),css,js});
+ assert.equal(withInline.js,js+'\ndocument.body.classList.add("inline");');
+});

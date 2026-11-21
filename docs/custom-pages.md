@@ -36,6 +36,7 @@
 ### 原代码与常用依赖
 
 - `index.html` 引用 `style.css` / `script.js` 时，在文件选择器里同时选中这三份文件。不会要求作者重写主题切换、目录、复制按钮或小实验代码。
+- 也可以把完整 HTML、CSS、JS 分别粘贴到三个编辑区；检测和保存会把已有 CSS / JS 视为本地引用的内容，不要求重复上传文件，也不会重复拼接代码。空编辑区仍会提示缺少对应文件，远程资源仍按原规则检查。
 - 明确识别的 cdnjs KaTeX、auto-render 和 highlight.js 引用改由本站固定版本提供；不会联网执行作者指定的任意第三方库。支持 `renderMathInElement`、`hljs.highlightElement`；高亮语言包含 C++、JavaScript、CSS 与 HTML/XML。
 - Google Fonts 引用不会联网加载，使用作者 CSS 已声明的本机后备字体；导入提示会说明这一点。缺少本地配套文件或不支持的远程资源不会静默忽略。
 - 原代码的 `localStorage` 是本篇文章独立、限额的虚拟存储；`navigator.clipboard.writeText` 是需要点击授权的写入接口。滚动进度、固定/粘性元素、页内锚点和 `IntersectionObserver` 使用隔离环境提供的视口信息。数值、范围、勾选等实验输入可用，登录表单仍不允许。
@@ -81,7 +82,7 @@ button.addEventListener('click', () => {
 
 Each article owns one independent detail-page design with default, custom-layout and fully free HTML modes. The free mode treats HTML as the article body without a required content slot; complete documents or HTML files can be imported. Inline styles/scripts are extracted and checked, and cleaned html/body attributes are retained. Original Markdown is preserved through mode switches; existing draft/published JSON fields are reused without a database migration. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
 
-Import one HTML file together with its referenced CSS and JS files; their source text is preserved. Known cdnjs KaTeX/highlight.js dependencies are supplied by pinned local libraries. Google Fonts links use the author's CSS fallback fonts, and missing companions or unsupported remote resources produce explicit errors without replacing current work.
+Import one HTML file together with its referenced CSS and JS files, or paste all three into their editor fields; source text is preserved. Nonempty CSS/JS fields satisfy local references during preview and saving without duplication. Known cdnjs KaTeX/highlight.js dependencies are supplied by pinned local libraries. Google Fonts links use the author's CSS fallback fonts, and missing companions or unsupported remote resources produce explicit errors without replacing current work.
 
 Source is checked on both client and server and rendered through DOMPurify, an opaque-origin script sandbox, and restrictive CSP. Default parameters, destructuring, spread and async functions are supported. The runtime provides per-article virtual localStorage (32 entries, 4 KiB), gesture-gated clipboard writing, viewport facts and an isolated IntersectionObserver. Dynamic innerHTML is sanitized. Messages require the matching frame and random channel; no blog tokens, parent DOM, network or clipboard reading are exposed. User functions/loops have injected budgets (100,000 checks per 200 ms, 1,000,000 per mount), plus callback limits. Static analysis and callback budgets are not a guarantee against all resource-exhaustion cases. Arbitrary third-party scripts, module imports and dynamic execution remain unsupported. Preview and publication use the same restrictions.
 

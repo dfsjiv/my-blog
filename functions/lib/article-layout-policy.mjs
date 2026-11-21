@@ -115,7 +115,7 @@ function builtInResource(url) {
   return /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/KaTeX\/[\d.]+\/(?:katex\.min\.(?:js|css)|contrib\/auto-render\.min\.js)$/i.test(url)
     || /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/highlight\.js\/[\d.]+\/highlight\.min\.js$/i.test(url);
 }
-export function splitArticleDocument(source, companions = {}) {
+export function splitArticleDocument(source, companions = {}, providedFields = {}) {
   const css = [], js = [], missing = [], blocked = [], notes = [];
   function resource(url, kind) {
     if (builtInResource(url)) { notes.push('KaTeX / 代码高亮使用本站内置版本'); return; }
@@ -123,8 +123,9 @@ export function splitArticleDocument(source, companions = {}) {
     const key = url.split(/[?#]/)[0].replace(/^\.\//,'');
     if (!key || key.startsWith('/') || key.split('/').includes('..')) { blocked.push(url); return; }
     const text = Object.hasOwn(companions,key) ? companions[key] : undefined;
-    if (typeof text !== 'string') missing.push(key);
-    else (kind === 'css' ? css : js).push(text);
+    if (typeof text === 'string') (kind === 'css' ? css : js).push(text);
+    else if (providedFields[kind] === true) notes.push('本地 '+kind.toUpperCase()+' 引用使用当前 '+kind.toUpperCase()+' 编辑区内容');
+    else missing.push(key);
   }
   const html = source.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (_, attrs, code) => {
     const src = resourceAttribute(attrs,'src');
@@ -138,7 +139,7 @@ export function splitArticleDocument(source, companions = {}) {
       return '';
     }).replace(/<(?:meta|base)\b[^>]*>/gi, '');
   if (missing.length || blocked.length) throw new Error([
-    missing.length ? '缺少配套文件：'+[...new Set(missing)].join('、')+'。请同时选择 HTML 与这些 CSS / JS 文件，或将内容内联后导入。' : '',
+    missing.length ? '缺少配套文件：'+[...new Set(missing)].join('、')+'。请同时选择 HTML 与这些文件导入，或把对应代码填入 CSS / JS 编辑区。' : '',
     blocked.length ? '未支持的外部资源：'+[...new Set(blocked)].join('、')+'。请使用已审查的内联代码。' : ''
   ].filter(Boolean).join('\n'));
   return { html, css: css.join('\n'), js: js.join('\n'), notes: [...new Set(notes)] };
@@ -170,7 +171,9 @@ export function normalizeArticleLayout(input, role = 'user', check = true) {
     layout[key] = input[key] || '';
   }
   if (layout.mode === 'free') {
-    const document = splitArticleDocument(layout.html);
+    // Separate editor fields already contain these local dependencies. Strip the
+    // relative references without fetching or appending those fields a second time.
+    const document = splitArticleDocument(layout.html, {}, {css:!!layout.css.trim(),js:!!layout.js.trim()});
     layout.html = document.html;
     layout.css = [layout.css, document.css].filter(Boolean).join('\n');
     layout.js = [layout.js, document.js].filter(Boolean).join('\n');
