@@ -1173,6 +1173,8 @@
   }
 
   function routeNeedsTransition(route, details, settings) {
+    // Do not clone a live sandbox into transition snapshots on the way out.
+    if (shell.classList.contains('has-standalone-article')) return false;
     if (settings.refresh || settings.skipTransition) return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
     if (route !== state.route) return true;
@@ -3195,19 +3197,33 @@
         if (controller.signal.aborted) return;
         const custom = element('section', 'article-layout-live');
         const tools = element('div', 'article-layout-live-tools');
+        const standalone = post.articleLayout.mode === 'free';
         const stage = element('div');
         const restore = button('默认排版阅读', 'knowledge-route-button');
         const stop = button('关闭 JS 效果', 'knowledge-route-button');
         const edit = canEditPost(post) ? button('编辑本篇页面', 'knowledge-route-button') : null;
         if (edit) { edit.onclick = () => openPostEditor(post, 'detail', edit); tools.append(edit); }
-        tools.append(restore, stop); custom.append(tools, stage);
-        let cleanup = await window.KnowledgeArticleLayout.mount(stage, { design: post.articleLayout, post, signal: controller.signal });
+        tools.append(restore, stop);
+        if (standalone) {
+          const back = button('返回博客', 'knowledge-route-button');
+          back.onclick = () => navigate('home');
+          tools.prepend(back);
+          const menu = element('details', 'article-layout-floating-tools');
+          const toggle = element('summary', '', '···');
+          toggle.setAttribute('aria-label', state.language === 'zh' ? '文章工具' : 'Article tools');
+          toggle.title = toggle.getAttribute('aria-label');
+          menu.append(toggle, tools); custom.append(menu, stage);
+          menu.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.open = false; toggle.focus(); } });
+        } else custom.append(tools, stage);
+        let cleanup = await window.KnowledgeArticleLayout.mount(stage, { design: post.articleLayout, post, signal: controller.signal, standalone });
         if (controller.signal.aborted) { cleanup(); return; }
         const native = [header, detailCover, body, ...main.querySelectorAll('.knowledge-solution-info'), ...layout.querySelectorAll(':scope > aside, :scope > .knowledge-back-top')].filter(Boolean);
         native.forEach(n => n.hidden = true);
         layout.classList.add('is-custom-article'); main.prepend(custom);
-        restore.onclick = () => { cleanup(); custom.remove(); native.forEach(n => n.hidden = false); layout.classList.remove('is-custom-article'); };
-        stop.onclick = async () => { stop.disabled = true; cleanup(); try { cleanup = await window.KnowledgeArticleLayout.mount(stage, {design: post.articleLayout, post, signal: controller.signal, scripts: false}); stop.textContent = 'JS 效果已关闭'; } catch { restore.click(); } };
+        const leaveStandalone = () => { shell.classList.remove('has-standalone-article'); layout.classList.remove('is-standalone-article'); };
+        if (standalone) { shell.classList.add('has-standalone-article'); layout.classList.add('is-standalone-article'); controller.signal.addEventListener('abort', leaveStandalone, {once:true}); }
+        restore.onclick = () => { cleanup(); leaveStandalone(); controller.signal.removeEventListener('abort', leaveStandalone); custom.remove(); native.forEach(n => n.hidden = false); layout.classList.remove('is-custom-article'); shell.scrollTop = 0; };
+        stop.onclick = async () => { stop.disabled = true; cleanup(); try { cleanup = await window.KnowledgeArticleLayout.mount(stage, {design: post.articleLayout, post, signal: controller.signal, scripts: false, standalone}); if (controller.signal.aborted) return; stop.textContent = 'JS 效果已关闭'; } catch { if (!controller.signal.aborted) restore.click(); } };
       }).catch(function () { /* Invalid or unavailable designs retain native article reading. */ });
     }
     window.requestAnimationFrame(function () { if (!controller.signal.aborted) restoreArticleHash(); });

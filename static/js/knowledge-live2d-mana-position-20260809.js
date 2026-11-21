@@ -34,6 +34,7 @@
   function isKnowledgeSiteVisible() {
     return shell.getAttribute('aria-hidden') !== 'true'
       && !shell.classList.contains('knowledge-writing-mode')
+      && !shell.classList.contains('has-standalone-article')
       && shell.dataset.route !== 'about';
   }
 

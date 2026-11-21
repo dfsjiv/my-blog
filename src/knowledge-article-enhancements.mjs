@@ -30,7 +30,7 @@ export async function enhanceArticleMarkup(wrap) {
 }
 
 // Serialized as trusted frame code. No outer variables or user code are captured.
-export function installFrameEnhancements(channel, initialStorage) {
+export function installFrameEnhancements(channel, initialStorage, standalone = false) {
   let copyId=0,scrollTop=0,viewportHeight=0,hasViewport=false;const copies=new Map(),observers=new Set(),store=new Map(initialStorage || []);
   const rawNow=performance.now.bind(performance);let persistPending=false;
   function persistStorage(){if(persistPending)return;persistPending=true;setTimeout(()=>{persistPending=false;parent.postMessage({channel,type:'storage',entries:[...store]},'*');},100);}
@@ -38,8 +38,8 @@ export function installFrameEnhancements(channel, initialStorage) {
   if(safeHTML){const descriptor=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');Object.defineProperty(Element.prototype,'innerHTML',{get:descriptor.get,set(value){const html=safeHTML(String(value),{USE_PROFILES:{html:true},FORBID_TAGS:['script','iframe','object','embed','form','meta','link','base','style'],FORBID_ATTR:['srcdoc','autofocus']});descriptor.set.call(this,html);this.querySelectorAll('a[href]').forEach(n=>{if(!n.getAttribute('href').startsWith('#'))n.removeAttribute('href');});}});}
   Object.defineProperty(window,'localStorage',{value:Object.freeze({getItem:key=>store.get(String(key))??null,setItem(key,value){key=String(key);value=String(value);if(key.length>64||value.length>1024)throw Error('文章独立存储超限');const next=new Map(store);next.set(key,value);if(next.size>32||new TextEncoder().encode(JSON.stringify([...next])).length>4096)throw Error('文章独立存储超过 32 项或 4 KiB');store.set(key,value);persistStorage();},removeItem(key){store.delete(String(key));persistStorage();},clear(){store.clear();persistStorage();},key:index=>[...store.keys()][index]??null,get length(){return store.size;}}),writable:false});
   Object.defineProperty(navigator,'clipboard',{value:Object.freeze({writeText(text){text=String(text);if(text.length>262144)return Promise.reject(Error('复制文本超限'));if(copies.size>=8||navigator.userActivation&&!navigator.userActivation.isActive)return Promise.reject(Error('请通过点击操作复制'));const id=++copyId;return new Promise((resolve,reject)=>{copies.set(id,{resolve,reject});parent.postMessage({channel,type:'copy',copyId:id,text},'*');setTimeout(()=>{if(copies.has(id)){copies.delete(id);reject(Error('复制超时'));}},5000);});}}),writable:false});
-  Object.defineProperty(document.documentElement,'scrollTop',{get:()=>scrollTop});
-  Object.defineProperty(document.documentElement,'clientHeight',{get:()=>viewportHeight || window.innerHeight});
+  if(!standalone){Object.defineProperty(document.documentElement,'scrollTop',{get:()=>scrollTop});
+  Object.defineProperty(document.documentElement,'clientHeight',{get:()=>viewportHeight || window.innerHeight});}
   const fixed=new Map(),sticky=new Map();let scanned=false;
   function scanPositioned(){if(scanned)return;scanned=true;document.querySelectorAll('body *').forEach(n=>{const style=getComputedStyle(n);if(style.position==='fixed'&&style.top!=='auto')fixed.set(n,n.style.translate);if(style.position==='sticky')sticky.set(n,n.getBoundingClientRect().top);});}
   function notifyObservers(){if(!hasViewport)return;observers.forEach(observer=>observer.update());}
@@ -51,12 +51,12 @@ export function installFrameEnhancements(channel, initialStorage) {
     takeRecords(){return [];}
     update(){const records=[];const toPixels=value=>parseFloat(value || 0)*(String(value).includes('%')?viewportHeight/100:1),top=scrollTop-toPixels(this.margin[0]),bottom=scrollTop+viewportHeight+toPixels(this.margin[2] || this.margin[0]);this.targets.forEach((previous,target)=>{const box=target.getBoundingClientRect(),visible=box.bottom>top&&box.top<bottom;if(previous!==visible){this.targets.set(target,visible);records.push({target,isIntersecting:visible,intersectionRatio:visible?Math.max(0,Math.min(box.bottom,bottom)-Math.max(box.top,top))/Math.max(1,box.height):0,boundingClientRect:box,time:rawNow()});}});if(records.length)this.callback(records,this);}
   }
-  Object.defineProperty(window,'IntersectionObserver',{value:ArticleIntersectionObserver,writable:false});
+  if(!standalone)Object.defineProperty(window,'IntersectionObserver',{value:ArticleIntersectionObserver,writable:false});
   if(window.renderMathInElement){const render=window.renderMathInElement;window.renderMathInElement=(root,options)=>render(root,{...options,trust:false,throwOnError:false,ignoredClasses:['katex'],maxExpand:1000});}
   window.addEventListener('message',event=>{
     if(event.source!==parent||event.data?.channel!==channel)return;
     const data=event.data;
-    if(data.type==='viewport'&&Number.isFinite(data.scrollTop)&&Number.isFinite(data.viewportHeight)){
+    if(!standalone&&data.type==='viewport'&&Number.isFinite(data.scrollTop)&&Number.isFinite(data.viewportHeight)){
       const top=Math.max(0,data.scrollTop),height=Math.max(1,data.viewportHeight),max=Math.max(1,document.body.scrollHeight-height);
       scrollTop=Math.min(max,top);viewportHeight=height;hasViewport=true;
       scanPositioned();fixed.forEach((_,n)=>n.style.translate='0 '+scrollTop+'px');sticky.forEach((base,n)=>{const maxOffset=Math.max(0,n.parentElement.getBoundingClientRect().height-n.getBoundingClientRect().height);n.style.translate='0 '+Math.min(maxOffset,Math.max(0,scrollTop+32-base))+'px';});
@@ -80,8 +80,13 @@ export function installFrameEnhancements(channel, initialStorage) {
     const copy=event.target.closest('[data-article-copy]');
     if(copy){const code=copy.closest('pre')?.querySelector('code');if(code&&code.textContent.length<=262144){const id=++copyId;copies.set(id,copy);parent.postMessage({channel,type:'copy',copyId:id,text:code.textContent},'*');}return;}
     const link=event.target.closest('a[href^="#"]');if(!link)return;
+    event.preventDefault();
     let id;try{id=decodeURIComponent(link.getAttribute('href').slice(1));}catch{return;}
+    if(!id){if(standalone)window.scrollTo({top:0,behavior:'smooth'});else parent.postMessage({channel,type:'anchor',offset:0},'*');return;}
     const target=document.getElementById(id);if(!target)return;
-    event.preventDefault();parent.postMessage({channel,type:'anchor',offset:target.getBoundingClientRect().top+window.scrollY},'*');
+    // srcdoc resolves # links against the embedding page's URL. Scroll within
+    // this document rather than letting the link load the blog inside the frame.
+    if(standalone){target.scrollIntoView({behavior:'smooth'});return;}
+    parent.postMessage({channel,type:'anchor',offset:target.getBoundingClientRect().top+window.scrollY},'*');
   });
 }

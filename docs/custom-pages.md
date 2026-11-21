@@ -12,6 +12,8 @@
 6. **应用到当前文章** 只更新编辑器状态；随后用原有 **保存草稿 / 发布** 按钮提交。原有 **预览** 也显示本篇设计。文章 JSON 备份携带设计；普通 `.md` 导出只包含文章与常用元数据。
 7. 详情页可 **关闭 JS 效果** 或 **默认排版阅读**，只影响本次阅读。作者可用外层 **编辑本篇页面** 返回编辑器。
 
+完全自由 HTML 文章打开后使用整屏独立页面，不再拼接博客顶栏、页脚、推荐或评论区。右下角 **··· / 文章工具** 提供返回博客、默认阅读、关闭 JS，以及作者的编辑入口；默认阅读可查看原有文章信息与评论。返回、切换文章或进入编辑器时会恢复博客界面。自定义布局模式仍保留博客公共区域。
+
 ### 自由画布
 
 - **文章页面宽度**：可跟随网站内容区，或选择全宽画布铺满视口。全宽只影响当前文章的设计区域，评论等公共功能继续保留。
@@ -31,6 +33,8 @@
 - **自定义布局**：用 HTML / CSS / JS 设计布局，用 `{{content}}` 插入原正文。
 - **完全自由 HTML**：HTML 本身就是文章正文，不要求任何占位符，也不要求另写 Markdown。可以写 HTML 片段、粘贴完整文档或导入 `.html` 文件。
 
+完全自由模式的正式展示占满视口，作者用自己的 CSS 决定内容宽度和留白。正文使用原生滚动，固定/粘性元素、阅读进度和 `IntersectionObserver` 按独立网页运行；页内目录由隔离运行环境留在当前文章内滚动。编辑器中的此模式预览也使用独立滚动区域。文章仍位于不透明来源 iframe 内，不获得博客 DOM、账号或网络权限。
+
 完整文档里的内联 `<style>`、`<script>` 或随选的配套文件会被提取到 CSS / JS 区域，随后进行相同的检查。CSS / JS 源文本保留，运行副本会自动加入预算检查。文档的 html/body class、style、lang、dir、data-theme 在清理后保留。导入、检测和预览不会自动发布，仍须应用后保存或发布文章。无导入导出的独立 module 脚本可按普通隔离脚本运行，模块导入、任意远程脚本、网络请求与危险事件属性仍不支持。
 
 ### 原代码与常用依赖
@@ -39,7 +43,7 @@
 - 也可以把完整 HTML、CSS、JS 分别粘贴到三个编辑区；检测和保存会把已有 CSS / JS 视为本地引用的内容，不要求重复上传文件，也不会重复拼接代码。空编辑区仍会提示缺少对应文件，远程资源仍按原规则检查。
 - 明确识别的 cdnjs KaTeX、auto-render 和 highlight.js 引用改由本站固定版本提供；不会联网执行作者指定的任意第三方库。支持 `renderMathInElement`、`hljs.highlightElement`；高亮语言包含 C++、JavaScript、CSS 与 HTML/XML。
 - Google Fonts 引用不会联网加载，使用作者 CSS 已声明的本机后备字体；导入提示会说明这一点。缺少本地配套文件或不支持的远程资源不会静默忽略。
-- 原代码的 `localStorage` 是本篇文章独立、限额的虚拟存储；`navigator.clipboard.writeText` 是需要点击授权的写入接口。滚动进度、固定/粘性元素、页内锚点和 `IntersectionObserver` 使用隔离环境提供的视口信息。数值、范围、勾选等实验输入可用，登录表单仍不允许。
+- 原代码的 `localStorage` 是本篇文章独立、限额的虚拟存储；`navigator.clipboard.writeText` 是需要点击授权的写入接口。嵌入式布局的滚动进度、固定/粘性元素和 `IntersectionObserver` 使用隔离环境提供的视口信息；整屏文章使用原生滚动和观察器。数值、范围、勾选等实验输入可用，登录表单仍不允许。
 
 切回默认写作时保留 HTML / CSS / JS，原 Markdown 也始终保留。JSON 文章备份携带两种源内容；HTML 文章的 Markdown 导出使用其正文文本。未填写摘要时，从 HTML 文本生成摘要；字数也来自 HTML 内容。详情页的默认阅读回退显示 HTML 的纯文本正文，不执行其中的代码。
 
@@ -81,6 +85,8 @@ button.addEventListener('click', () => {
 ## English
 
 Each article owns one independent detail-page design with default, custom-layout and fully free HTML modes. The free mode treats HTML as the article body without a required content slot; complete documents or HTML files can be imported. Inline styles/scripts are extracted and checked, and cleaned html/body attributes are retained. Original Markdown is preserved through mode switches; existing draft/published JSON fields are reused without a database migration. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
+
+Fully free HTML opens as an independent viewport with native scrolling, fixed/sticky elements and IntersectionObserver. The blog header, footer and appended sections are hidden. A collapsed bottom-right **Article tools** menu provides Back to blog, default reading/comments, Disable JS and the author's edit action. Leaving the page restores the public shell. Custom-layout mode retains the public shell; both modes keep the same opaque-origin security boundary.
 
 Import one HTML file together with its referenced CSS and JS files, or paste all three into their editor fields; source text is preserved. Nonempty CSS/JS fields satisfy local references during preview and saving without duplication. Known cdnjs KaTeX/highlight.js dependencies are supplied by pinned local libraries. Google Fonts links use the author's CSS fallback fonts, and missing companions or unsupported remote resources produce explicit errors without replacing current work.
 

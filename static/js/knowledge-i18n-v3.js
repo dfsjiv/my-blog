@@ -5,6 +5,7 @@
     '首页': 'Home',
     '页面设计': 'Page studio',
     '编辑本篇页面': 'Edit this article page',
+    '返回博客': 'Back to blog',
     '默认排版阅读': 'Read with default layout',
     '关闭 JS 效果': 'Disable JS effects',
     'JS 效果已关闭': 'JS effects disabled',

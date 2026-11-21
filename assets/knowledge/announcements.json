@@ -21,7 +21,8 @@
           "支持安全的展示元素创建、静态 SVG，以及自动加运行限额检查的循环。",
           "保留网络、账号存储和外层页面的隔离限制。",
           "新增“完全自由 HTML”写作模式：直接导入或编写整篇 HTML，不再要求正文占位符，原 Markdown 保留。",
-          "改进原代码兼容：同时导入 HTML、CSS、JS，内置公式与高亮依赖；主题存储、复制和滚动观察在隔离环境中运行。"
+          "改进原代码兼容：同时导入 HTML、CSS、JS，内置公式与高亮依赖；主题存储、复制和滚动观察在隔离环境中运行。",
+          "完全自由 HTML 改为整屏独立文章，使用原生滚动；博客顶栏、页脚和追加区域收起，右下角工具保留安全退出与编辑。"
         ],
         "en": [
           "Default article headers, body and outline use transparent surfaces; controls and tags have square corners.",
@@ -29,7 +30,8 @@
           "Safe display-element creation, static SVG and automatically guarded loops are supported.",
           "Network, account storage and outer-page access remain isolated.",
           "A fully free HTML writing mode accepts complete articles without a content slot and preserves the original Markdown.",
-          "Original-source compatibility: import HTML/CSS/JS together, use local math/highlight libraries, and run storage, clipboard and scroll APIs inside the isolated runtime."
+          "Original-source compatibility: import HTML/CSS/JS together, use local math/highlight libraries, and run storage, clipboard and scroll APIs inside the isolated runtime.",
+          "Fully free HTML now owns the viewport with native scrolling. Public chrome is hidden; a collapsed corner menu keeps safe exit, default reading and editing available."
         ]
       },
       "steps": {
@@ -38,14 +40,16 @@
           "选择全宽画布和空白样式，或点击“空白起稿”，用自己的 HTML / CSS / JS 排版。",
           "展开编辑器，切换桌面、平板及手机预览；检测并预览动态效果后应用并保存文章。",
           "整篇 HTML 写作可直接点击编辑器顶部“完全自由 HTML”，检测预览后应用并发布。",
-          "导入有配套文件的文章时同时选中 HTML、CSS 和 JS；缺少文件会显示名称，原编辑内容保留。"
+          "导入有配套文件的文章时同时选中 HTML、CSS 和 JS；缺少文件会显示名称，原编辑内容保留。",
+          "整屏文章右下角点击“···”，可返回博客、默认阅读、关闭 JS，或编辑本篇页面。"
         ],
         "en": [
           "Edit an article and open Article page design.",
           "Select a full-width canvas and minimal styles, or start blank, then edit your HTML/CSS/JS.",
           "Expand the editor and check desktop, tablet and phone previews; apply and save the article.",
           "Use Fully free HTML at the top of the writer to edit or import a complete HTML article, then check, apply and publish it.",
-          "Select the HTML and companion CSS/JS files together; missing files are named without replacing existing work."
+          "Select the HTML and companion CSS/JS files together; missing files are named without replacing existing work.",
+          "Use the bottom-right Article tools menu to return to the blog, read the default layout, disable JS or edit your article."
         ]
       },
       "notes": {
