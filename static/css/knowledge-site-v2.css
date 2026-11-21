@@ -1356,6 +1356,7 @@ body.auth-elegant .knowledge-site {
   width: 100%;
   margin-top: 12px;
   color: var(--knowledge-muted);
+  border-radius: 0;
 }
 
 .knowledge-load-more:not(:disabled):hover {
