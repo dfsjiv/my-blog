@@ -4,7 +4,7 @@ export const DEFAULT_ARTICLE_LAYOUT = Object.freeze({ mode: 'default', html: '',
 const globals = new Set(['document', 'window', 'Math', 'Number', 'String', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'undefined', 'NaN', 'Infinity', 'performance', 'console', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout', 'getComputedStyle']);
 const denied = new Set(['eval', 'Function', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Worker', 'SharedWorker', 'navigator', 'location', 'top', 'parent', 'opener', 'frames', 'globalThis', 'self', 'localStorage', 'sessionStorage', 'indexedDB', 'caches', 'Reflect', 'Proxy', 'WebAssembly', 'constructor', 'prototype', '__proto__', 'arguments']);
 const members = new Set([
-  'querySelector', 'querySelectorAll', 'getElementById', 'body', 'documentElement', 'style', 'classList', 'textContent', 'innerText',
+  'querySelector', 'querySelectorAll', 'getElementById', 'createElement', 'createTextNode', 'createDocumentFragment', 'body', 'documentElement', 'style', 'classList', 'textContent', 'innerText',
   'add', 'remove', 'toggle', 'contains', 'addEventListener', 'removeEventListener', 'preventDefault', 'stopPropagation',
   'setAttribute', 'getAttribute', 'removeAttribute', 'setProperty', 'removeProperty',
   'getBoundingClientRect', 'animate', 'scrollIntoView', 'append', 'appendChild', 'replaceChildren',
@@ -20,7 +20,9 @@ const members = new Set([
 ]);
 const forbiddenNodes = new Set(['ThisExpression', 'NewExpression', 'ImportExpression', 'ImportDeclaration', 'ExportNamedDeclaration',
   'ExportDefaultDeclaration', 'WithStatement', 'DebuggerStatement', 'TaggedTemplateExpression', 'ClassDeclaration', 'ClassExpression',
-  'WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement', 'ObjectPattern', 'ArrayPattern', 'RestElement', 'SpreadElement']);
+  'ObjectPattern', 'ArrayPattern', 'RestElement', 'SpreadElement']);
+const loopNodes = new Set(['WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement']);
+const safeElements = new Set(['div', 'span', 'p', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'button', 'strong', 'em', 'small', 'code', 'pre', 'br', 'hr', 'figure', 'figcaption']);
 const methods = new Set(['querySelector', 'querySelectorAll', 'getElementById', 'add', 'remove', 'toggle', 'contains', 'addEventListener', 'removeEventListener', 'preventDefault', 'stopPropagation', 'setAttribute', 'getAttribute', 'removeAttribute', 'setProperty', 'removeProperty', 'getBoundingClientRect', 'animate', 'scrollIntoView', 'append', 'appendChild', 'replaceChildren', 'min', 'max', 'abs', 'round', 'floor', 'ceil', 'random', 'sin', 'cos', 'pow', 'sqrt', 'now', 'forEach', 'map', 'filter', 'find', 'findIndex', 'some', 'every', 'reduce', 'slice', 'includes', 'indexOf', 'push', 'pop', 'join', 'split', 'trim', 'toLowerCase', 'toUpperCase', 'toFixed', 'substring', 'charAt', 'log', 'warn', 'error', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout']);
 function children(node) {
   return Object.entries(node).filter(([key]) => !['loc', 'start', 'end'].includes(key)).flatMap(([, value]) =>
@@ -54,11 +56,12 @@ export function inspectArticleScript(source) {
       const value = property(node), numeric = node.computed && node.property.type === 'Literal' && Number.isInteger(value) && value >= 0 && value < 10000;
       if (node.computed && node.property.type !== 'Literal') issue(node, '不允许动态属性名，请使用明确的点号属性');
       else if (!numeric && (!members.has(value) || denied.has(value))) issue(node, '不允许访问属性：' + String(value));
-      if (methods.has(value) && !(parent?.type === 'CallExpression' && key === 'callee')) issue(node, '运行接口必须直接调用，不能提取或改写：' + value);
+      if ((methods.has(value) || ['createElement','createTextNode','createDocumentFragment'].includes(value)) && !(parent?.type === 'CallExpression' && key === 'callee')) issue(node, '运行接口必须直接调用，不能提取或改写：' + value);
     }
     if (node.type === 'Property' && (node.computed || node.kind !== 'init' || denied.has(node.key.name || node.key.value))) issue(node, '不允许动态对象属性、访问器或原型操作');
     if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression') {
       const name = property(node.callee);
+      if (name === 'createElement' && (node.arguments[0]?.type !== 'Literal' || !safeElements.has(node.arguments[0].value) || node.arguments.length !== 1)) issue(node, 'createElement 只接受明确的展示元素标签，例如 div、span、button；不能创建脚本、资源或嵌入页面');
       if (['setAttribute', 'getAttribute', 'removeAttribute'].includes(name)) {
         const attr = node.arguments[0];
         if (attr?.type !== 'Literal' || typeof attr.value !== 'string' || !/^(?:class|id|style|hidden|aria-[a-z-]+|data-[a-z-]+)$/.test(attr.value)) issue(node, '属性操作仅支持 class、id、style、hidden、aria-* 和 data-*');
@@ -77,6 +80,10 @@ export function inspectArticleScript(source) {
       if (node.body.type === 'BlockStatement') edits.push({ at: node.body.start + 1, value: '__zhenGuard();' });
       else { edits.push({ at: node.body.start, value: '{__zhenGuard();return (' }); edits.push({ at: node.body.end, value: ');}' }); }
     }
+    if (loopNodes.has(node.type)) {
+      if (node.body.type === 'BlockStatement') edits.push({ at: node.body.start + 1, value: '__zhenGuard();' });
+      else { edits.push({ at: node.body.start, value: '{__zhenGuard();' }); edits.push({ at: node.body.end, value: '}' }); }
+    }
     for (const [field, value] of Object.entries(node)) {
       if (['loc', 'start', 'end'].includes(field)) continue;
       if (Array.isArray(value)) value.forEach(child => { if (child?.type) walk(child, node, field); });
@@ -94,6 +101,12 @@ export function normalizeArticleLayout(input, role = 'user', check = true) {
   if (!input) return { ...DEFAULT_ARTICLE_LAYOUT };
   if (typeof input !== 'object' || !['default', 'custom'].includes(input.mode)) throw new Error('文章页面设计格式无效');
   const layout = { mode: input.mode };
+  for (const [key, choices] of Object.entries({ width: ['content', 'full'], baseStyles: ['reading', 'minimal'] })) {
+    if (input[key] !== undefined) {
+      if (!choices.includes(input[key])) throw new Error('无效的文章页面选项：' + key);
+      layout[key] = input[key];
+    }
+  }
   for (const key of ['html', 'css', 'js']) {
     if (input[key] !== undefined && typeof input[key] !== 'string') throw new Error(key + ' 必须是文本');
     layout[key] = input[key] || '';

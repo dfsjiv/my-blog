@@ -1278,7 +1278,7 @@
         try {
           await window.KnowledgeFeatures.ensure('articleLayout');
           if (state.destroyed) return;
-          state.previewCleanup = await window.KnowledgeArticleLayout.mount(previewOverlay.body, {design: state.articleLayout, post: designPost(), signal: state.designController.signal});
+          state.previewCleanup = await window.KnowledgeArticleLayout.mount(previewOverlay.body, {design: state.articleLayout, post: designPost(), signal: state.designController.signal, preview: true});
           if (state.destroyed) { state.previewCleanup(); return; }
           [previewOverlay.title, previewOverlay.summary, previewOverlay.meta, previewOverlay.solution].forEach(n => n.hidden = true);
           previewOverlay.root.hidden = false; previewOverlay.close.focus(); return;

@@ -12,11 +12,20 @@
 6. **应用到当前文章** 只更新编辑器状态；随后用原有 **保存草稿 / 发布** 按钮提交。原有 **预览** 也显示本篇设计。文章 JSON 备份携带设计；普通 `.md` 导出只包含文章与常用元数据。
 7. 详情页可 **关闭 JS 效果** 或 **默认排版阅读**，只影响本次阅读。作者可用外层 **编辑本篇页面** 返回编辑器。
 
+### 自由画布
+
+- **文章页面宽度**：可跟随网站内容区，或选择全宽画布铺满视口。全宽只影响当前文章的设计区域，评论等公共功能继续保留。
+- **文章基础样式**：可保留基础阅读样式，或选择空白样式，完全由自己的 CSS 决定字体、间距、布局、背景和图片比例。
+- **空白起稿**：用一个正文占位符开始，不强制标题、封面、作者区等模块的位置或样式。模板中的直角是起稿默认值，作者仍可在自己的 CSS 中使用圆角。
+- 支持 Grid、Flex、CSS 动画及清理后的静态 SVG 图形；SVG 脚本、foreignObject、嵌入和外部引用不保留。
+- 编辑器可展开到整个窗口，支持桌面、平板和手机预览。只有点击应用并保存文章后才改变线上设计。
+- 配置继续存入原有文章设计 JSON，不需要新的数据库迁移。
+
 **帖子外观预览** 继续设置首页文章卡片，和本文的详情页设计是两个独立功能。
 
 ## JavaScript 范围与限制
 
-JS 是受限的 DOM 交互子集，支持明确选择元素、修改样式/文本、classList、点击/指针事件、计时器和动画回调。可以使用 `forEach` / `map` 遍历。
+JS 支持明确选择及创建展示元素、修改样式/文本、classList、事件、计时器和动画回调。`for` / `while` / `do` / `for…of` / `for…in` 均可用，每次循环自动检查运行预算；也可用 `forEach` / `map`。元素创建只接受明确的展示标签，不允许创建脚本、资源或嵌入页面。
 
 ```js
 const button = document.querySelector('.back-top');
@@ -25,10 +34,10 @@ button.addEventListener('click', () => {
 });
 ```
 
-- 客户端和服务端使用同一 Acorn AST 能力策略，拒绝账号存储、Cookie、网络接口、外层窗口、动态代码、原型/构造器、动态属性访问、接口提取、循环和非受限全局变量。错误定位到源代码行。
+- 客户端和服务端使用同一 Acorn AST 能力策略，拒绝账号存储、Cookie、网络接口、外层窗口、动态代码、原型/构造器、动态属性访问、接口提取和非受限全局变量。错误定位到源代码行。
 - HTML 另经 DOMPurify 清理，脚本只能写在单独的 JS 区。CSS 的 `@import` 被拒绝，页面 CSP 阻止外部脚本、网络连接和表单。
 - 预览及正式展示使用相同的 `sandbox="allow-scripts"` iframe，**不授予 allow-same-origin**。脚本无法获得博客的令牌、存储或外层 DOM。框架只接收来自该 iframe、匹配随机通道的高度消息，不接受脚本发来的操作命令。
-- 每个用户函数注入运行预算检查，限制高频回调、递归与过量计时器。运行失败时可切回原生正文。
+- 每个用户函数及循环注入运行预算检查，限制高频回调、递归与过量计时器。运行失败时可切回原生正文。
 - **检测不是任意代码安全的数学证明，也不是独立进程级 CPU/内存限额。** 不支持任意 npm 库、第三方脚本、`eval`、`fetch` 或完整 JavaScript 环境；需要新能力时应扩展并测试白名单，不能关闭隔离。
 - iframe 中只允许锚点链接。正常外链、评论、文章导航和分享功能可在默认排版或外层原有区域使用。
 
@@ -49,6 +58,6 @@ button.addEventListener('click', () => {
 
 Each article owns one independent detail-page HTML/CSS/restricted-JS design. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
 
-Source is checked on both client and server and rendered through DOMPurify, an opaque-origin script sandbox, and restrictive CSP. Network/storage access, parent-page access, dynamic execution, prototype/constructor operations, dynamic properties, extracted capability methods, and loop syntax are rejected. Static analysis and callback budgets are not a guarantee against all resource-exhaustion cases. External resources and arbitrary third-party scripts are unsupported. Preview and publication use the same restrictions.
+Source is checked on both client and server and rendered through DOMPurify, an opaque-origin script sandbox, and restrictive CSP. Network/storage access, parent-page access, dynamic execution, prototype/constructor operations, dynamic properties, extracted capability methods are rejected; loops run with injected execution budgets. Static analysis and callback budgets are not a guarantee against all resource-exhaustion cases. External resources and arbitrary third-party scripts are unsupported. Preview and publication use the same restrictions.
 
 Apply migration 0015. `knowledge_article_layouts` has one row per article and draft/published JSON snapshots; saving is atomic with article updates and retains ownership/version rules. Member/admin design limits are 96/256 KiB, with 16/64 Ki-character JS limits. JSON article backups retain designs; plain Markdown exports do not embed page code. Old incorrectly scoped `custom_pages` data is preserved while its UI, homepage override and API are retired.

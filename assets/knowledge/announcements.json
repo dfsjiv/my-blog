@@ -2,6 +2,72 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-22-article-canvas",
+      "date": "2026-11-22",
+      "type": "feature",
+      "historical": false,
+      "title": {
+        "zh": "更自由的文章画布与简洁阅读界面",
+        "en": "Freer article canvases and a flatter reading interface"
+      },
+      "summary": {
+        "zh": "文章详情页移除圆角面板感，独立页面支持全宽画布、空白样式、静态 SVG 和带运行限额的 JS 循环。",
+        "en": "Flatter article detail panels, with full-width canvases, minimal base styles, static SVG and budgeted JavaScript loops."
+      },
+      "changes": {
+        "zh": [
+          "默认详情页的标题、正文和目录使用透明面板，按钮及标签改为直角。",
+          "独立页面可铺满视口，基础阅读样式可关闭，也可从空白正文起稿。",
+          "支持安全的展示元素创建、静态 SVG，以及自动加运行限额检查的循环。",
+          "保留网络、账号存储和外层页面的隔离限制。"
+        ],
+        "en": [
+          "Default article headers, body and outline use transparent surfaces; controls and tags have square corners.",
+          "Custom articles can span the viewport, disable built-in reading styles or start with a blank content slot.",
+          "Safe display-element creation, static SVG and automatically guarded loops are supported.",
+          "Network, account storage and outer-page access remain isolated."
+        ]
+      },
+      "steps": {
+        "zh": [
+          "编辑文章，打开“文章页面设计”。",
+          "选择全宽画布和空白样式，或点击“空白起稿”，用自己的 HTML / CSS / JS 排版。",
+          "展开编辑器，切换桌面、平板及手机预览；检测并预览动态效果后应用并保存文章。"
+        ],
+        "en": [
+          "Edit an article and open Article page design.",
+          "Select a full-width canvas and minimal styles, or start blank, then edit your HTML/CSS/JS.",
+          "Expand the editor and check desktop, tablet and phone previews; apply and save the article."
+        ]
+      },
+      "notes": {
+        "zh": [
+          "本次配置复用原有文章设计 JSON，无需新增数据库表或迁移。",
+          "运行检查不等于任意代码绝对安全；自定义脚本继续在隔离环境内执行。"
+        ],
+        "en": [
+          "Settings reuse the existing per-article JSON; no new table or migration is needed.",
+          "Runtime checks are not a proof of arbitrary-code safety; scripts continue to execute in an isolated environment."
+        ]
+      },
+      "links": [
+        {
+          "label": {
+            "zh": "写文章",
+            "en": "Write an article"
+          },
+          "url": "/?knowledge=writer"
+        },
+        {
+          "label": {
+            "zh": "设计说明",
+            "en": "Design guide"
+          },
+          "url": "https://github.com/dfsjiv/my-blog/blob/main/docs/custom-pages.md"
+        }
+      ]
+    },
+    {
       "id": "2026-11-20-page-studio",
       "date": "2026-11-20",
       "type": "feature",
@@ -48,12 +114,12 @@
       },
       "notes": {
         "zh": [
-          "JS 是受限的 DOM 交互子集；禁止网络、存储、动态执行、访问外层页面以及循环语法。检测不能证明任意代码绝对安全，运行时仍有沙箱、CSP 和回调预算。",
+          "JS 是受限的 DOM 交互子集；禁止网络、存储、动态执行及访问外层页面。检测不能证明任意代码绝对安全，运行时仍有沙箱、CSP 和回调预算。",
           "正文、设计和图片分开存放：正文沿用原表，设计使用 knowledge_article_layouts，图片复用原上传服务。",
           "普通用户仅能修改自己的文章设计；管理员保持原有管理权限。JS 上限为用户 16 Ki 字符／管理员 64 Ki 字符。"
         ],
         "en": [
-          "JavaScript is a restricted DOM-interaction subset. Network/storage access, dynamic execution, outer-page access and loop syntax are blocked. Checks are not a proof of arbitrary-code safety; sandbox, CSP and callback budgets still apply.",
+          "JavaScript is a restricted DOM-interaction subset. Network/storage access, dynamic execution, outer-page access are blocked. Checks are not a proof of arbitrary-code safety; sandbox, CSP and callback budgets still apply.",
           "Article content stays in the existing table, designs use knowledge_article_layouts, and images reuse the upload service.",
           "Members may only change their own articles. JS is limited to 16 Ki characters for members and 64 Ki characters for administrators."
         ]

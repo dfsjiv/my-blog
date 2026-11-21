@@ -1153,3 +1153,14 @@ test('a lost update cannot replace article design even when competing timestamps
  assert.equal(JSON.parse(env.sqlite.prepare('SELECT draft_json FROM knowledge_article_layouts WHERE post_id=?').get(post.id).draft_json).css,designA.css);
  env.sqlite.close();
 });
+
+test('per-article full-width blank-canvas settings survive draft and published APIs',async()=>{
+ const env=createDatabase(),api=createApi(env);migrateArticleLayouts(env);
+ const articleLayout={...designA,width:'full',baseStyles:'minimal',js:'for(let i=0;i<3;i++){const n=document.createElement("span");n.textContent=String(i);document.body.appendChild(n);}'};
+ const created=await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({articleLayout,status:'published'})});
+ assert.equal(created.status,201);const post=created.body.data.post;
+ assert.equal(post.articleLayout.width,'full');assert.equal(post.articleLayout.baseStyles,'minimal');
+ const publicPost=(await api('/api/knowledge/posts/'+post.slug)).body.data.post;
+ assert.equal(publicPost.articleLayout.width,'full');assert.equal(publicPost.articleLayout.baseStyles,'minimal');assert.equal(publicPost.articleLayout.js,articleLayout.js);
+ env.sqlite.close();
+});

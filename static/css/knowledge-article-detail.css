@@ -1,0 +1,41 @@
+/* Article reading chrome: flat surfaces and square controls; avatar geometry is retained. */
+.knowledge-detail-layout {
+  --knowledge-radius: 0px;
+  --knowledge-radius-small: 0px;
+}
+.knowledge-detail-layout :is(.knowledge-detail-header, .knowledge-detail-body, .knowledge-detail-cover,
+  .knowledge-solution-info, .knowledge-toc, .knowledge-panel, .knowledge-related-card, .knowledge-comments, .knowledge-comment-item,
+  .knowledge-comments-form, button, input, textarea, select, .knowledge-reader-settings > summary,
+  .knowledge-reader-settings-panel, .knowledge-type-badge, .knowledge-state-badge, .knowledge-tag,
+  .knowledge-card-tags > a, .knowledge-card-tags > span, .knowledge-code-toolbar, pre, code, details) {
+  border-radius: 0;
+}
+.knowledge-detail-layout :is(.knowledge-detail-header, .knowledge-detail-body, .knowledge-toc) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.knowledge-detail-layout .knowledge-detail-header {
+  border-bottom: 1px solid var(--knowledge-border);
+  padding-inline: 0;
+  padding-top: 10px;
+  padding-bottom: 26px;
+}
+.knowledge-detail-layout .knowledge-detail-body { padding-inline: 0; }
+.knowledge-detail-layout .knowledge-toc {
+  border-left: 1px solid var(--knowledge-border);
+  padding: 6px 0 6px 20px;
+}
+.knowledge-detail-layout .knowledge-detail-cover { border: 0; box-shadow: none; }
+.knowledge-detail-aside > .knowledge-panel { background: transparent; border: 0; box-shadow: none; padding: 0; }
+.knowledge-detail-layout .knowledge-type-badge,
+.knowledge-detail-layout .knowledge-card-tags > :is(a, span) {
+  background: transparent;
+  border-color: var(--knowledge-border);
+}
+.knowledge-detail-layout :is(.knowledge-route-button, .knowledge-reading-button, .knowledge-reader-settings > summary) {
+  box-shadow: none;
+}
+@media (max-width: 760px) {
+  .knowledge-detail-layout .knowledge-toc { border-left: 0; border-top: 1px solid var(--knowledge-border); padding: 16px 0; }
+}
