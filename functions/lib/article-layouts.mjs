@@ -8,7 +8,7 @@ export async function readArticleLayout(env, post, admin = false) {
   if (!text) return undefined;
   try {
     const layout = normalizeArticleLayout(JSON.parse(text), 'admin');
-    return admin || layout.mode === 'custom' ? layout : undefined;
+    return admin || ['custom', 'free'].includes(layout.mode) ? layout : undefined;
   } catch { return undefined; }
 }
 

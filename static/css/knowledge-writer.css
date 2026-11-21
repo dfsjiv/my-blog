@@ -1311,3 +1311,7 @@
 .knowledge-writer-card-stage { padding: 4px; }
 .knowledge-writer-card-stage .knowledge-post-card { text-align: left; }
 @media (max-width:720px) { .knowledge-writer-card-dialog { width: calc(100vw - 20px); padding: 14px; } }
+.knowledge-writer-html-mode{padding:28px 0;border-block:1px solid var(--knowledge-border);margin:24px 0;color:var(--knowledge-text)}
+.knowledge-writer-html-mode[hidden]{display:none}
+.knowledge-writer-html-mode strong{font-weight:500;font-size:24px}.knowledge-writer-html-mode p{line-height:1.8;color:var(--knowledge-muted)}
+.knowledge-writer-html-mode button{margin-right:12px;border-radius:0}

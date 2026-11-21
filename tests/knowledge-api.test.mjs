@@ -1164,3 +1164,21 @@ test('per-article full-width blank-canvas settings survive draft and published A
  assert.equal(publicPost.articleLayout.width,'full');assert.equal(publicPost.articleLayout.baseStyles,'minimal');assert.equal(publicPost.articleLayout.js,articleLayout.js);
  env.sqlite.close();
 });
+
+test('free HTML publishes without Markdown, computes metrics and keeps both sources through mode switches',async()=>{
+ const env=createDatabase(),api=createApi(env);migrateArticleLayouts(env);
+ const articleLayout={mode:'free',html:'<!DOCTYPE html><html><head><style>body{color:teal}</style></head><body class="free"><h1>HTML 原创正文</h1><p>完全独立的正文与页面，Hello world。</p></body></html>',css:'',js:''};
+ const created=await api('/api/knowledge/admin/posts',{method:'POST',token:'user-token',body:articleInput({title:'Free HTML',contentMarkdown:'',summary:'',articleLayout,status:'published'})});
+ assert.equal(created.status,201);let post=created.body.data.post;
+ assert.equal(post.contentMarkdown,'');assert.equal(post.articleLayout.mode,'free');assert.ok(post.wordCount>0);assert.match(post.summary,/HTML 原创正文/);
+ const detail=(await api('/api/knowledge/posts/'+post.slug)).body.data.post;
+ assert.match(detail.htmlFallbackText,/完全独立/);assert.equal(detail.articleLayout.mode,'free');
+ const originalMarkdown='# 原有 Markdown\n\n切换后仍保留。';
+ const defaulted=await api('/api/knowledge/admin/posts/'+post.id,{method:'PATCH',token:'user-token',body:{version:post.version,contentMarkdown:originalMarkdown,articleLayout:{...post.articleLayout,mode:'default'}}});
+ assert.equal(defaulted.status,200);post=defaulted.body.data.post;assert.equal(post.contentMarkdown,originalMarkdown);assert.equal(post.articleLayout.html,detail.articleLayout.html);
+ assert.equal((await api('/api/knowledge/posts/'+post.slug)).body.data.post.articleLayout,undefined);
+ const freed=await api('/api/knowledge/admin/posts/'+post.id,{method:'PATCH',token:'user-token',body:{version:post.version,summary:'',articleLayout:{...post.articleLayout,mode:'free'}}});
+ assert.equal(freed.status,200);assert.equal(freed.body.data.post.contentMarkdown,originalMarkdown);assert.equal(freed.body.data.post.articleLayout.mode,'free');
+ const bad=await api('/api/knowledge/admin/posts/'+post.id,{method:'PATCH',token:'user-token',body:{version:freed.body.data.post.version,articleLayout:{mode:'free',html:'<script>fetch("https://x")</script><p>bad</p>'}}});assert.equal(bad.status,400);
+ env.sqlite.close();
+});

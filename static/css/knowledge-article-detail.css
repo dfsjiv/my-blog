@@ -39,3 +39,4 @@
 @media (max-width: 760px) {
   .knowledge-detail-layout .knowledge-toc { border-left: 0; border-top: 1px solid var(--knowledge-border); padding: 16px 0; }
 }
+.knowledge-detail-body.is-html-fallback{white-space:pre-wrap}

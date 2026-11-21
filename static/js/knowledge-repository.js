@@ -152,6 +152,7 @@
       content: typeof source.content === 'string' ? source.content : '',
       originalContent: typeof source.originalContent === 'string' ? source.originalContent : '',
       articleLayout: source.articleLayout && typeof source.articleLayout === 'object' ? source.articleLayout : undefined,
+      htmlFallbackText: typeof source.htmlFallbackText === 'string' ? source.htmlFallbackText : '',
       contentFormat: typeof source.contentFormat === 'string' ? source.contentFormat : 'markdown',
       coverUrl: source.coverUrl || null,
       appearance: ['default', 'vinyl', 'collage', 'mecha', 'island', 'holo', 'spider', 'armor', 'hand'].includes(source.appearance) ? source.appearance : 'default',

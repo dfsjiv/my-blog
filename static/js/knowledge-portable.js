@@ -25,13 +25,14 @@
       summary: string(post.summary, 500), slug: string(post.slug, 200),
       tags: (Array.isArray(post.tags) ? post.tags : []).slice(0, 30).map(tag => string(typeof tag === 'string' ? tag : tag?.name, 80)).filter(Boolean),
       appearance: APPEARANCES.has(post.appearance) ? post.appearance : 'default',
-      articleLayout: post.articleLayout && typeof post.articleLayout === 'object' ? { mode: post.articleLayout.mode === 'custom' ? 'custom' : 'default', width: ['content','full'].includes(post.articleLayout.width) ? post.articleLayout.width : undefined, baseStyles: ['reading','minimal'].includes(post.articleLayout.baseStyles) ? post.articleLayout.baseStyles : undefined, html: string(post.articleLayout.html, 262144), css: string(post.articleLayout.css, 262144), js: string(post.articleLayout.js, 65536) } : undefined,
+      articleLayout: post.articleLayout && typeof post.articleLayout === 'object' ? { mode: ['custom','free'].includes(post.articleLayout.mode) ? post.articleLayout.mode : 'default', width: ['content','full'].includes(post.articleLayout.width) ? post.articleLayout.width : undefined, baseStyles: ['reading','minimal'].includes(post.articleLayout.baseStyles) ? post.articleLayout.baseStyles : undefined, html: string(post.articleLayout.html, 262144), css: string(post.articleLayout.css, 262144), js: string(post.articleLayout.js, 65536) } : undefined,
       coverUrl: safeUrl(post.coverUrl), sourceUrl: safeUrl(post.sourceUrl),
       solutionMeta: { platform: string(solution.platform, 80), problemId: string(solution.problemId, 100), problemTitle: string(solution.problemTitle, 200), problemUrl: safeUrl(solution.problemUrl), language: string(solution.language, 40) },
     };
   }
   function toMarkdown(post) {
     const value = snapshot(post);
+    if (post.articleLayout?.mode === 'free') value.contentMarkdown = post.htmlFallbackText || window.KnowledgeArticleLayout?.articleHtmlText(post.articleLayout.html) || '';
     // JSON-quoted strings are valid YAML scalars, including embedded newlines.
     const metadata = [
       'title: ' + JSON.stringify(value.title), 'type: ' + JSON.stringify(value.type),

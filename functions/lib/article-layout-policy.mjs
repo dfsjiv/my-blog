@@ -97,9 +97,32 @@ export function inspectArticleScript(source) {
   return { ok: true, issues: [], instrumented };
 }
 
+// Extraction is an editing convenience, not an HTML sanitizer. Remaining active
+// markup is rejected below and browser output is still purified inside a sandbox.
+export function splitArticleDocument(source) {
+  const css = [], js = [];
+  const html = source.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (_, attrs, code) => {
+    if (/\bsrc\s*=|\btype\s*=\s*["']?module\b/i.test(attrs)) throw new Error('请使用内联普通 JS，不支持外部脚本或 module');
+    js.push(code); return '';
+  }).replace(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi, (_, code) => { css.push(code); return ''; })
+    .replace(/<(?:meta|link|base)\b[^>]*>/gi, '');
+  return { html, css: css.join('\n'), js: js.join('\n') };
+}
+
+export function articleHtmlText(source) {
+  return String(source || '').replace(/<(head|script|style|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '').replace(/<br\b[^>]*>|<\/(?:p|h[1-6]|li|div|section|article|pre|tr|header|footer)>/gi, '\n')
+    .replace(/<[^>]*>/g, '').replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (all, entity) => {
+      const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }, key = entity.toLowerCase();
+      if (key[0] !== '#') return named[key] || all;
+      const n = key[1] === 'x' ? parseInt(key.slice(2), 16) : Number(key.slice(1));
+      return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : '';
+    }).replace(/[\t ]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export function normalizeArticleLayout(input, role = 'user', check = true) {
   if (!input) return { ...DEFAULT_ARTICLE_LAYOUT };
-  if (typeof input !== 'object' || !['default', 'custom'].includes(input.mode)) throw new Error('文章页面设计格式无效');
+  if (typeof input !== 'object' || !['default', 'custom', 'free'].includes(input.mode)) throw new Error('文章页面设计格式无效');
   const layout = { mode: input.mode };
   for (const [key, choices] of Object.entries({ width: ['content', 'full'], baseStyles: ['reading', 'minimal'] })) {
     if (input[key] !== undefined) {
@@ -111,11 +134,19 @@ export function normalizeArticleLayout(input, role = 'user', check = true) {
     if (input[key] !== undefined && typeof input[key] !== 'string') throw new Error(key + ' 必须是文本');
     layout[key] = input[key] || '';
   }
+  if (layout.mode === 'free') {
+    const document = splitArticleDocument(layout.html);
+    layout.html = document.html;
+    layout.css = [layout.css, document.css].filter(Boolean).join('\n');
+    layout.js = [layout.js, document.js].filter(Boolean).join('\n');
+    layout.width ??= 'full'; layout.baseStyles ??= 'minimal';
+  }
   const limit = role === 'admin' ? 256 * 1024 : 96 * 1024;
   if (new TextEncoder().encode(JSON.stringify(layout)).length > limit) throw new Error('文章设计超过 ' + limit / 1024 + ' KiB 上限');
   if (layout.js.length > (role === 'admin' ? 65536 : 16384)) throw new Error('JS 超过当前账号的大小上限');
-  if (layout.mode === 'custom' && check) {
-    if (!layout.html.includes('{{content}}') && !/data-article-slot=["']content["']/.test(layout.html)) throw new Error('HTML 必须包含 {{content}} 正文区域');
+  if (['custom', 'free'].includes(layout.mode) && check) {
+    if (layout.mode === 'free' && !layout.html.trim()) throw new Error('完全自由模式需要填写 HTML 内容');
+    if (layout.mode === 'custom' && !layout.html.includes('{{content}}') && !/data-article-slot=["']content["']/.test(layout.html)) throw new Error('HTML 必须包含 {{content}} 正文区域');
     if (/<\s*(?:script|iframe|object|embed|form|base|meta|link)\b|\bon[a-z]+\s*=|\bsrcdoc\s*=/i.test(layout.html)) throw new Error('HTML 中不能放脚本、事件属性或嵌入页面；请将代码放入 JS 编辑区');
     if (/@import\b/i.test(layout.css)) throw new Error('请将外部样式放入 CSS 编辑区，不使用 @import');
     const audit = inspectArticleScript(layout.js);

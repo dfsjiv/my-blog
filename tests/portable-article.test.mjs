@@ -70,3 +70,11 @@ test('article JSON backups carry design source as inert text without article IDs
   for(const key of ['mode','width','baseStyles','html','css','js']) assert.equal(restored.articleLayout[key],articleLayout[key]);
   assert.doesNotMatch(portable.toMarkdown({...post,articleLayout}),/classList|articleLayout/);
 });
+
+test('free HTML backup retains original Markdown and active HTML separately',()=>{
+ const articleLayout={mode:'free',width:'full',baseStyles:'minimal',html:'<article><h1>HTML source</h1></article>',css:'body{color:teal}',js:''};
+ const original={...post,articleLayout,htmlFallbackText:'HTML source'};
+ const restored=portable.fromBackup(portable.toBackup(original));
+ assert.equal(restored.contentMarkdown,post.contentMarkdown);assert.equal(restored.articleLayout.mode,'free');assert.equal(restored.articleLayout.html,articleLayout.html);
+ assert.ok(portable.toMarkdown(original).endsWith('HTML source'));
+});

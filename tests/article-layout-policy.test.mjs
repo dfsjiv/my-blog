@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { inspectArticleScript, normalizeArticleLayout } from '../functions/lib/article-layout-policy.mjs';
+import { inspectArticleScript, normalizeArticleLayout, articleHtmlText } from '../functions/lib/article-layout-policy.mjs';
 
 test('article effects accept DOM interactions and instrument every user callback', () => {
   const source = 'const nodes=document.querySelectorAll("button"); nodes.forEach(n=>{n.addEventListener("click",()=>{n.classList.toggle("active");n.style.setProperty("opacity","0.5");});});';
@@ -62,4 +62,16 @@ test('article layout validation requires the current article content and bounds 
   assert.deepEqual(normalizeArticleLayout(base),base);
   for(const extra of [{html:'<main>missing body</main>'},{html:'<script>x</script>{{content}}'},{html:'<img onerror="x">{{content}}'},{css:'@import "https://x";'},{js:'navigator.sendBeacon("x")'},{css:'x'.repeat(100*1024)}]) assert.throws(()=>normalizeArticleLayout({...base,...extra}));
   assert.equal(normalizeArticleLayout({...base,mode:'default',js:'fetch(1)'}).mode,'default','inactive design source is preserved as text, never executed');
+});
+
+test('free HTML uses its own body, extracts inline code idempotently and retains safety checks',()=>{
+ const source='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Metadata</title><style>body.free{color:teal}</style></head><body class="free"><h1>HTML 正文</h1><p>A &amp; B &#x4E2D;</p><script>document.body.classList.add("ready");</script></body></html>';
+ const layout=normalizeArticleLayout({mode:'free',html:source,css:'',js:''});
+ assert.equal(layout.width,'full');assert.equal(layout.baseStyles,'minimal');
+ assert.match(layout.css,/body.free/);assert.match(layout.js,/classList/);
+ assert.doesNotMatch(layout.html,/<script|<style|<meta/i);assert.doesNotMatch(layout.html,/content}}/);
+ assert.deepEqual(normalizeArticleLayout(layout),layout);
+ assert.equal(articleHtmlText(layout.html),'HTML 正文\nA & B 中');
+ for(const html of ['<script src="https://x"></script><p>x</p>','<script>fetch("https://x")</script><p>x</p>','<p onclick="alert(1)">x</p>','']) assert.throws(()=>normalizeArticleLayout({mode:'free',html}));
+ assert.throws(()=>normalizeArticleLayout({mode:'custom',html:'<p>HTML 正文</p>'}),/content/);
 });

@@ -32,6 +32,7 @@ import {
 import { POST_APPEARANCES, ensureAppearanceStorage, readAppearances, appearanceCreate, appearanceUpdate } from './post-appearances.mjs';
 import { isCustomPagePath } from './custom-pages.mjs';
 import { readArticleLayout, prepareArticleLayout, layoutCreate, layoutUpdate, layoutPublish } from './article-layouts.mjs';
+import { articleHtmlText } from './article-layout-policy.mjs';
 
 const CONTENT_TYPES = new Set(["article", "solution", "note", "project", "essay"]);
 const CONTENT_CHANNELS = new Set([
@@ -576,6 +577,8 @@ async function createPost(request, env, user, jsonResponse) {
     try { layoutJson = await prepareArticleLayout(env, bodyResult.body, user); }
     catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
 
+    applyFreeArticleMetrics(post, layoutJson ? JSON.parse(layoutJson) : null, bodyResult.body.summary);
+
     const requestedSlug = typeof bodyResult.body.slug === "string"
         && bodyResult.body.slug.trim() !== "";
     const slugResult = await resolveCreateSlug(env, post.slug || post.title, requestedSlug);
@@ -679,6 +682,8 @@ async function updatePost(request, id, env, user, jsonResponse) {
     let layoutJson;
     try { layoutJson = await prepareArticleLayout(env, bodyResult.body, user); }
     catch (error) { return validationResponse(jsonResponse, { articleLayout: error.message }); }
+
+    applyFreeArticleMetrics(post, layoutJson ? JSON.parse(layoutJson) : await readArticleLayout(env, existing, true), bodyResult.body.summary ?? existing.summary);
 
     if (Object.prototype.hasOwnProperty.call(bodyResult.body, "slug")) {
         const normalized = normalizeSlug(post.slug);
@@ -1524,8 +1529,17 @@ function toListPost(post, admin = false) {
     return result;
 }
 
+function applyFreeArticleMetrics(post, layout, explicitSummary) {
+    if (layout?.mode !== 'free') return;
+    const text = articleHtmlText(layout.html);
+    Object.assign(post, calculateContentMetrics(text));
+    if (typeof explicitSummary !== 'string' || !explicitSummary.trim()) post.summary = createMarkdownSummary(text);
+}
+
 async function detailPost(post, admin, env) {
-    return { ...toDetailPost(post, admin), articleLayout: await readArticleLayout(env, post, admin) };
+    const articleLayout = await readArticleLayout(env, post, admin);
+    return { ...toDetailPost(post, admin), articleLayout,
+        htmlFallbackText: articleLayout?.mode === 'free' ? articleHtmlText(articleLayout.html) : undefined };
 }
 
 function toDetailPost(post, admin) {

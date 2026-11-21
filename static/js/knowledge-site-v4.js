@@ -3158,11 +3158,18 @@
     const body = element('div', 'knowledge-detail-body');
     let renderedHeadings = [];
     let detailAside = null;
-    const originalContent = post.originalContent || post.content || post.contentMarkdown;
+    const originalContent = post.articleLayout?.mode === 'free' ? post.htmlFallbackText || '这篇文章以 HTML 视觉内容展示。' : post.originalContent || post.content || post.contentMarkdown;
     if (originalContent.trim()) {
-      const rendered = post.contentFormat === 'html' && markdown.renderHtml
-        ? markdown.renderHtml(originalContent, body)
-        : markdown.render(post.contentMarkdown || originalContent, body);
+      let rendered;
+      if (post.articleLayout?.mode === 'free') {
+        body.classList.add('is-html-fallback');
+        body.textContent = post.htmlFallbackText || '这篇文章主要以 HTML 视觉内容展示，可使用上方自定义页面阅读。';
+        rendered = { headings: [] };
+      } else {
+        rendered = post.contentFormat === 'html' && markdown.renderHtml
+          ? markdown.renderHtml(originalContent, body)
+          : markdown.render(post.contentMarkdown || originalContent, body);
+      }
       renderedHeadings = rendered.headings;
       main.appendChild(body);
       const aside = element('aside', 'knowledge-detail-aside');
@@ -3183,7 +3190,7 @@
     const comments = element('section', 'knowledge-comments');
     main.appendChild(comments);
     routeView.appendChild(layout);
-    if (post.articleLayout?.mode === 'custom') {
+    if (['custom', 'free'].includes(post.articleLayout?.mode)) {
       window.KnowledgeFeatures.ensure('articleLayout').then(async function () {
         if (controller.signal.aborted) return;
         const custom = element('section', 'article-layout-live');

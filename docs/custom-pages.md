@@ -1,13 +1,13 @@
 # 每篇文章的页面设计 / Per-article page design
 
-一篇文章对应一套详情页设计。设计只作用于该文章打开后的页面；首页、搜索、分类、导航和文章卡片仍使用原来的设计。没有选择自定义的文章继续使用默认排版。
+一篇文章对应一套详情页设计，提供默认、自定义布局、完全自由 HTML 三种模式。设计只作用于该文章打开后的页面；首页、搜索、分类、导航和文章卡片仍使用原来的设计。没有选择自定义的文章继续使用默认排版。
 
 ## 使用
 
 1. 登录后新建或编辑文章，填写标题、分类及正文。原有 Markdown 导入继续可用。
 2. 点击编辑器底部 **文章页面设计**，选择 **使用本篇自定义设计**。
 3. 编辑 HTML、CSS、JS 三个区域，也可导入 HTML 文件：内联 style/script 分别进入 CSS/JS 编辑区，导入时不执行。外部脚本不支持。
-4. HTML 必须保留 `{{content}}`，自动插入当前文章正文。另支持 `{{title}}`、`{{author}}`、`{{date}}`、`{{category}}`、`{{cover}}`，以及 `<section data-article-slot="content"></section>`。
+4. 自定义布局模式的 HTML 必须保留 `{{content}}`，自动插入当前文章正文。另支持 `{{title}}`、`{{author}}`、`{{date}}`、`{{category}}`、`{{cover}}`，以及 `<section data-article-slot="content"></section>`。
 5. 点击 **检测并预览**，用实际未保存的正文检查悬停、点击、动画及手机布局。图片使用本站上传链接或 PNG/JPEG/WebP/GIF data URL；外部资源被阻止。
 6. **应用到当前文章** 只更新编辑器状态；随后用原有 **保存草稿 / 发布** 按钮提交。原有 **预览** 也显示本篇设计。文章 JSON 备份携带设计；普通 `.md` 导出只包含文章与常用元数据。
 7. 详情页可 **关闭 JS 效果** 或 **默认排版阅读**，只影响本次阅读。作者可用外层 **编辑本篇页面** 返回编辑器。
@@ -22,6 +22,20 @@
 - 配置继续存入原有文章设计 JSON，不需要新的数据库迁移。
 
 **帖子外观预览** 继续设置首页文章卡片，和本文的详情页设计是两个独立功能。
+
+## 完全自由 HTML 写作
+
+编辑器顶部新增 **完全自由 HTML** 入口；底部“文章页面设计”的模式选择中也可以切换。
+
+- **默认模式**：继续使用原来的富文本 / Markdown。
+- **自定义布局**：用 HTML / CSS / JS 设计布局，用 `{{content}}` 插入原正文。
+- **完全自由 HTML**：HTML 本身就是文章正文，不要求任何占位符，也不要求另写 Markdown。可以写 HTML 片段、粘贴完整文档或导入 `.html` 文件。
+
+完整文档里的内联 `<style>`、普通 `<script>` 会被提取到 CSS / JS 区域，随后进行相同的检查。文档的 html/body class、style、lang、dir 在清理后保留。导入、检测和预览不会自动发布，仍须应用后保存或发布文章。外部脚本、module、网络请求与危险事件属性仍不支持；完全自由指文章页面的排版与正文，不代表可获得博客账号权限。
+
+切回默认写作时保留 HTML / CSS / JS，原 Markdown 也始终保留。JSON 文章备份携带两种源内容；HTML 文章的 Markdown 导出使用其正文文本。未填写摘要时，从 HTML 文本生成摘要；字数也来自 HTML 内容。详情页的默认阅读回退显示 HTML 的纯文本正文，不执行其中的代码。
+
+数据库继续使用 `knowledge_posts` 与 `knowledge_article_layouts`：HTML / CSS / JS、模式及画布选项放在现有设计 JSON 的草稿/发布字段，按文章 ID 关联。没有新增表或改表，原 Markdown 不被 HTML 覆盖。标题、分类、作者、权限、版本冲突和图片存储沿用原实现。
 
 ## JavaScript 范围与限制
 
@@ -56,7 +70,7 @@ button.addEventListener('click', () => {
 
 ## English
 
-Each article owns one independent detail-page HTML/CSS/restricted-JS design. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
+Each article owns one independent detail-page design with default, custom-layout and fully free HTML modes. The free mode treats HTML as the article body without a required content slot; complete documents or HTML files can be imported. Inline styles/scripts are extracted and checked, and cleaned html/body attributes are retained. Original Markdown is preserved through mode switches; existing draft/published JSON fields are reused without a database migration. Open **Article page design** in that article's writer, choose the custom mode, retain `{{content}}`, check the interactive/mobile preview, apply, then save or publish the article. The default layout remains available. Homepages and other common pages are unchanged; **Post appearance preview** still configures the homepage card.
 
 Source is checked on both client and server and rendered through DOMPurify, an opaque-origin script sandbox, and restrictive CSP. Network/storage access, parent-page access, dynamic execution, prototype/constructor operations, dynamic properties, extracted capability methods are rejected; loops run with injected execution budgets. Static analysis and callback budgets are not a guarantee against all resource-exhaustion cases. External resources and arbitrary third-party scripts are unsupported. Preview and publication use the same restrictions.
 

@@ -218,6 +218,9 @@
     markdownImportButton.type = 'button';
     markdownImportButton.title = '导入 UTF-8 Markdown 文件；普通用户最大 256 KB，管理员最大 2 MB';
     viewModes.appendChild(markdownImportButton);
+    const htmlWriteButton = element('button', '', '完全自由 HTML');
+    htmlWriteButton.type = 'button'; htmlWriteButton.setAttribute('aria-pressed', 'false');
+    viewModes.appendChild(htmlWriteButton);
     const backupMenu = element('details', 'knowledge-writer-backup-menu');
     const backupToggle = element('summary', '', '备份与导出');
     const backupActions = element('div');
@@ -285,6 +288,10 @@
     const titleError = element('span', 'knowledge-writer-title-error');
     titleWrap.append(titleInput, titleCount, titleError);
     const editorHost = element('div', 'knowledge-writer-editor-host');
+    const htmlModeNotice = element('section', 'knowledge-writer-html-mode'); htmlModeNotice.hidden = true;
+    const htmlEditButton = element('button', 'knowledge-writer-secondary', '编辑 HTML 文章'); htmlEditButton.type = 'button';
+    const htmlDefaultButton = element('button', 'knowledge-writer-secondary', '切回默认写作'); htmlDefaultButton.type = 'button';
+    htmlModeNotice.append(element('strong', '', '完全自由 HTML 模式'), element('p', '', 'HTML 是这篇文章的正文和页面。无需另写 Markdown，也不需要正文占位符。原来的 Markdown 保留，可随时切回默认写作。'), htmlEditButton, htmlDefaultButton);
     const sourceWorkspace = element('div', 'knowledge-writer-source-workspace');
     sourceWorkspace.hidden = true;
     const sourcePane = element('section', 'knowledge-writer-source-pane');
@@ -331,6 +338,7 @@
     paper.append(
       recovery,
       titleWrap,
+      htmlModeNotice,
       editorHost,
       sourceWorkspace,
       bodyImageInput,
@@ -437,6 +445,7 @@
 
     function applyPostSettings(post) {
       state.articleLayout = post.articleLayout;
+      updateArticleMode();
       setField('type', post.type || 'article');
       setField('appearance', post.appearance || 'default');
       setField('category', post.category || '');
@@ -685,6 +694,7 @@
 
     function applyDraftSettings(values) {
       if (Object.hasOwn(values, 'articleLayout')) state.articleLayout = values.articleLayout;
+      updateArticleMode();
       Object.keys(values || {}).forEach(function (key) { setField(key, values[key]); });
       updateSolutionFields();
     }
@@ -823,6 +833,7 @@
       previewButton.disabled = busy;
       appearanceButton.disabled = busy;
       designButton.disabled = busy;
+      htmlWriteButton.disabled = busy; htmlEditButton.disabled = busy; htmlDefaultButton.disabled = busy;
     }
 
     function setSaveState(label, error) {
@@ -834,6 +845,12 @@
 
     function updateMetrics() {
       if (!state.editor) return;
+      if (state.articleLayout?.mode === 'free') {
+        const htmlText = window.KnowledgeArticleLayout?.articleHtmlText(state.articleLayout.html);
+        const count = htmlText === undefined ? state.post?.wordCount || 0 : (htmlText.match(/[\u3400-\u9fff]/g) || []).length + (htmlText.match(/[A-Za-z0-9]+/g) || []).length;
+        wordCount.textContent = count + ' 字'; readingTime.textContent = '约 ' + Math.max(1, Math.ceil(count / 400)) + ' 分钟';
+        editMode.textContent = '完全自由 HTML'; editMode.title = 'HTML 正文，原 Markdown 保留'; return;
+      }
       const markdown = currentMarkdown();
       const text = currentPlainText();
       const chinese = (text.match(/[\u3400-\u9fff]/g) || []).length;
@@ -1260,13 +1277,27 @@
     function designPost() {
       return { ...collectPayload(), author: state.post?.author || window.authManager?.getCurrentUser?.().nickname || window.authManager?.getCurrentUser?.().username || '', publishedAt: state.post?.publishedAt, ...(state.editorMode === 'rich' ? {contentFormat: 'html', content: state.editor.getHTML()} : {}) };
     }
-    async function openArticleDesign() {
+    function updateArticleMode() {
+      const free = state.articleLayout?.mode === 'free';
+      htmlModeNotice.hidden = !free;
+      editorHost.hidden = free || state.editorMode !== 'rich';
+      sourceWorkspace.hidden = free || state.editorMode === 'rich';
+      toolbar.hidden = free || state.editorMode !== 'rich';
+      htmlWriteButton.setAttribute('aria-pressed', String(free)); htmlWriteButton.classList.toggle('is-active', free);
+      viewModes.querySelectorAll('[data-writer-mode]').forEach(button => { const active = !free && button.dataset.writerMode === state.editorMode; button.setAttribute('aria-pressed', String(active)); button.classList.toggle('is-active', active); });
+      if (!free) editMode.textContent = state.editorMode === 'rich' ? '富文本模式' : state.editorMode === 'split' ? 'Markdown 分屏模式' : 'Markdown 模式';
+      updateMetrics();
+    }
+    function useDefaultWriting() {
+      if (state.articleLayout?.mode === 'free') { state.articleLayout = { ...state.articleLayout, mode: 'default' }; updateArticleMode(); markDirty(); }
+    }
+    async function openArticleDesign(initialMode) {
       try {
         await window.KnowledgeFeatures.ensure('articleLayout');
         if (state.destroyed) return;
         state.designClose?.();
-        state.designClose = window.KnowledgeArticleLayout.openEditor({ design: state.articleLayout, getPost: designPost, role: isAdmin() ? 'admin' : 'user', signal: state.designController.signal,
-          onApply: function (value) { state.articleLayout = value; markDirty(); showNotice('本篇页面设计已应用，保存草稿或发布后生效。'); } });
+        state.designClose = window.KnowledgeArticleLayout.openEditor({ design: state.articleLayout, initialMode: initialMode === 'free' ? 'free' : undefined, getPost: designPost, role: isAdmin() ? 'admin' : 'user', signal: state.designController.signal,
+          onApply: function (value) { state.articleLayout = value; updateArticleMode(); markDirty(); showNotice('本篇页面设计已应用，保存草稿或发布后生效。'); } });
       } catch (error) { showNotice(error.message, true); }
     }
     async function openPreview() {
@@ -1274,7 +1305,7 @@
       if (!validatePayload(payload, false)) return;
       state.previewCleanup?.(); state.previewCleanup = null;
       [previewOverlay.title, previewOverlay.summary, previewOverlay.meta].forEach(n => n.hidden = false);
-      if (state.articleLayout?.mode === 'custom') {
+      if (['custom', 'free'].includes(state.articleLayout?.mode)) {
         try {
           await window.KnowledgeFeatures.ensure('articleLayout');
           if (state.destroyed) return;
@@ -1425,6 +1456,7 @@
     primaryBar.addEventListener('click', function (event) {
       const modeButton = event.target.closest('[data-writer-mode]');
       if (modeButton) {
+        useDefaultWriting();
         setEditorMode(modeButton.dataset.writerMode);
         return;
       }
@@ -1571,6 +1603,9 @@
     previewButton.addEventListener('click', openPreview);
     appearanceButton.addEventListener('click', openAppearancePreview);
     designButton.addEventListener('click', openArticleDesign);
+    htmlWriteButton.addEventListener('click', () => openArticleDesign('free'));
+    htmlEditButton.addEventListener('click', () => openArticleDesign('free'));
+    htmlDefaultButton.addEventListener('click', useDefaultWriting);
     appearanceClose.addEventListener('click', () => appearanceDialog.close());
     appearanceDialog.addEventListener('click', event => { if (event.target === appearanceDialog) appearanceDialog.close(); });
     appearanceDialog.addEventListener('close', () => appearanceButton.focus());

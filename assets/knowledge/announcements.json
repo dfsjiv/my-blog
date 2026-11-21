@@ -7,8 +7,8 @@
       "type": "feature",
       "historical": false,
       "title": {
-        "zh": "更自由的文章画布与简洁阅读界面",
-        "en": "Freer article canvases and a flatter reading interface"
+        "zh": "自由文章画布与完全自由 HTML 写作",
+        "en": "Article canvases and fully free HTML writing"
       },
       "summary": {
         "zh": "文章详情页移除圆角面板感，独立页面支持全宽画布、空白样式、静态 SVG 和带运行限额的 JS 循环。",
@@ -19,25 +19,29 @@
           "默认详情页的标题、正文和目录使用透明面板，按钮及标签改为直角。",
           "独立页面可铺满视口，基础阅读样式可关闭，也可从空白正文起稿。",
           "支持安全的展示元素创建、静态 SVG，以及自动加运行限额检查的循环。",
-          "保留网络、账号存储和外层页面的隔离限制。"
+          "保留网络、账号存储和外层页面的隔离限制。",
+          "新增“完全自由 HTML”写作模式：直接导入或编写整篇 HTML，不再要求正文占位符，原 Markdown 保留。"
         ],
         "en": [
           "Default article headers, body and outline use transparent surfaces; controls and tags have square corners.",
           "Custom articles can span the viewport, disable built-in reading styles or start with a blank content slot.",
           "Safe display-element creation, static SVG and automatically guarded loops are supported.",
-          "Network, account storage and outer-page access remain isolated."
+          "Network, account storage and outer-page access remain isolated.",
+          "A fully free HTML writing mode accepts complete articles without a content slot and preserves the original Markdown."
         ]
       },
       "steps": {
         "zh": [
           "编辑文章，打开“文章页面设计”。",
           "选择全宽画布和空白样式，或点击“空白起稿”，用自己的 HTML / CSS / JS 排版。",
-          "展开编辑器，切换桌面、平板及手机预览；检测并预览动态效果后应用并保存文章。"
+          "展开编辑器，切换桌面、平板及手机预览；检测并预览动态效果后应用并保存文章。",
+          "整篇 HTML 写作可直接点击编辑器顶部“完全自由 HTML”，检测预览后应用并发布。"
         ],
         "en": [
           "Edit an article and open Article page design.",
           "Select a full-width canvas and minimal styles, or start blank, then edit your HTML/CSS/JS.",
-          "Expand the editor and check desktop, tablet and phone previews; apply and save the article."
+          "Expand the editor and check desktop, tablet and phone previews; apply and save the article.",
+          "Use Fully free HTML at the top of the writer to edit or import a complete HTML article, then check, apply and publish it."
         ]
       },
       "notes": {
