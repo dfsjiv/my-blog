@@ -1275,7 +1275,7 @@
     }
 
     function designPost() {
-      return { ...collectPayload(), author: state.post?.author || window.authManager?.getCurrentUser?.().nickname || window.authManager?.getCurrentUser?.().username || '', publishedAt: state.post?.publishedAt, ...(state.editorMode === 'rich' ? {contentFormat: 'html', content: state.editor.getHTML()} : {}) };
+      return { ...collectPayload(), id: state.postId || undefined, author: state.post?.author || window.authManager?.getCurrentUser?.().nickname || window.authManager?.getCurrentUser?.().username || '', publishedAt: state.post?.publishedAt, ...(state.editorMode === 'rich' ? {contentFormat: 'html', content: state.editor.getHTML()} : {}) };
     }
     function updateArticleMode() {
       const free = state.articleLayout?.mode === 'free';

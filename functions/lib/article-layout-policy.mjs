@@ -1,16 +1,16 @@
 import { parse } from './vendor/acorn.mjs';
 
 export const DEFAULT_ARTICLE_LAYOUT = Object.freeze({ mode: 'default', html: '', css: '', js: '' });
-const globals = new Set(['document', 'window', 'Math', 'Number', 'String', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'undefined', 'NaN', 'Infinity', 'performance', 'console', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout', 'getComputedStyle']);
-const denied = new Set(['eval', 'Function', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Worker', 'SharedWorker', 'navigator', 'location', 'top', 'parent', 'opener', 'frames', 'globalThis', 'self', 'localStorage', 'sessionStorage', 'indexedDB', 'caches', 'Reflect', 'Proxy', 'WebAssembly', 'constructor', 'prototype', '__proto__', 'arguments']);
+const globals = new Set(['document', 'window', 'Math', 'Number', 'String', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'undefined', 'NaN', 'Infinity', 'performance', 'console', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout', 'getComputedStyle', 'localStorage', 'navigator', 'matchMedia', 'addEventListener', 'IntersectionObserver', 'renderMathInElement', 'hljs']);
+const denied = new Set(['eval', 'Function', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Worker', 'SharedWorker', 'location', 'top', 'parent', 'opener', 'frames', 'globalThis', 'self', 'sessionStorage', 'indexedDB', 'caches', 'Reflect', 'Proxy', 'WebAssembly', 'constructor', 'prototype', '__proto__', 'arguments']);
 const members = new Set([
-  'querySelector', 'querySelectorAll', 'getElementById', 'createElement', 'createTextNode', 'createDocumentFragment', 'body', 'documentElement', 'style', 'classList', 'textContent', 'innerText',
+  'querySelector', 'querySelectorAll', 'getElementById', 'createElement', 'createTextNode', 'createDocumentFragment', 'body', 'documentElement', 'style', 'classList', 'textContent', 'innerText', 'innerHTML',
   'add', 'remove', 'toggle', 'contains', 'addEventListener', 'removeEventListener', 'preventDefault', 'stopPropagation',
   'setAttribute', 'getAttribute', 'removeAttribute', 'setProperty', 'removeProperty',
   'getBoundingClientRect', 'animate', 'scrollIntoView', 'append', 'appendChild', 'replaceChildren',
   'clientX', 'clientY', 'offsetX', 'offsetY', 'clientWidth', 'clientHeight', 'offsetWidth', 'offsetHeight',
   'scrollTop', 'scrollHeight', 'innerWidth', 'innerHeight', 'target', 'currentTarget', 'type', 'key',
-  'x', 'y', 'width', 'height', 'left', 'right', 'bottom', 'length', 'id', 'className',
+  'x', 'y', 'width', 'height', 'left', 'right', 'bottom', 'length', 'id', 'className', 'value', 'checked', 'dataset', 'theme', 'onclick', 'tagName', 'href', 'hash', 'clipboard', 'writeText', 'getItem', 'setItem', 'matches', 'observe', 'unobserve', 'disconnect', 'isIntersecting', 'highlightElement', 'renderMathInElement', 'hljs', 'repeat', 'm', 'a', 'localStorage', 'navigator', 'matchMedia', 'IntersectionObserver', 'message',
   'transform', 'transformOrigin', 'opacity', 'color', 'background', 'backgroundColor', 'borderColor', 'borderRadius',
   'boxShadow', 'filter', 'transition', 'display', 'position', 'zIndex', 'padding', 'margin', 'fontSize', 'textAlign',
   'min', 'max', 'abs', 'round', 'floor', 'ceil', 'random', 'sin', 'cos', 'PI', 'pow', 'sqrt', 'now',
@@ -18,11 +18,11 @@ const members = new Set([
   'push', 'pop', 'join', 'split', 'trim', 'toLowerCase', 'toUpperCase', 'toFixed', 'substring', 'charAt',
   'log', 'warn', 'error', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout'
 ]);
-const forbiddenNodes = new Set(['ThisExpression', 'NewExpression', 'ImportExpression', 'ImportDeclaration', 'ExportNamedDeclaration',
+const forbiddenNodes = new Set(['ThisExpression', 'ImportExpression', 'ImportDeclaration', 'ExportNamedDeclaration',
   'ExportDefaultDeclaration', 'WithStatement', 'DebuggerStatement', 'TaggedTemplateExpression', 'ClassDeclaration', 'ClassExpression',
-  'ObjectPattern', 'ArrayPattern', 'RestElement', 'SpreadElement']);
+  'RestElement']);
 const loopNodes = new Set(['WhileStatement', 'DoWhileStatement', 'ForStatement', 'ForInStatement', 'ForOfStatement']);
-const safeElements = new Set(['div', 'span', 'p', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'button', 'strong', 'em', 'small', 'code', 'pre', 'br', 'hr', 'figure', 'figcaption']);
+const safeElements = new Set(['div', 'span', 'p', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'button', 'strong', 'em', 'small', 'code', 'pre', 'br', 'hr', 'figure', 'figcaption', 'i', 'b', 'a']);
 const methods = new Set(['querySelector', 'querySelectorAll', 'getElementById', 'add', 'remove', 'toggle', 'contains', 'addEventListener', 'removeEventListener', 'preventDefault', 'stopPropagation', 'setAttribute', 'getAttribute', 'removeAttribute', 'setProperty', 'removeProperty', 'getBoundingClientRect', 'animate', 'scrollIntoView', 'append', 'appendChild', 'replaceChildren', 'min', 'max', 'abs', 'round', 'floor', 'ceil', 'random', 'sin', 'cos', 'pow', 'sqrt', 'now', 'forEach', 'map', 'filter', 'find', 'findIndex', 'some', 'every', 'reduce', 'slice', 'includes', 'indexOf', 'push', 'pop', 'join', 'split', 'trim', 'toLowerCase', 'toUpperCase', 'toFixed', 'substring', 'charAt', 'log', 'warn', 'error', 'requestAnimationFrame', 'cancelAnimationFrame', 'setTimeout', 'clearTimeout']);
 function children(node) {
   return Object.entries(node).filter(([key]) => !['loc', 'start', 'end'].includes(key)).flatMap(([, value]) =>
@@ -37,9 +37,10 @@ export function inspectArticleScript(source) {
   catch (error) { return { ok: false, issues: ['JS 语法错误：' + error.message], instrumented: '' }; }
   const names = new Set(), issues = [], edits = [];
   function issue(node, message) { if (issues.length < 12) issues.push('第 ' + node.loc.start.line + ' 行：' + message); }
+  function pattern(node) {if(!node)return;if(node.type==='Identifier')names.add(node.name);else if(node.type==='AssignmentPattern')pattern(node.left);else if(node.type==='ObjectPattern')node.properties.forEach(n=>pattern(n.value));else if(node.type==='ArrayPattern')node.elements.forEach(pattern);}
   function declare(node) {
-    if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') names.add(node.id.name);
-    if (/Function/.test(node.type)) { if (node.id) names.add(node.id.name); for (const parameter of node.params || []) if (parameter.type === 'Identifier') names.add(parameter.name); }
+    if (node.type === 'VariableDeclarator') pattern(node.id);
+    if (/Function/.test(node.type)) { if (node.id) names.add(node.id.name); for (const parameter of node.params || []) pattern(parameter); }
     if (node.type === 'CatchClause' && node.param?.type === 'Identifier') names.add(node.param.name);
     children(node).forEach(declare);
   }
@@ -52,6 +53,7 @@ export function inspectArticleScript(source) {
       if (denied.has(node.name) || node.name.startsWith('__zhen')) issue(node, '禁止访问 ' + node.name);
       else if (!prop && !names.has(node.name) && !globals.has(node.name)) issue(node, '未允许的全局变量：' + node.name);
     }
+    if (node.type === 'NewExpression' && !(node.callee.type==='Identifier' && node.callee.name==='IntersectionObserver')) issue(node, '构造器仅支持隔离环境的 IntersectionObserver');
     if (node.type === 'MemberExpression') {
       const value = property(node), numeric = node.computed && node.property.type === 'Literal' && Number.isInteger(value) && value >= 0 && value < 10000;
       if (node.computed && node.property.type !== 'Literal') issue(node, '不允许动态属性名，请使用明确的点号属性');
@@ -59,6 +61,11 @@ export function inspectArticleScript(source) {
       if ((methods.has(value) || ['createElement','createTextNode','createDocumentFragment'].includes(value)) && !(parent?.type === 'CallExpression' && key === 'callee')) issue(node, '运行接口必须直接调用，不能提取或改写：' + value);
     }
     if (node.type === 'Property' && (node.computed || node.kind !== 'init' || denied.has(node.key.name || node.key.value))) issue(node, '不允许动态对象属性、访问器或原型操作');
+    if (node.type === 'Property' && parent?.type === 'ObjectPattern') {
+      const name=node.key.name ?? node.key.value;
+      if (!members.has(name)) issue(node, '不允许解构属性：'+String(name));
+      if (methods.has(name) || ['createElement','createTextNode','createDocumentFragment'].includes(name)) issue(node, '运行接口必须直接调用，不能解构提取：'+String(name));
+    }
     if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression') {
       const name = property(node.callee);
       if (name === 'createElement' && (node.arguments[0]?.type !== 'Literal' || !safeElements.has(node.arguments[0].value) || node.arguments.length !== 1)) issue(node, 'createElement 只接受明确的展示元素标签，例如 div、span、button；不能创建脚本、资源或嵌入页面');
@@ -72,11 +79,12 @@ export function inspectArticleScript(source) {
     }
     if ((node.type === 'AssignmentExpression' || node.type === 'UpdateExpression') && (node.left || node.argument)?.type === 'MemberExpression') {
       const target = node.left || node.argument, name = property(target);
+      if (name==='href' && node.type==='AssignmentExpression' && !(node.right.type==='Literal' && typeof node.right.value==='string' && node.right.value.startsWith('#') || node.right.type==='BinaryExpression' && node.right.operator==='+' && node.right.left.type==='Literal' && typeof node.right.left.value==='string' && node.right.left.value.startsWith('#'))) issue(node, '动态链接仅支持 # 开头的页内锚点');
       if (['addEventListener', 'removeEventListener', 'querySelector', 'querySelectorAll', 'setTimeout', 'requestAnimationFrame', 'now'].includes(name)
         || ['document', 'window', 'performance', 'Math', 'console'].includes(target.object?.name)) issue(node, '不能改写全局对象或运行接口');
     }
     if (/Function/.test(node.type)) {
-      if (node.async || node.generator || node.params.some(param => param.type !== 'Identifier')) issue(node, '函数仅支持普通参数，不支持 async、生成器或解构参数');
+      if (node.generator) issue(node, '暂不支持生成器函数');
       if (node.body.type === 'BlockStatement') edits.push({ at: node.body.start + 1, value: '__zhenGuard();' });
       else { edits.push({ at: node.body.start, value: '{__zhenGuard();return (' }); edits.push({ at: node.body.end, value: ');}' }); }
     }
@@ -99,14 +107,41 @@ export function inspectArticleScript(source) {
 
 // Extraction is an editing convenience, not an HTML sanitizer. Remaining active
 // markup is rejected below and browser output is still purified inside a sandbox.
-export function splitArticleDocument(source) {
-  const css = [], js = [];
+function resourceAttribute(attrs, key) {
+  const match = attrs.match(new RegExp('\\b'+key+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))','i'));
+  return match ? match[1] ?? match[2] ?? match[3] : '';
+}
+function builtInResource(url) {
+  return /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/KaTeX\/[\d.]+\/(?:katex\.min\.(?:js|css)|contrib\/auto-render\.min\.js)$/i.test(url)
+    || /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/highlight\.js\/[\d.]+\/highlight\.min\.js$/i.test(url);
+}
+export function splitArticleDocument(source, companions = {}) {
+  const css = [], js = [], missing = [], blocked = [], notes = [];
+  function resource(url, kind) {
+    if (builtInResource(url)) { notes.push('KaTeX / 代码高亮使用本站内置版本'); return; }
+    if (/^(?:https?:)?\/\//i.test(url) || /^[a-z][\w+.-]*:/i.test(url)) { blocked.push(url); return; }
+    const key = url.split(/[?#]/)[0].replace(/^\.\//,'');
+    if (!key || key.startsWith('/') || key.split('/').includes('..')) { blocked.push(url); return; }
+    const text = Object.hasOwn(companions,key) ? companions[key] : undefined;
+    if (typeof text !== 'string') missing.push(key);
+    else (kind === 'css' ? css : js).push(text);
+  }
   const html = source.replace(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi, (_, attrs, code) => {
-    if (/\bsrc\s*=|\btype\s*=\s*["']?module\b/i.test(attrs)) throw new Error('请使用内联普通 JS，不支持外部脚本或 module');
+    const src = resourceAttribute(attrs,'src');
+    if (src) { resource(src,'js'); return ''; }
     js.push(code); return '';
   }).replace(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi, (_, code) => { css.push(code); return ''; })
-    .replace(/<(?:meta|link|base)\b[^>]*>/gi, '');
-  return { html, css: css.join('\n'), js: js.join('\n') };
+    .replace(/<link\b([^>]*)>/gi, (_, attrs) => {
+      const href = resourceAttribute(attrs,'href'), rel = resourceAttribute(attrs,'rel');
+      if (/^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//i.test(href)) notes.push('在线字体未加载，使用 CSS 中的本机后备字体');
+      else if (/\bstylesheet\b/i.test(rel) && href) resource(href,'css');
+      return '';
+    }).replace(/<(?:meta|base)\b[^>]*>/gi, '');
+  if (missing.length || blocked.length) throw new Error([
+    missing.length ? '缺少配套文件：'+[...new Set(missing)].join('、')+'。请同时选择 HTML 与这些 CSS / JS 文件，或将内容内联后导入。' : '',
+    blocked.length ? '未支持的外部资源：'+[...new Set(blocked)].join('、')+'。请使用已审查的内联代码。' : ''
+  ].filter(Boolean).join('\n'));
+  return { html, css: css.join('\n'), js: js.join('\n'), notes: [...new Set(notes)] };
 }
 
 export function articleHtmlText(source) {

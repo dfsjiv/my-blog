@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const DATA_URL = '/assets/knowledge/announcements.json?v=20261122-free-html-2';
+  const DATA_URL = '/assets/knowledge/announcements.json?v=20261122-sandbox-1';
   const text = (value, language) => typeof value === 'string' ? value : value?.[language] || value?.zh || '';
   function records(data) {
     if (data?.version !== 1 || !Array.isArray(data.items)) throw new Error('Invalid announcements');

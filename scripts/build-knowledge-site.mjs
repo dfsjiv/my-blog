@@ -13,7 +13,8 @@ const stale = [];
 for (const [source, target] of [
   ['node_modules/acorn/dist/acorn.mjs', 'functions/lib/vendor/acorn.mjs'],
   ['node_modules/acorn/LICENSE', 'functions/lib/vendor/acorn.LICENSE'],
-  ['node_modules/acorn/LICENSE', 'assets/vendor/knowledge/acorn.LICENSE']
+  ['node_modules/acorn/LICENSE', 'assets/vendor/knowledge/acorn.LICENSE'],
+  ['node_modules/highlight.js/LICENSE', 'assets/vendor/knowledge/highlight.LICENSE']
 ]) {
   const content = await readFile(path.join(root, source), 'utf8');
   if (check) {
@@ -28,13 +29,13 @@ for (const [source, target] of [
 const indexPath = path.join(root, 'index.html');
 const original = await readFile(indexPath, 'utf8');
 let updated = original;
-for (const [entry, name] of [['src/knowledge-site-entry.js', 'site'], ['src/knowledge-article-layout-entry.mjs', 'article-layout']]) {
+for (const [entry, name] of [['src/knowledge-site-entry.js', 'site'], ['src/knowledge-article-layout-entry.mjs', 'article-layout'], ['src/knowledge-article-libraries-entry.mjs', 'article-libraries']]) {
   const relative = 'assets/vendor/knowledge/' + name + '.bundle.js';
   const outfile = path.join(root, relative);
 
   const result = await build({ absWorkingDir: root, entryPoints: [entry], bundle: true,
     format: 'iife', outfile, minify: true, legalComments: 'linked', write: false,
-    banner: name === 'article-layout' ? { js: '/* Includes Acorn (MIT). See acorn.LICENSE. */' } : undefined });
+    banner: name === 'article-layout' ? { js: '/* Includes Acorn (MIT) and highlight.js (BSD-3-Clause). See acorn.LICENSE and highlight.LICENSE. */' } : undefined });
   const bundle = result.outputFiles.find(file => file.path === outfile);
   const version = createHash('sha256').update(normalize(bundle.text)).digest('hex').slice(0, 12);
   const reference = new RegExp(relative.replaceAll('.', '\\.') + '\\?v=[^"\\s]+');
