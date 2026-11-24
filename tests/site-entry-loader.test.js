@@ -19,7 +19,7 @@ assert(loader.includes('window.sessionStorage.getItem'));
 assert(loader.includes("window.addEventListener('load'"));
 assert(loader.includes('async function waitForPageReady()'));
 assert(loader.includes('while (readinessTasks.size)'));
-assert(loader.includes('window.siteEntryLoader = { play, holdUntil }'));
+assert(loader.includes('window.siteEntryLoader = { play, holdUntil, transition }'));
 assert(site.includes('window.siteEntryLoader.holdUntil(initialRender.then(waitForInitialViewImages))'));
 assert(site.includes("window.siteEntryLoader.play({ force: true, label: 'MY OS' });"));
 assert(site.includes('window.authUi.showDesktop(user);'));

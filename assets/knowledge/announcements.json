@@ -2,6 +2,27 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-24-entry-navigation",
+      "date": "2026-11-24",
+      "type": "feature",
+      "historical": false,
+      "title": {"zh": "页面跳转沿用入站开场动画", "en": "Entry-style page transitions"},
+      "summary": {"zh": "上下分屏先遮住当前页，目标页面准备后再揭开，统一博客与独立文章的切换。", "en": "The entry panels cover the current page before revealing the prepared destination, including independent articles."},
+      "changes": {
+        "zh": ["用入站的分屏与进度线替换横向整页滑动。", "等待独立文章内部加载与首帧，切换不再复制 iframe。", "支持返回博客、历史回退、默认阅读切换；保留减少动态效果与超时退出。"],
+        "en": ["Entry panels and the progress line replace horizontal page slides.", "Independent articles load and paint before revealing, without cloning their sandbox.", "Return, browser history and default reading use the transition, with reduced motion and timeout handling."]
+      },
+      "steps": {
+        "zh": ["照常点击导航或文章卡片即可看到过渡。", "独立文章右下角的返回博客、默认阅读入口也使用同一效果。"],
+        "en": ["Use navigation or article cards as usual.", "Back to blog and default reading in Article tools use the same effect."]
+      },
+      "notes": {
+        "zh": ["不需要重新保存文章或修改文章代码。"],
+        "en": ["No article edits or republishing are required."]
+      },
+      "links": []
+    },
+    {
       "id": "2026-11-22-article-canvas",
       "date": "2026-11-22",
       "type": "feature",

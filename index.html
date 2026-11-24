@@ -119,6 +119,11 @@
     .site-entry-loader__panel--bottom { bottom: 0; }
     .site-entry-loader.is-leaving .site-entry-loader__panel--top { transform: translateY(-100%); }
     .site-entry-loader.is-leaving .site-entry-loader__panel--bottom { transform: translateY(100%); }
+    .site-entry-loader.is-covering .site-entry-loader__panel--top { transform: translateY(-100%); }
+    .site-entry-loader.is-covering .site-entry-loader__panel--bottom { transform: translateY(100%); }
+    .site-entry-loader.is-route-transition .site-entry-loader__panel { transition-duration: 480ms; }
+    .site-entry-loader.is-route-cover .site-entry-loader__panel { transition-duration: 220ms; }
+    .site-entry-loader:is(.is-covering,.is-route-cover) .site-entry-loader__line { opacity: 0; }
 
     .site-entry-loader__line {
       position: absolute;
@@ -149,7 +154,7 @@
     @media (prefers-reduced-motion: reduce) {
       .site-entry-loader__panel,
       .site-entry-loader__line {
-        transition-duration: 100ms;
+        transition-duration: 0ms !important;
       }
     }
   </style>
@@ -916,7 +921,7 @@ Camera: --, --, --</pre>
     </div>
   </section>
 
-  <script src="/static/js/site-entry-loader.js?v=20261028-horizon-1"></script>
+  <script src="/static/js/site-entry-loader.js?v=20261124-navigation-1"></script>
   <script src="/static/js/home-device.js"></script>
   <script src="/static/js/login-mikutap-bridge.js?v=20260814-1"></script>
   <script src="/static/js/auth.js?v=20261027-request-timeout-1"></script>
@@ -949,12 +954,12 @@ Camera: --, --, --</pre>
       },
       "announcements": {
         "styles": ["/static/css/knowledge-announcements.css?v=20261120-1"],
-        "scripts": ["/static/js/knowledge-announcements.js?v=20261122-standalone-1"],
+        "scripts": ["/static/js/knowledge-announcements.js?v=20261124-navigation-1"],
         "ready": "KnowledgeAnnouncements"
       },
       "articleLayout": {
         "styles": ["/static/css/knowledge-article-layout.css?v=20261122-standalone-1"],
-        "scripts": ["/assets/vendor/knowledge/article-layout.bundle.js?v=0c20e499da24"],
+        "scripts": ["/assets/vendor/knowledge/article-layout.bundle.js?v=5ef04f63b578"],
         "ready": "KnowledgeArticleLayout"
       },
       "articleLibraries": {
@@ -993,7 +998,7 @@ Camera: --, --, --</pre>
   </script>
   <script src="/static/js/knowledge-feature-loader.js?v=20261027-lazy-features-1"></script>
   <script src="/static/js/knowledge-comments.js?v=20261014-nickname-crop-1"></script>
-  <script src="assets/vendor/knowledge/site.bundle.js?v=359b2e75d5e0"></script>
+  <script src="assets/vendor/knowledge/site.bundle.js?v=a26893524f30"></script>
   <script src="/static/js/knowledge-live2d-mana-position-20260809.js?v=20261122-standalone-1"></script>
 </body>
 </html>

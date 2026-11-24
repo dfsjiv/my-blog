@@ -79,11 +79,18 @@ async function buildDocument(design, post, channel, scripts, standalone = false)
   return '<!DOCTYPE html><html'+(htmlAttributes || ' lang="zh-CN"')+'><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="'+esc(csp)+'"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><link rel="stylesheet" href="'+origin+'/assets/vendor/katex/katex.min.css"><style>:root{'+palette()+'}'+(design.baseStyles==='minimal'?minimalCss:baseCss)+motionCss+'.hljs-keyword,.hljs-type{color:#70b5d6}.hljs-comment{color:#82968f}.hljs-string,.hljs-meta{color:#9fbf86}.hljs-number,.hljs-literal{color:#d89bac}\n'+design.css.replace(/<\/style/gi,'<\\/style')+'</style></head><body'+bodyAttributes+'>'+wrap.innerHTML+libraryTags+'<script nonce="'+nonce+'">'+runtime.replace(/<\/script/gi,'<\\/script')+'</script></body></html>';
 }
 
-async function mount(root, {design,post,signal,scripts=true,preview=false,standalone=false}) {
+async function mount(root, {design,post,signal,scripts=true,preview=false,standalone=false,waitUntilReady=false}) {
   const channel=crypto.randomUUID(), frame=el('iframe','article-layout-frame');
   frame.title='本篇文章的自定义页面'; frame.setAttribute('sandbox','allow-scripts'); frame.referrerPolicy='no-referrer';
   const html=await buildDocument(design,post,channel,scripts,standalone);
   if(signal?.aborted) return ()=>{};
+  let finishReady=()=>{};
+  const ready=waitUntilReady?new Promise(resolve=>{
+    let done=false;
+    const timer=setTimeout(()=>finishReady(),4500);
+    finishReady=()=>{if(done)return;done=true;clearTimeout(timer);frame.removeEventListener('load',finishReady);signal?.removeEventListener('abort',finishReady);requestAnimationFrame(()=>requestAnimationFrame(resolve));};
+    frame.addEventListener('load',finishReady,{once:true});signal?.addEventListener('abort',finishReady,{once:true});
+  }):null;
   let viewportPending=false;
   const viewport=()=>{if(standalone||viewportPending)return;viewportPending=true;requestAnimationFrame(()=>{viewportPending=false;if(!frame.isConnected)return;const box=frame.getBoundingClientRect();frame.contentWindow?.postMessage({channel,type:'viewport',scrollTop:Math.max(0,96-box.top),viewportHeight:Math.max(1,innerHeight-96)},'*');});};
   const onMessage=async event=>{
@@ -111,8 +118,8 @@ async function mount(root, {design,post,signal,scripts=true,preview=false,standa
   const observer=new MutationObserver(refreshTheme), shell=document.getElementById('elegantShell');
   if(shell)observer.observe(shell,{attributes:true,attributeFilter:['data-theme','style']});
   const media=window.matchMedia('(prefers-color-scheme:dark)');media.addEventListener('change',refreshTheme);
-  const cleanup=()=>{active=false;revision++;observer.disconnect();media.removeEventListener('change',refreshTheme);window.removeEventListener('resize',resize);window.removeEventListener('resize',viewport);window.removeEventListener('scroll',viewport,true);window.removeEventListener('message',onMessage);frame.remove();root.classList.remove('article-layout-viewport','article-layout-standalone-stage');root.style.removeProperty('--article-viewport-width');signal?.removeEventListener('abort',cleanup);};
-  signal?.addEventListener('abort',cleanup,{once:true}); return cleanup;
+  const cleanup=()=>{active=false;revision++;finishReady();observer.disconnect();media.removeEventListener('change',refreshTheme);window.removeEventListener('resize',resize);window.removeEventListener('resize',viewport);window.removeEventListener('scroll',viewport,true);window.removeEventListener('message',onMessage);frame.remove();root.classList.remove('article-layout-viewport','article-layout-standalone-stage');root.style.removeProperty('--article-viewport-width');signal?.removeEventListener('abort',cleanup);};
+  signal?.addEventListener('abort',cleanup,{once:true}); if(ready)await ready;return cleanup;
 }
 
 function openEditor({design, getPost, role, onApply, signal, initialMode}) {

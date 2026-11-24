@@ -1173,30 +1173,10 @@
   }
 
   function routeNeedsTransition(route, details, settings) {
-    // Do not clone a live sandbox into transition snapshots on the way out.
-    if (shell.classList.contains('has-standalone-article')) return false;
     if (settings.refresh || settings.skipTransition) return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
     if (route !== state.route) return true;
     return route === 'detail' && details.slug !== state.routePayload.slug;
-  }
-
-  function waitForRouteSlide(node) {
-    return new Promise(function (resolve) {
-      let done = false;
-      const finish = function (event) {
-        if (event && (event.target !== node || !event.animationName.startsWith('knowledge-page-slide-'))) {
-          return;
-        }
-        if (done) return;
-        done = true;
-        node.removeEventListener('animationend', finish);
-        window.clearTimeout(timer);
-        resolve();
-      };
-      const timer = window.setTimeout(finish, 540);
-      node.addEventListener('animationend', finish, { once: true });
-    });
   }
 
   function restoreArticleHash() {
@@ -1223,60 +1203,13 @@
     });
   }
 
-  async function runFallbackRouteTransition(updateRoute) {
-    const main = shell.querySelector('.knowledge-main');
-    const previousRoute = shell.dataset.route || state.route || 'home';
-    const rect = main.getBoundingClientRect();
-    const previousPage = main.cloneNode(true);
-    let nextPage = null;
-    previousPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
-    previousPage.removeAttribute('id');
-    previousPage.setAttribute('aria-hidden', 'true');
-    previousPage.classList.add('knowledge-route-snapshot');
-    previousPage.dataset.snapshotRoute = previousRoute;
-    Object.assign(previousPage.style, {
-      top: rect.top + 'px',
-      left: rect.left + 'px',
-      width: rect.width + 'px',
-      height: rect.height + 'px',
-    });
-    main.style.visibility = 'hidden';
+  async function runEntryRouteTransition(updateRoute) {
     shell.classList.add('knowledge-route-transitioning');
-    shell.appendChild(previousPage);
-
     try {
-      const hydrationPromise = updateRoute();
-      hydrationPromise.catch(function (error) {
-        if (error && error.name === 'AbortError') return;
-        console.error('Knowledge route hydration failed:', error);
-      });
-      resetRouteScroll();
-      await waitForRouteLayout();
-      const nextRect = main.getBoundingClientRect();
-      nextPage = main.cloneNode(true);
-      nextPage.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
-      nextPage.removeAttribute('id');
-      nextPage.setAttribute('aria-hidden', 'true');
-      nextPage.classList.add('knowledge-route-snapshot', 'knowledge-route-next');
-      nextPage.dataset.snapshotRoute = shell.dataset.route || state.route;
-      nextPage.style.removeProperty('visibility');
-      Object.assign(nextPage.style, {
-        top: nextRect.top + 'px',
-        left: nextRect.left + 'px',
-        width: nextRect.width + 'px',
-        height: nextRect.height + 'px',
-      });
-      shell.appendChild(nextPage);
-      previousPage.classList.add('knowledge-route-leaving');
-      nextPage.classList.add('knowledge-route-entering');
-      await Promise.all([waitForRouteSlide(nextPage), waitForRouteSlide(previousPage)]);
-    } finally {
-      resetRouteScroll();
-      main.style.removeProperty('visibility');
-      if (nextPage) nextPage.remove();
-      previousPage.remove();
-      shell.classList.remove('knowledge-route-transitioning');
-    }
+      const update = async function () { const result = await updateRoute(); await waitForRouteLayout(); return result; };
+      if (window.siteEntryLoader?.transition) return await window.siteEntryLoader.transition(update);
+      return await update();
+    } finally { shell.classList.remove('knowledge-route-transitioning'); }
   }
 
   async function performNavigation(route, details, settings) {
@@ -1298,7 +1231,7 @@
       return updateRoute();
     }
 
-    return runFallbackRouteTransition(updateRoute);
+    return runEntryRouteTransition(updateRoute);
   }
 
   async function navigate(route, payload, options) {
@@ -3193,7 +3126,7 @@
     main.appendChild(comments);
     routeView.appendChild(layout);
     if (['custom', 'free'].includes(post.articleLayout?.mode)) {
-      window.KnowledgeFeatures.ensure('articleLayout').then(async function () {
+      await window.KnowledgeFeatures.ensure('articleLayout').then(async function () {
         if (controller.signal.aborted) return;
         const custom = element('section', 'article-layout-live');
         const tools = element('div', 'article-layout-live-tools');
@@ -3215,14 +3148,25 @@
           menu.append(toggle, tools); custom.append(menu, stage);
           menu.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.open = false; toggle.focus(); } });
         } else custom.append(tools, stage);
-        let cleanup = await window.KnowledgeArticleLayout.mount(stage, { design: post.articleLayout, post, signal: controller.signal, standalone });
-        if (controller.signal.aborted) { cleanup(); return; }
+        // The iframe must be connected to load; keep its full-size viewport
+        // invisible under the entry panels until its scripts and first paint finish.
+        custom.style.cssText = 'position:absolute;visibility:hidden;width:100%';
+        main.prepend(custom);
+        let cleanup;
+        try { cleanup = await window.KnowledgeArticleLayout.mount(stage, { design: post.articleLayout, post, signal: controller.signal, standalone, waitUntilReady: true }); }
+        catch (error) { custom.remove(); throw error; }
+        if (controller.signal.aborted) { cleanup(); custom.remove(); return; }
         const native = [header, detailCover, body, ...main.querySelectorAll('.knowledge-solution-info'), ...layout.querySelectorAll(':scope > aside, :scope > .knowledge-back-top')].filter(Boolean);
         native.forEach(n => n.hidden = true);
-        layout.classList.add('is-custom-article'); main.prepend(custom);
+        layout.classList.add('is-custom-article'); custom.removeAttribute('style');
         const leaveStandalone = () => { shell.classList.remove('has-standalone-article'); layout.classList.remove('is-standalone-article'); };
         if (standalone) { shell.classList.add('has-standalone-article'); layout.classList.add('is-standalone-article'); controller.signal.addEventListener('abort', leaveStandalone, {once:true}); }
-        restore.onclick = () => { cleanup(); leaveStandalone(); controller.signal.removeEventListener('abort', leaveStandalone); custom.remove(); native.forEach(n => n.hidden = false); layout.classList.remove('is-custom-article'); shell.scrollTop = 0; };
+        restore.onclick = () => {
+          restore.disabled = true;
+          const update = () => { cleanup(); leaveStandalone(); controller.signal.removeEventListener('abort', leaveStandalone); custom.remove(); native.forEach(n => n.hidden = false); layout.classList.remove('is-custom-article'); shell.scrollTop = 0; };
+          if (standalone && window.siteEntryLoader?.transition) return runEntryRouteTransition(update);
+          update();
+        };
         stop.onclick = async () => { stop.disabled = true; cleanup(); try { cleanup = await window.KnowledgeArticleLayout.mount(stage, {design: post.articleLayout, post, signal: controller.signal, scripts: false, standalone}); if (controller.signal.aborted) return; stop.textContent = 'JS 效果已关闭'; } catch { if (!controller.signal.aborted) restore.click(); } };
       }).catch(function () { /* Invalid or unavailable designs retain native article reading. */ });
     }
