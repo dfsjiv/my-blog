@@ -14,6 +14,7 @@
       zhihu: 'https://www.zhihu.com/people/study-32-31',
       nowcoder: 'https://www.nowcoder.com/users/412412995',
       x: 'https://x.com/EleniyaNia39418',
+      youtube: 'https://www.youtube.com/@EleniyaNiasse',
     }),
     aboutLinks: Object.freeze({
       games: 'games',
@@ -2062,6 +2063,7 @@
       ['zhihu', '知乎'],
       ['nowcoder', '牛客'],
       ['x', 'X'],
+      ['youtube', 'YouTube'],
     ].forEach(function (entry) {
       const href = safeExternalUrl(navigationLinks.socialLinks[entry[0]]);
       if (!href) return;

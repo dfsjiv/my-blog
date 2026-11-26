@@ -3204,6 +3204,11 @@ body.auth-elegant .knowledge-site {
   --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/x.svg");
 }
 
+.knowledge-social-icon-link.is-youtube {
+  --social-color: #ff0033;
+  --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/youtube.svg");
+}
+
 .knowledge-social-icon-link.is-nowcoder .knowledge-social-icon {
   background: transparent;
   mask: none;
