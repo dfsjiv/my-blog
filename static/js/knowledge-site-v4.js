@@ -13,6 +13,7 @@
       github: 'https://github.com/dfsjiv',
       zhihu: 'https://www.zhihu.com/people/study-32-31',
       nowcoder: 'https://www.nowcoder.com/users/412412995',
+      x: 'https://x.com/EleniyaNia39418',
     }),
     aboutLinks: Object.freeze({
       games: 'games',
@@ -2060,6 +2061,7 @@
       ['bilibili', 'B站'],
       ['zhihu', '知乎'],
       ['nowcoder', '牛客'],
+      ['x', 'X'],
     ].forEach(function (entry) {
       const href = safeExternalUrl(navigationLinks.socialLinks[entry[0]]);
       if (!href) return;

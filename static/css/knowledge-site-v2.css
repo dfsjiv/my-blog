@@ -3199,6 +3199,11 @@ body.auth-elegant .knowledge-site {
   --social-color: #00bc9b;
 }
 
+.knowledge-social-icon-link.is-x {
+  --social-color: var(--knowledge-text);
+  --social-icon: url("https://cdn.jsdelivr.net/npm/simple-icons@v16/icons/x.svg");
+}
+
 .knowledge-social-icon-link.is-nowcoder .knowledge-social-icon {
   background: transparent;
   mask: none;
