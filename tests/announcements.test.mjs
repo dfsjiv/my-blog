@@ -16,7 +16,7 @@ test('release records sort newest first without mutating input, and content is b
   const unsorted = { version: 1, items: [...data.items].reverse() };
   const before = JSON.stringify(unsorted); const sorted = api.records(unsorted);
   assert.equal(JSON.stringify(unsorted), before);
-  assert.equal(sorted[0].id, '2026-11-24-entry-navigation');
+  assert.equal(sorted[0].id, '2026-11-26-background-management');
   for (let i = 1; i < sorted.length; i++) assert.ok(sorted[i - 1].date >= sorted[i].date);
   for (const item of sorted) for (const language of ['zh', 'en']) {
     assert.ok(item.title[language]); assert.ok(item.summary[language]);

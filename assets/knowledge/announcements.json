@@ -2,6 +2,24 @@
   "version": 1,
   "items": [
     {
+      "id": "2026-11-26-background-management",
+      "date": "2026-11-26",
+      "type": "feature",
+      "historical": false,
+      "title": {"zh": "原有背景可管理，支持 5MB 原图", "en": "Manage original backgrounds and upload 5 MB originals"},
+      "summary": {"zh": "原有图片可暂停、移出与恢复，取消选图更方便；我的系统移入个人介绍页。", "en": "Pause, remove and restore built-in backgrounds, clear image selections, and find My OS on the About page."},
+      "changes": {
+        "zh": ["原有四张背景支持暂停、删除确认、取消删除及恢复，裁剪设置保留。", "全部移出后首页不再自动补回默认图片，也不下载已停用图片。", "背景独立支持 5 MB 原图上传，保留文件与分辨率，可取消选图。", "我的系统入口从顶栏移到关于阿臻 / Meet Zhen 页面。"],
+        "en": ["Built-in images support pause, confirmed removal, cancellation and restoration, with crop settings retained.", "An empty queue no longer restores defaults or downloads disabled images.", "Background uploads preserve original files and resolution up to 5 MB; selections can be cleared.", "My OS moves from primary navigation to About Zhen / Meet Zhen."]
+      },
+      "steps": {
+        "zh": ["管理员打开背景管理，对原有背景点击暂停轮播或删除；已移出列表可恢复。", "选错图片时点击取消选择；上传高清图后仍可调整位置、缩放与预览比例。", "打开关于阿臻页面，在个人介绍的链接区进入我的系统。"],
+        "en": ["In Background Management, pause or remove originals; restore them from the removed list.", "Clear an incorrect selection, or upload an original and adjust its position, zoom and preview ratio.", "Open About Zhen and use My OS in the introduction links."]
+      },
+      "notes": {"zh": ["背景限额与头像、文章图片相互独立，不需要数据库迁移。"], "en": ["Background limits are independent of avatars and article images. No database migration is required."]},
+      "links": []
+    },
+    {
       "id": "2026-11-24-entry-navigation",
       "date": "2026-11-24",
       "type": "feature",

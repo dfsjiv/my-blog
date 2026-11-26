@@ -98,6 +98,8 @@
     let timer = 0;
     let slideSequence = 0;
     let backgroundsRequested = false;
+    let queueReady = false;
+    let backgroundRevision = 0;
 
     function isHomeVisible() {
       return !document.hidden && shell.dataset.route === 'home' && document.body.classList.contains('auth-elegant');
@@ -130,7 +132,7 @@
     }
 
     async function showSlide(index) {
-      if (!heroSlides.length || !isHomeVisible()) return;
+      if (!queueReady || !heroSlides.length || !isHomeVisible()) return;
       const sequence = ++slideSequence;
       let nextIndex = ((index % heroSlides.length) + heroSlides.length) % heroSlides.length;
       let attempts = 0;
@@ -162,8 +164,9 @@
         backgroundsRequested = true;
         void heroCarouselRefresh();
       }
+      if (!queueReady || !heroSlides.length) return;
       void showSlide(activeIndex);
-      if (reducedMotion.matches) return;
+      if (reducedMotion.matches || heroSlides.length < 2) return;
       timer = window.setInterval(function () {
         void showSlide((activeIndex + 1) % heroSlides.length);
       }, 7000);
@@ -179,19 +182,20 @@
 
     heroCarouselRefresh = async function () {
       const container = shell.querySelector('.knowledge-hero-slides');
-      if (!container) return;
-      container.querySelectorAll('[data-custom-background]').forEach(function (slide) {
-        slide.remove();
-      });
+      if (!container) return false;
+      const revision = ++backgroundRevision;
+      stop(); slideSequence++;
       try {
         const backgrounds = await repository.getBackgrounds();
-        let displaySettings = [];
-        try {
-          displaySettings = await window.KnowledgeBackgroundDisplay.get(['builtin-1', 'builtin-2', 'builtin-3', 'builtin-4', ...backgrounds.map(b => String(b.id))]);
-        } catch (error) { console.error('Background display settings unavailable:', error.message); }
+        const displaySettings = await window.KnowledgeBackgroundDisplay.get(['builtin-1', 'builtin-2', 'builtin-3', 'builtin-4', ...backgrounds.map(b => String(b.id))]);
+        if(revision !== backgroundRevision)return false;
+        container.querySelectorAll('[data-custom-background]').forEach(slide=>slide.remove());
         const builtins = Array.from(container.querySelectorAll('[data-knowledge-hero-slide]'));
         builtins.forEach(function (slide, index) {
-          window.KnowledgeBackgroundDisplay.apply(slide, displaySettings.find(s => s.key === 'builtin-' + (index + 1))?.display);
+          const setting=displaySettings.find(s=>s.key==='builtin-'+(index+1));
+          slide.hidden=Boolean(setting && setting.state!=='active');
+          slide.classList.remove('is-active');
+          window.KnowledgeBackgroundDisplay.apply(slide, setting?.display);
         });
         backgrounds.forEach(function (background) {
           if (!background.url) return;
@@ -200,17 +204,23 @@
           slide.dataset.customBackground = String(background.id);
           slide.dataset.backgroundUrl = background.url;
           slide.dataset.focalPosition = background.focalPosition;
-          slide.style.backgroundPosition = background.focalPosition + ' center';
           const legacyDisplay = { x: ({ left: 0, center: 50, right: 100 })[background.focalPosition] ?? 50, y: 50, zoom: 1.08 };
           window.KnowledgeBackgroundDisplay.apply(slide, displaySettings.find(s => s.key === String(background.id))?.display || legacyDisplay);
           container.appendChild(slide);
         });
+        heroSlides = Array.from(container.querySelectorAll('[data-knowledge-hero-slide]')).filter(slide=>!slide.hidden);
+        queueReady = true;
+        backgroundsRequested = true;
+        if (activeIndex >= heroSlides.length) activeIndex = 0;
+        start();
+        return true;
       } catch (error) {
-        console.error('Custom backgrounds request failed:', error.message);
+        if(revision !== backgroundRevision)return false;
+        backgroundsRequested = false;
+        console.error('Homepage backgrounds unavailable:', error.message);
+        // Never re-add removed defaults when settings cannot be read.
+        return false;
       }
-      heroSlides = Array.from(container.querySelectorAll('[data-knowledge-hero-slide]'));
-      if (activeIndex >= heroSlides.length) activeIndex = 0;
-      void showSlide(activeIndex);
     };
     start();
   }
@@ -2060,6 +2070,10 @@
       socialLinks.appendChild(link);
     });
     introduction.append(stats, socialLinks);
+    const desktop = button('我的系统', 'knowledge-route-button');
+    desktop.dataset.knowledgeAction = 'desktop';
+    desktop.setAttribute('aria-label', t('进入我的系统'));
+    socialLinks.appendChild(desktop);
     profile.append(portrait, introduction);
 
     const details = element('div', 'knowledge-about-details');
@@ -2453,7 +2467,7 @@
     const node = showRouteShell(
       'ADMIN',
       '背景管理',
-      '上传图片并调整首页背景展示队列。现有四张默认背景会始终作为兜底。'
+      '管理首页背景轮播。原有背景也可暂停、删除和恢复；全部移出后显示纯色背景。'
     );
     const workspace = element('div', 'knowledge-background-workspace');
     const form = element('form', 'knowledge-background-upload');
@@ -2490,38 +2504,52 @@
     focalSelect.addEventListener('change', function () { uploadAdjust.setFocal(focalSelect.value); });
     const upload = button('上传并加入队列', 'knowledge-route-button is-primary');
     upload.type = 'submit';
+    upload.disabled = true;
+    const cancelSelection = button('取消选择', 'knowledge-route-button');
+    cancelSelection.disabled = true;
+    const uploadHint = element('p', 'knowledge-note', '背景支持 5 MB 原图上传，不压缩、不缩小尺寸；放大展示建议使用 2560 × 1440 或更高分辨率。');
     const message = element('p', 'knowledge-background-message');
     message.setAttribute('role', 'status');
-    fields.append(fileLabel, titleLabel, focalLabel, upload, message);
+    fields.append(fileLabel, titleLabel, focalLabel, uploadHint, upload, cancelSelection, message);
     form.append(preview, fields);
 
     const heading = element('div', 'knowledge-section-heading');
     heading.append(
       element('h2', '', '自定义背景队列'),
-      element('span', '', '最多启用 12 张 · JPEG / PNG / WebP · 单张不超过 8 MB')
+      element('span', '', '最多启用 12 张 · JPEG / PNG / WebP · 单张不超过 5 MB')
     );
     const list = element('div', 'knowledge-background-list');
     list.appendChild(makeLoadingState('正在加载背景…'));
-    const builtinHeading = element('h2', '', '原有背景 · 同样可调整与预览');
+    const builtinHeading = element('h2', '', '原有背景 · 可暂停、删除与调整');
     const builtinList = element('div', 'knowledge-background-list');
-    workspace.append(form, builtinHeading, builtinList, heading, list);
+    const queueMessage=element('p','knowledge-background-message');queueMessage.setAttribute('role','status');
+    workspace.append(form, builtinHeading, queueMessage, builtinList, heading, list);
     node.appendChild(workspace);
 
     let previewUrl = '';
+    function clearSelection(){
+      fileInput.value='';titleInput.value='';focalSelect.value='center';previewImage.onload=null;previewImage.removeAttribute('src');
+      uploadAdjust.setSource('');uploadAdjust.reset();uploadAdjust.root.hidden=true;previewImage.hidden=true;previewEmpty.hidden=false;
+      if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl='';upload.disabled=true;cancelSelection.disabled=true;
+    }
+    cancelSelection.addEventListener('click',()=>{clearSelection();message.classList.remove('is-error');message.textContent=t('已取消图片选择。');});
+    controller.signal.addEventListener('abort',()=>{previewImage.onload=null;if(previewUrl)URL.revokeObjectURL(previewUrl);},{once:true});
     fileInput.addEventListener('change', function () {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrl = '';
+      previewImage.onload=null;previewImage.removeAttribute('src');uploadAdjust.setSource('');
       message.classList.remove('is-error');
       message.textContent = '';
       const file = fileInput.files?.[0];
+      upload.disabled=true;cancelSelection.disabled=true;
       if (!file) {
         uploadAdjust.root.hidden = true;
         previewImage.hidden = true;
         previewEmpty.hidden = false;
         return;
       }
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
-        message.textContent = '请选择不超过 8 MB 的 JPEG、PNG 或 WebP 图片。';
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024) {
+        message.textContent = t('请选择不超过 5 MB 的 JPEG、PNG 或 WebP 图片。');
         message.classList.add('is-error');
         fileInput.value = '';
         uploadAdjust.root.hidden = true;
@@ -2530,6 +2558,7 @@
         return;
       }
       previewUrl = URL.createObjectURL(file);
+      upload.disabled=false;cancelSelection.disabled=false;
       previewImage.src = previewUrl;
       uploadAdjust.setSource(previewUrl);
       uploadAdjust.root.hidden = false;
@@ -2537,8 +2566,8 @@
       previewEmpty.hidden = true;
       previewImage.onload = function () {
         const dimensions = previewImage.naturalWidth + ' × ' + previewImage.naturalHeight;
-        message.textContent = previewImage.naturalWidth < 1600 || previewImage.naturalHeight < 900
-          ? dimensions + '；建议使用至少 1600 × 900 的图片。'
+        message.textContent = previewImage.naturalWidth < 2560 || previewImage.naturalHeight < 1440
+          ? dimensions + t('；放大展示建议使用至少 2560 × 1440 的图片。')
           : dimensions;
       };
       if (!titleInput.value.trim()) titleInput.value = file.name.replace(/\.[^.]+$/, '').slice(0, 80);
@@ -2549,6 +2578,7 @@
       const file = fileInput.files?.[0];
       if (!file || upload.disabled) return;
       upload.disabled = true;
+      cancelSelection.disabled = true;
       message.classList.remove('is-error');
       message.textContent = '正在上传背景…';
       try {
@@ -2560,14 +2590,7 @@
         try { await window.KnowledgeBackgroundDisplay.save(uploaded.id, uploadAdjust.value(), currentToken(), controller.signal); }
         catch (error) { displayError = error.message; }
         if (controller.signal.aborted) return;
-        fileInput.value = '';
-        titleInput.value = '';
-        previewImage.hidden = true;
-        uploadAdjust.root.hidden = true;
-        previewImage.removeAttribute('src');
-        previewEmpty.hidden = false;
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        previewUrl = '';
+        clearSelection();
         message.textContent = displayError ? '背景已上传，但调整设置未保存。请在队列中重试：' + displayError : '背景已加入展示队列。';
         message.classList.toggle('is-error', Boolean(displayError));
         await loadBackgroundList();
@@ -2577,7 +2600,8 @@
         message.textContent = error.message || '背景上传失败。';
         message.classList.add('is-error');
       } finally {
-        upload.disabled = false;
+        upload.disabled = !fileInput.files?.length;
+        cancelSelection.disabled = !fileInput.files?.length;
       }
     });
 
@@ -2589,27 +2613,41 @@
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        let displays = [];
-        try { displays = await window.KnowledgeBackgroundDisplay.get(['builtin-1', 'builtin-2', 'builtin-3', 'builtin-4', ...items.map(item => String(item.id))], controller.signal); }
-        catch (error) { if (controller.signal.aborted) return; }
+        const displays=await window.KnowledgeBackgroundDisplay.get(['builtin-1','builtin-2','builtin-3','builtin-4',...items.map(item=>String(item.id))],controller.signal);
+        if(controller.signal.aborted)return;
         builtinList.replaceChildren();
-        for (let i = 1; i <= 4; i++) {
-          const key = 'builtin-' + i;
-          const edit = window.KnowledgeBackgroundDisplay.editor('assets/knowledge/hero-0' + i + '.webp', displays.find(d => d.key === key)?.display);
-          const row = element('article', 'knowledge-background-row');
-          const name = element('strong', '', '原有背景 ' + i);
-          const action = button('保存调整', 'knowledge-route-button is-primary');
-          const status = element('p', 'knowledge-background-row-message'); status.setAttribute('role', 'status');
-          action.addEventListener('click', async function () {
-            action.disabled = true; status.textContent = '正在保存…';
-            try { await window.KnowledgeBackgroundDisplay.save(key, edit.value(), currentToken(), controller.signal); await heroCarouselRefresh?.(); status.textContent = '已保存，首页轮播已同步。'; }
-            catch (error) { status.textContent = error.message; } finally { action.disabled = false; }
-          });
-          row.append(edit.root, name, action, status); builtinList.appendChild(row);
+        const removed=element('details','knowledge-background-removed'),removedRows=element('div','knowledge-background-list');let removedCount=0;
+        for(let i=1;i<=4;i++){
+          const key='builtin-'+i,setting=displays.find(d=>d.key===key),state=setting?.state || 'active';
+          const row=element('article','knowledge-background-row');row.dataset.backgroundKey=key;row.dataset.backgroundState=state;
+          const name=element('strong','','原有背景 '+i),actions=element('div','knowledge-background-row-actions');
+          const status=element('p','knowledge-background-row-message');status.setAttribute('role','status');
+          const label=element('p','knowledge-note',state==='active'?'已启用':state==='paused'?'已暂停':'已移出轮播');
+          const information=element('div','knowledge-background-row-settings');information.append(name,label);
+          async function run(operation,notice){
+            actions.querySelectorAll('button').forEach(n=>n.disabled=true);status.textContent=t('正在保存…');
+            try{await operation();if(controller.signal.aborted)return;const refreshed=await heroCarouselRefresh?.();await loadBackgroundList();queueMessage.textContent=t(notice)+(refreshed===false?' '+t('设置已保存，首页刷新失败，请稍后刷新页面。'):'');queueMessage.classList.remove('is-error');}
+            catch(error){if(controller.signal.aborted)return;status.textContent=error.message;actions.querySelectorAll('button').forEach(n=>n.disabled=false);}
+          }
+          if(state==='removed'){
+            row.classList.add('is-removed');removedCount++;
+            const restore=button('恢复到轮播','knowledge-route-button');actions.append(restore);
+            restore.onclick=()=>run(()=>window.KnowledgeBackgroundDisplay.setState(key,'active',currentToken(),controller.signal),'背景已恢复到轮播。');
+            row.append(information,actions,status);removedRows.append(row);continue;
+          }
+          const edit=window.KnowledgeBackgroundDisplay.editor('assets/knowledge/hero-0'+i+'.webp',setting?.display);
+          const save=button('保存调整','knowledge-route-button is-primary'),toggle=button(state==='active'?'暂停轮播':'启用轮播','knowledge-route-button'),remove=button('删除','knowledge-route-button is-danger'),cancel=button('取消','knowledge-route-button');cancel.hidden=true;
+          actions.append(save,toggle,remove,cancel);
+          save.onclick=()=>run(()=>window.KnowledgeBackgroundDisplay.save(key,edit.value(),currentToken(),controller.signal),'背景调整已保存。');
+          toggle.onclick=()=>run(()=>window.KnowledgeBackgroundDisplay.setState(key,state==='active'?'paused':'active',currentToken(),controller.signal),state==='active'?'背景已暂停轮播。':'背景已恢复到轮播。');
+          let armed=false;cancel.onclick=()=>{armed=false;cancel.hidden=true;remove.textContent=t('删除');};
+          remove.onclick=()=>{if(!armed){armed=true;cancel.hidden=false;remove.textContent=t('确认删除');return;}return run(()=>window.KnowledgeBackgroundDisplay.setState(key,'removed',currentToken(),controller.signal),'背景已移出轮播，可在已移出列表中恢复。');};
+          row.append(edit.root,information,actions,status);builtinList.append(row);
         }
+        if(removedCount){removed.append(element('summary','',t('已移出的原有背景')+' ('+removedCount+')'),removedRows);builtinList.append(removed);}
         list.replaceChildren();
         if (!items.length) {
-          list.appendChild(makeEmptyState('还没有自定义背景。', '上传后会自动加入默认背景之后。'));
+          list.appendChild(makeEmptyState('还没有自定义背景。', '上传后会自动加入已启用的背景队列。'));
           return;
         }
         items.forEach(function (background, index) {
@@ -2618,6 +2656,7 @@
         });
       } catch (error) {
         if (controller.signal.aborted) return;
+        builtinList.replaceChildren(makeErrorState(loadBackgroundList));
         list.replaceChildren(makeErrorState(loadBackgroundList));
       }
     }

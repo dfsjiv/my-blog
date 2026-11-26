@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { handleKnowledgeRequest } from '../../functions/lib/knowledge-api.mjs';
+import { handleBackgroundDisplay } from '../../functions/lib/background-display.mjs';
 const rootDir=path.resolve(import.meta.dirname,'../..');
 class D1Statement {
     constructor(database, sql, bindings = []) {
@@ -124,13 +125,22 @@ function createDatabase() {
 
 
 const env=createDatabase();
+const objects=new Map();
+env.KNOWLEDGE_IMAGES={
+ async put(key,value,options){objects.set(key,{bytes:typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value),options});},
+ async get(key){const stored=objects.get(key);if(!stored)return null;return {body:stored.bytes,httpEtag:'"fixture-'+stored.bytes.length+'"',text:async()=>new TextDecoder().decode(stored.bytes),writeHttpMetadata:headers=>headers.set('Content-Type',stored.options?.httpMetadata?.contentType || 'application/octet-stream')};},
+ async delete(key){objects.delete(key);}
+};
 for(const n of ['0013_add_extensible_post_presentation.sql','0015_add_article_layouts.sql']) env.sqlite.exec(fs.readFileSync(path.join(rootDir,'migrations',n),'utf8'));
 http.createServer(async(incoming,outgoing)=>{
  try{
   const url=new URL(incoming.url,'http://127.0.0.1:39801');
   const chunks=[];for await(const chunk of incoming)chunks.push(chunk);const body=chunks.length?Buffer.concat(chunks):undefined;
   let response;
-  if(/^\/api\/knowledge\/(?:posts|facets|admin\/posts)(?:[/?]|$)/.test(url.pathname)){
+  if(url.pathname==='/api/background-display'){
+   const request=new Request(url,{method:incoming.method,headers:incoming.headers,body});
+   response=await handleBackgroundDisplay({request,env,url,jsonResponse:(data,status=200)=>Response.json(data,{status}),getBearerToken:r=>r.headers.get('authorization')?.replace(/^Bearer /,''),getAuthenticatedUser:async token=>token==='fixture-admin-token'?{id:1,role:'admin'}:token==='fixture-user-token'?{id:2,role:'user'}:null});
+  }else if(/^\/api\/knowledge\/(?:posts|facets|backgrounds|images|admin\/(?:posts|backgrounds))(?:[/?]|$)/.test(url.pathname)){
    const request=new Request(url,{method:incoming.method,headers:incoming.headers,body});
    response=await handleKnowledgeRequest({request,env,url,jsonResponse:(data,status=200)=>Response.json(data,{status}),getBearerToken:r=>r.headers.get('authorization')?.replace(/^Bearer /,''),getAuthenticatedUser:async token=>token==='fixture-admin-token'?{id:1,username:'Local Admin',role:'admin'}:token==='fixture-user-token'?{id:2,username:'Local Reader',role:'user'}:null});
   }else response=await fetch('http://127.0.0.1:39800'+incoming.url,{method:incoming.method,headers:incoming.headers,body});

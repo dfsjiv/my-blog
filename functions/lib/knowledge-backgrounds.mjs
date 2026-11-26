@@ -1,6 +1,6 @@
 const PUBLIC_PATH = "/api/knowledge/backgrounds";
 const ADMIN_PATH = "/api/knowledge/admin/backgrounds";
-const MAX_BACKGROUND_BYTES = 8 * 1024 * 1024;
+const MAX_BACKGROUND_BYTES = 5 * 1024 * 1024;
 const MAX_ENABLED_BACKGROUNDS = 12;
 const FOCAL_POSITIONS = new Set(["left", "center", "right"]);
 
@@ -79,7 +79,7 @@ async function createBackground(context, user) {
         return failure(jsonResponse, 400, "INVALID_BACKGROUND", "请选择要上传的背景图片");
     }
     if (!Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_BACKGROUND_BYTES) {
-        return failure(jsonResponse, 400, "INVALID_BACKGROUND", "背景图片必须在 8 MB 以内");
+        return failure(jsonResponse, 400, "INVALID_BACKGROUND", "背景图片必须在 5 MB 以内");
     }
 
     const enabledCount = await countEnabled(env);

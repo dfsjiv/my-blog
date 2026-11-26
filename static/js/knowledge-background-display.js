@@ -40,7 +40,8 @@
       input.addEventListener('input', update);
     }
     const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'knowledge-route-button'; reset.textContent = '撤销本次调整';
-    reset.addEventListener('click', () => { for (const name of Object.keys(inputs)) inputs[name].input.value = (initial || defaults)[name]; update(); });
+    function resetAdjustment(){for (const name of Object.keys(inputs)) inputs[name].input.value = (initial || defaults)[name]; update();}
+    reset.addEventListener('click', resetAdjustment);
     const caption = document.createElement('p'); caption.className = 'knowledge-background-message'; caption.textContent = '模拟 cover 裁剪，不拉伸原图。拖动或调整滑条；切换比例检查不同屏幕。';
     root.append(ratio, stage, controls, reset, caption);
     function value() { return Object.fromEntries(Object.entries(inputs).map(([name, control]) => [name, Number(control.input.value)])); }
@@ -62,9 +63,10 @@
     stage.addEventListener('pointerup', () => { drag = null; }); stage.addEventListener('pointercancel', () => { drag = null; });
     if (src) image.src = src;
     update(); updateRatio();
-    return { root, image, value, setSource: url => { image.src = url; }, setFocal: focal => { inputs.x.input.value = ({ left: 0, center: 50, right: 100 })[focal] ?? 50; update(); } };
+    return { root, image, value, reset:resetAdjustment, setSource: url => { if(url)image.src = url;else image.removeAttribute('src'); }, setFocal: focal => { inputs.x.input.value = ({ left: 0, center: 50, right: 100 })[focal] ?? 50; update(); } };
   }
   window.KnowledgeBackgroundDisplay = { apply, editor, defaults,
-    get: async (ids, signal) => (await request('GET', ids, null, null, signal)).settings,
-    save: (key, display, token, signal) => request('PATCH', null, { key: String(key), display }, token, signal) };
+    get: async (ids, signal) => {const keys=[...new Set(ids.map(String))],batches=[];for(let i=0;i<keys.length;i+=50)batches.push(keys.slice(i,i+50));return (await Promise.all(batches.map(batch=>request('GET',batch,null,null,signal)))).flatMap(result=>result.settings);},
+    save: (key, display, token, signal) => request('PATCH', null, { key: String(key), display }, token, signal),
+    setState: (key, state, token, signal) => request('PATCH', null, { key: String(key), state }, token, signal) };
 }());

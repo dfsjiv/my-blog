@@ -146,3 +146,17 @@ test("only admins can upload and manage the custom background queue", async () =
     assert.equal(env.KNOWLEDGE_IMAGES.objects.size, 0);
     sqlite.close();
 });
+
+test('background uploads accept a 5 MiB original unchanged and reject anything larger before storage',async()=>{
+    const {sqlite,env}=createEnvironment();
+    const original=new Uint8Array(5*1024*1024);original.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);original[original.length-1]=123;
+    const form=new FormData();form.set('file',new File([original],'large-original.png',{type:'image/png'}));
+    const result=await call(env,'/api/knowledge/admin/backgrounds',{method:'POST',token:'admin-token',body:form});
+    assert.equal(result.response.status,201);
+    const stored=[...env.KNOWLEDGE_IMAGES.objects.values()][0].bytes;
+    assert.equal(Buffer.compare(Buffer.from(stored),Buffer.from(original)),0,'original file must not be compressed or resized');
+    const tooLarge=new FormData();tooLarge.set('file',new File([original,new Uint8Array([1])],'too-large.png',{type:'image/png'}));
+    const rejected=await call(env,'/api/knowledge/admin/backgrounds',{method:'POST',token:'admin-token',body:tooLarge});
+    assert.equal(rejected.response.status,400);assert.match(rejected.body.error.message,/5 MB/);assert.equal(env.KNOWLEDGE_IMAGES.objects.size,1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM knowledge_backgrounds').get().count,1);sqlite.close();
+});

@@ -3362,6 +3362,11 @@ body.auth-elegant .knowledge-site {
   justify-content: flex-end;
   gap: 7px;
 }
+.knowledge-background-row-actions [hidden] { display: none !important; }
+.knowledge-background-row.is-removed { grid-template-columns: minmax(0,1fr) auto; }
+.knowledge-background-row[data-background-key]>.knowledge-background-row-settings { grid-template-columns:1fr; }
+.knowledge-background-removed { grid-column:1/-1; }
+.knowledge-background-removed>summary { cursor:pointer;padding:16px 0;color:var(--knowledge-muted); }
 
 .knowledge-background-row-message {
   grid-column: 2 / -1;
@@ -3380,6 +3385,7 @@ body.auth-elegant .knowledge-site {
   .knowledge-background-row-message {
     grid-column: 1;
   }
+  .knowledge-background-row.is-removed { grid-template-columns:1fr; }
 }
 
 @media (max-width: 1040px) {
@@ -3995,9 +4001,7 @@ body.auth-elegant .knowledge-site {
   will-change: opacity;
 }
 
-.knowledge-hero-slide:nth-child(1) {
-  background-image: url("/assets/knowledge/hero-01.webp");
-}
+.knowledge-hero-slide[hidden] { display: none !important; }
 
 .knowledge-hero-slide.is-active {
   opacity: 1;
